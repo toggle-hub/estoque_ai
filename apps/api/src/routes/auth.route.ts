@@ -26,10 +26,8 @@ type UserRecord = typeof usersTable.$inferSelect;
 
 const sanitizeUser = (user: UserRecord) => ({
     id: user.id,
-    organization_id: user.organization_id,
     email: user.email,
     name: user.name,
-    role: user.role,
     is_active: user.is_active,
     created_at: user.created_at,
     updated_at: user.updated_at,

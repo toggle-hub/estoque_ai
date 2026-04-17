@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   date,
@@ -16,6 +16,7 @@ import {
 
 const createdAt = timestamp({ withTimezone: true }).notNull().defaultNow();
 const updatedAt = timestamp({ withTimezone: true }).notNull().defaultNow();
+const deletedAt = timestamp({ withTimezone: true });
 
 export const transactionTypeEnum = pgEnum("transaction_type", [
   "RECEIVING",
@@ -24,33 +25,71 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
   "ADJUSTMENT",
 ]);
 
-export const organizationsTable = pgTable("organizations", {
-  id: uuid().defaultRandom().primaryKey(),
-  name: varchar({ length: 255 }).notNull(),
-  cnpj: varchar({ length: 18 }).unique(),
-  email: varchar({ length: 255 }),
-  phone: varchar({ length: 20 }),
-  plan_type: varchar({ length: 50 }).default("essencial"),
-  created_at: createdAt,
-  updated_at: updatedAt,
-});
+export const organizationsTable = pgTable(
+  "organizations",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    name: varchar({ length: 255 }).notNull(),
+    cnpj: varchar({ length: 18 }),
+    email: varchar({ length: 255 }),
+    phone: varchar({ length: 20 }),
+    plan_type: varchar({ length: 50 }).default("essencial"),
+    created_at: createdAt,
+    updated_at: updatedAt,
+    deleted_at: deletedAt,
+  },
+  (table) => [
+    uniqueIndex("organizations_cnpj_active_unique")
+      .on(table.cnpj)
+      .where(sql`${table.deleted_at} IS NULL`),
+  ],
+);
 
 export const usersTable = pgTable(
   "users",
   {
     id: uuid().defaultRandom().primaryKey(),
-    organization_id: uuid().references(() => organizationsTable.id, {
-      onDelete: "cascade",
-    }),
     email: varchar({ length: 255 }).notNull(),
     password_hash: varchar({ length: 255 }).notNull(),
     name: varchar({ length: 255 }).notNull(),
-    role: varchar({ length: 50 }).default("viewer"),
     is_active: boolean().default(true),
     created_at: createdAt,
     updated_at: updatedAt,
+    deleted_at: deletedAt,
   },
-  (table) => [uniqueIndex("users_organization_email_unique").on(table.organization_id, table.email)],
+  (table) => [
+    uniqueIndex("users_email_active_unique")
+      .on(table.email)
+      .where(sql`${table.deleted_at} IS NULL`),
+  ],
+);
+
+export const userOrganizationsTable = pgTable(
+  "user_organizations",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    user_id: uuid()
+      .notNull()
+      .references(() => usersTable.id, {
+        onDelete: "cascade",
+      }),
+    organization_id: uuid()
+      .notNull()
+      .references(() => organizationsTable.id, {
+        onDelete: "cascade",
+      }),
+    role: varchar({ length: 50 }).notNull().default("viewer"),
+    created_at: createdAt,
+    updated_at: updatedAt,
+    deleted_at: deletedAt,
+  },
+  (table) => [
+    uniqueIndex("user_organizations_user_organization_unique")
+      .on(table.user_id, table.organization_id)
+      .where(sql`${table.deleted_at} IS NULL`),
+    index("idx_user_organizations_user").on(table.user_id),
+    index("idx_user_organizations_org").on(table.organization_id),
+  ],
 );
 
 export const locationsTable = pgTable(
@@ -65,6 +104,7 @@ export const locationsTable = pgTable(
     is_active: boolean().default(true),
     created_at: createdAt,
     updated_at: updatedAt,
+    deleted_at: deletedAt,
   },
   (table) => [index("idx_locations_org").on(table.organization_id)],
 );
@@ -79,6 +119,7 @@ export const categoriesTable = pgTable(
     name: varchar({ length: 255 }).notNull(),
     description: text(),
     created_at: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deleted_at: deletedAt,
   },
   (table) => [index("idx_categories_org").on(table.organization_id)],
 );
@@ -99,9 +140,12 @@ export const itemsTable = pgTable(
     is_active: boolean().default(true),
     created_at: createdAt,
     updated_at: updatedAt,
+    deleted_at: deletedAt,
   },
   (table) => [
-    uniqueIndex("items_organization_sku_unique").on(table.organization_id, table.sku),
+    uniqueIndex("items_organization_sku_active_unique")
+      .on(table.organization_id, table.sku)
+      .where(sql`${table.deleted_at} IS NULL`),
     index("idx_items_org").on(table.organization_id),
     index("idx_items_sku").on(table.sku),
   ],
@@ -125,8 +169,14 @@ export const stockLevelsTable = pgTable(
     updated_at: updatedAt,
   },
   (table) => [
-    uniqueIndex("stock_levels_location_item_unique").on(table.location_id, table.item_id),
-    index("idx_stock_org_location").on(table.organization_id, table.location_id),
+    uniqueIndex("stock_levels_location_item_unique").on(
+      table.location_id,
+      table.item_id,
+    ),
+    index("idx_stock_org_location").on(
+      table.organization_id,
+      table.location_id,
+    ),
     index("idx_stock_item").on(table.item_id),
   ],
 );
@@ -168,6 +218,7 @@ export const alertsTable = pgTable(
     message: text().notNull(),
     is_read: boolean().default(false),
     created_at: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deleted_at: deletedAt,
   },
   (table) => [
     index("idx_alerts_org").on(table.organization_id),
@@ -187,47 +238,70 @@ export const usageMetricsTable = pgTable(
     created_at: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("usage_metrics_organization_date_unique").on(table.organization_id, table.date),
+    uniqueIndex("usage_metrics_organization_date_unique").on(
+      table.organization_id,
+      table.date,
+    ),
     index("idx_usage_org_date").on(table.organization_id, table.date),
   ],
 );
 
-export const organizationsRelations = relations(organizationsTable, ({ many }) => ({
-  users: many(usersTable),
-  locations: many(locationsTable),
-  categories: many(categoriesTable),
-  items: many(itemsTable),
-  stock_levels: many(stockLevelsTable),
+export const organizationsRelations = relations(
+  organizationsTable,
+  ({ many }) => ({
+    user_organizations: many(userOrganizationsTable),
+    locations: many(locationsTable),
+    categories: many(categoriesTable),
+    items: many(itemsTable),
+    stock_levels: many(stockLevelsTable),
+    transactions: many(transactionsTable),
+    alerts: many(alertsTable),
+    usage_metrics: many(usageMetricsTable),
+  }),
+);
+
+export const usersRelations = relations(usersTable, ({ many }) => ({
+  user_organizations: many(userOrganizationsTable),
   transactions: many(transactionsTable),
-  alerts: many(alertsTable),
-  usage_metrics: many(usageMetricsTable),
 }));
 
-export const usersRelations = relations(usersTable, ({ one, many }) => ({
-  organization: one(organizationsTable, {
-    fields: [usersTable.organization_id],
-    references: [organizationsTable.id],
+export const userOrganizationsRelations = relations(
+  userOrganizationsTable,
+  ({ one }) => ({
+    user: one(usersTable, {
+      fields: [userOrganizationsTable.user_id],
+      references: [usersTable.id],
+    }),
+    organization: one(organizationsTable, {
+      fields: [userOrganizationsTable.organization_id],
+      references: [organizationsTable.id],
+    }),
   }),
-  transactions: many(transactionsTable),
-}));
+);
 
-export const locationsRelations = relations(locationsTable, ({ one, many }) => ({
-  organization: one(organizationsTable, {
-    fields: [locationsTable.organization_id],
-    references: [organizationsTable.id],
+export const locationsRelations = relations(
+  locationsTable,
+  ({ one, many }) => ({
+    organization: one(organizationsTable, {
+      fields: [locationsTable.organization_id],
+      references: [organizationsTable.id],
+    }),
+    stock_levels: many(stockLevelsTable),
+    transactions: many(transactionsTable),
+    alerts: many(alertsTable),
   }),
-  stock_levels: many(stockLevelsTable),
-  transactions: many(transactionsTable),
-  alerts: many(alertsTable),
-}));
+);
 
-export const categoriesRelations = relations(categoriesTable, ({ one, many }) => ({
-  organization: one(organizationsTable, {
-    fields: [categoriesTable.organization_id],
-    references: [organizationsTable.id],
+export const categoriesRelations = relations(
+  categoriesTable,
+  ({ one, many }) => ({
+    organization: one(organizationsTable, {
+      fields: [categoriesTable.organization_id],
+      references: [organizationsTable.id],
+    }),
+    items: many(itemsTable),
   }),
-  items: many(itemsTable),
-}));
+);
 
 export const itemsRelations = relations(itemsTable, ({ one, many }) => ({
   organization: one(organizationsTable, {
@@ -258,24 +332,27 @@ export const stockLevelsRelations = relations(stockLevelsTable, ({ one }) => ({
   }),
 }));
 
-export const transactionsRelations = relations(transactionsTable, ({ one }) => ({
-  organization: one(organizationsTable, {
-    fields: [transactionsTable.organization_id],
-    references: [organizationsTable.id],
+export const transactionsRelations = relations(
+  transactionsTable,
+  ({ one }) => ({
+    organization: one(organizationsTable, {
+      fields: [transactionsTable.organization_id],
+      references: [organizationsTable.id],
+    }),
+    location: one(locationsTable, {
+      fields: [transactionsTable.location_id],
+      references: [locationsTable.id],
+    }),
+    item: one(itemsTable, {
+      fields: [transactionsTable.item_id],
+      references: [itemsTable.id],
+    }),
+    performed_by_user: one(usersTable, {
+      fields: [transactionsTable.performed_by],
+      references: [usersTable.id],
+    }),
   }),
-  location: one(locationsTable, {
-    fields: [transactionsTable.location_id],
-    references: [locationsTable.id],
-  }),
-  item: one(itemsTable, {
-    fields: [transactionsTable.item_id],
-    references: [itemsTable.id],
-  }),
-  performed_by_user: one(usersTable, {
-    fields: [transactionsTable.performed_by],
-    references: [usersTable.id],
-  }),
-}));
+);
 
 export const alertsRelations = relations(alertsTable, ({ one }) => ({
   organization: one(organizationsTable, {
@@ -292,9 +369,12 @@ export const alertsRelations = relations(alertsTable, ({ one }) => ({
   }),
 }));
 
-export const usageMetricsRelations = relations(usageMetricsTable, ({ one }) => ({
-  organization: one(organizationsTable, {
-    fields: [usageMetricsTable.organization_id],
-    references: [organizationsTable.id],
+export const usageMetricsRelations = relations(
+  usageMetricsTable,
+  ({ one }) => ({
+    organization: one(organizationsTable, {
+      fields: [usageMetricsTable.organization_id],
+      references: [organizationsTable.id],
+    }),
   }),
-}));
+);
