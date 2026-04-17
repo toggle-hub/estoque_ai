@@ -58,6 +58,13 @@ const logErrorResponse = (c: Context, reason: string) => {
     logger.setResLevel("warn");
 };
 
+const logGenericErrorResponse = (c: Context) => {
+    const logger = getLogger(c);
+
+    logger.setResMessage("Request failed");
+    logger.setResLevel("warn");
+};
+
 auth.post("/register", async (c) => {
     const payload = await c.req.json().catch(() => null);
     const parsed = registerSchema.safeParse(payload);
@@ -74,7 +81,7 @@ auth.post("/register", async (c) => {
         .limit(1);
 
     if (existingUser) {
-        logErrorResponse(c, "Email already in use");
+        logGenericErrorResponse(c);
         return c.json({ error: "Email already in use" }, 409);
     }
 
