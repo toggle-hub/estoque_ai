@@ -1,6 +1,7 @@
 import { createAdaptorServer } from "@hono/node-server";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { sign } from "hono/jwt";
 import { Pool } from "pg";
 import request from "supertest";
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
@@ -38,6 +39,8 @@ const getAppServer = () => {
 
 const containerStartupTimeout = 120_000;
 const testTimeout = 30_000;
+const authCookieName = "__Host-estoque_ai_test_session";
+const authCookieTtlSeconds = 3_600;
 
 const registerUser = () =>
   request(getAppServer()).post("/api/auth/register").send({
@@ -45,6 +48,41 @@ const registerUser = () =>
     name: "Ada Lovelace",
     password: "password123",
   });
+
+const getSetCookieHeaders = (response: request.Response) => {
+  const setCookieHeader = response.headers["set-cookie"];
+
+  if (!setCookieHeader) {
+    throw new Error("Expected set-cookie header");
+  }
+
+  return Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+};
+
+const expectAuthCookie = (response: request.Response) => {
+  expect(getSetCookieHeaders(response)).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining(`${authCookieName}=`),
+      expect.stringContaining("HttpOnly"),
+      expect.stringContaining(`Max-Age=${authCookieTtlSeconds}`),
+      expect.stringContaining("Secure"),
+      expect.stringContaining("SameSite=Lax"),
+      expect.stringContaining("Path=/"),
+    ]),
+  );
+};
+
+const getAuthCookie = (response: request.Response) => {
+  const authCookie = getSetCookieHeaders(response).find((cookie) =>
+    cookie.startsWith(`${authCookieName}=`),
+  );
+
+  if (!authCookie) {
+    throw new Error("Expected auth cookie to be set");
+  }
+
+  return authCookie.split(";")[0];
+};
 
 beforeAll(async () => {
   postgresContainer = await new GenericContainer("postgres:16-alpine")
@@ -62,6 +100,8 @@ beforeAll(async () => {
   process.env.DATABASE_URL = databaseUrl;
   process.env.JWT_SECRET = jwtSecret;
   process.env.BCRYPT_SALT = bcryptSalt;
+  process.env.AUTH_COOKIE_NAME = authCookieName;
+  process.env.AUTH_COOKIE_TTL_SECONDS = String(authCookieTtlSeconds);
   process.env.LOG_LEVEL = "silent";
 
   cleanupPool = new Pool({ connectionString: databaseUrl });
@@ -96,11 +136,11 @@ afterAll(async () => {
 
 describe("auth routes", () => {
   it(
-    "registers a user and returns a token with sanitized user data",
+    "registers a user and sets an auth cookie with sanitized user data",
     async () => {
       const response = await registerUser().expect(201);
 
-      expect(response.body.token).toEqual(expect.any(String));
+      expectAuthCookie(response);
       expect(response.body.user).toMatchObject({
         email: "ada@example.com",
         name: "Ada Lovelace",
@@ -125,7 +165,7 @@ describe("auth routes", () => {
   );
 
   it(
-    "logs in an existing user",
+    "logs in an existing user and sets an auth cookie",
     async () => {
       await registerUser().expect(201);
 
@@ -137,7 +177,7 @@ describe("auth routes", () => {
         })
         .expect(200);
 
-      expect(response.body.token).toEqual(expect.any(String));
+      expectAuthCookie(response);
       expect(response.body.user).toMatchObject({
         email: "ada@example.com",
         name: "Ada Lovelace",
@@ -165,13 +205,19 @@ describe("auth routes", () => {
   );
 
   it(
-    "returns the current user for a valid bearer token",
+    "returns the current user for a valid auth cookie",
     async () => {
-      const registerResponse = await registerUser().expect(201);
+      const registerResponse = await request(getAppServer()).post("/api/auth/register").send({
+        email: "ada@example.com",
+        name: "Ada Lovelace",
+        password: "password123",
+      });
+
+      expect(registerResponse.status).toBe(201);
 
       const response = await request(getAppServer())
         .get("/api/auth/me")
-        .set("Authorization", `Bearer ${registerResponse.body.token}`)
+        .set("Cookie", getAuthCookie(registerResponse))
         .expect(200);
 
       expect(response.body.user).toMatchObject({
@@ -185,20 +231,36 @@ describe("auth routes", () => {
   );
 
   it(
-    "rejects missing and invalid bearer tokens",
+    "rejects missing and invalid auth tokens",
     async () => {
       const missingTokenResponse = await request(getAppServer()).get("/api/auth/me").expect(401);
 
       expect(missingTokenResponse.body).toEqual({
-        error: "Missing or invalid authorization header",
+        error: "Missing authentication token",
       });
 
       const invalidTokenResponse = await request(getAppServer())
         .get("/api/auth/me")
-        .set("Authorization", "Bearer not-a-real-token")
+        .set("Cookie", `${authCookieName}=not-a-real-token`)
         .expect(401);
 
       expect(invalidTokenResponse.body).toEqual({ error: "Invalid token" });
+    },
+    testTimeout,
+  );
+
+  it(
+    "returns not found when token user does not exist",
+    async () => {
+      const missingUserId = "00000000-0000-0000-0000-000000000000";
+      const token = await sign({ sub: missingUserId }, jwtSecret, "HS256");
+
+      const response = await request(getAppServer())
+        .get("/api/auth/me")
+        .set("Cookie", `${authCookieName}=${token}`)
+        .expect(404);
+
+      expect(response.body).toEqual({ error: "User not found" });
     },
     testTimeout,
   );
