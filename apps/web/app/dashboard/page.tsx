@@ -27,7 +27,7 @@ const Dashboard = () => {
             <h1 className="text-lg font-semibold">
               {getGreeting()}, {user.name}
             </h1>
-            <p className="text-sm text-gray-500">Here&apos;s what&apos;s happening today</p>
+            <p className="text-sm text-gray-500">Activity today</p>
           </div>
 
           {/* Search */}
