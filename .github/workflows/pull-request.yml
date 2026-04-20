@@ -137,5 +137,7 @@ jobs:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/estoque_ai"
           JWT_SECRET: "ci_jwt_secret_must_be_16_chars"
           BCRYPT_SALT: "$2b$10$abcdefghijklmnopqrstuu"
+          AUTH_COOKIE_NAME: "__Host-estoque_ai_session"
+          AUTH_COOKIE_TTL_SECONDS: 604800
           LOG_LEVEL: "info"
           PORT: 3000
