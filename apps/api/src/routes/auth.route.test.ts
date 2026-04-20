@@ -125,11 +125,11 @@ describe("auth routes", () => {
   );
 
   it(
-    "logs in an existing user and rejects invalid credentials",
+    "logs in an existing user",
     async () => {
       await registerUser().expect(201);
 
-      const loginResponse = await request(getAppServer())
+      const response = await request(getAppServer())
         .post("/api/auth/login")
         .send({
           email: "ada@example.com",
@@ -137,13 +137,21 @@ describe("auth routes", () => {
         })
         .expect(200);
 
-      expect(loginResponse.body.token).toEqual(expect.any(String));
-      expect(loginResponse.body.user).toMatchObject({
+      expect(response.body.token).toEqual(expect.any(String));
+      expect(response.body.user).toMatchObject({
         email: "ada@example.com",
         name: "Ada Lovelace",
       });
+    },
+    testTimeout,
+  );
 
-      const invalidResponse = await request(getAppServer())
+  it(
+    "rejects invalid login credentials",
+    async () => {
+      await registerUser().expect(201);
+
+      const response = await request(getAppServer())
         .post("/api/auth/login")
         .send({
           email: "ada@example.com",
@@ -151,7 +159,7 @@ describe("auth routes", () => {
         })
         .expect(401);
 
-      expect(invalidResponse.body).toEqual({ error: "Invalid credentials" });
+      expect(response.body).toEqual({ error: "Invalid credentials" });
     },
     testTimeout,
   );
