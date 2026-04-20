@@ -1,0 +1,86 @@
+name: Validate Environment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "GitHub environment to validate"
+        required: true
+        type: choice
+        default: staging
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    name: Validate staging environment
+    if: github.event_name == 'push' || inputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate API environment
+        run: pnpm --filter api exec tsx src/env.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          BCRYPT_SALT: ${{ secrets.BCRYPT_SALT }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL || 'info' }}
+          PORT: ${{ vars.PORT || '3000' }}
+
+  production:
+    name: Validate production environment
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate API environment
+        run: pnpm --filter api exec tsx src/env.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          BCRYPT_SALT: ${{ secrets.BCRYPT_SALT }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL || 'info' }}
+          PORT: ${{ vars.PORT || '3000' }}
