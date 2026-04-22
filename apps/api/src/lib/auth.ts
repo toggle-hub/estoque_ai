@@ -15,6 +15,12 @@ type AuthenticationResult =
   | { user: UserRecord; payload: JWTPayload & { sub: string } }
   | { response: Response };
 
+/**
+ * Extracts the JWT from a standard `Bearer <token>` authorization header.
+ *
+ * @param authorizationHeader Raw Authorization header value.
+ * @returns JWT string when the header uses the Bearer scheme, otherwise `null`.
+ */
 const getBearerToken = (authorizationHeader?: string | null) => {
   if (!authorizationHeader) {
     return null;

@@ -21,6 +21,13 @@ const organizationSchema = z.object({
   plan_type: z.string().trim().min(1).max(50).optional(),
 });
 
+/**
+ * Removes internal-only fields and optionally adds the caller's membership role.
+ *
+ * @param organization Persisted organization record.
+ * @param role Membership role associated with the current user.
+ * @returns Organization payload safe to expose in API responses.
+ */
 const sanitizeOrganization = (
   organization: typeof organizationsTable.$inferSelect,
   role?: string,
