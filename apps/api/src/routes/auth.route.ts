@@ -1,14 +1,13 @@
 import { compare, hash } from "bcrypt";
-import { eq } from "drizzle-orm";
-import { type Context, Hono } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
-import { sign, verify } from "hono/jwt";
-import type { JWTPayload } from "hono/utils/jwt/types";
+import { Hono } from "hono";
+import { sign } from "hono/jwt";
 import type { Env as HonoPinoEnv } from "hono-pino";
 import { z } from "zod";
 import { db } from "../db";
-import { usersTable } from "../db/schema";
 import { env } from "../env";
+import { requireAuthenticatedUser, sanitizeUser, setAuthCookie } from "../lib/auth";
+import { logErrorResponse, logGenericErrorResponse } from "../lib/http-log";
+import { createUser, findActiveUserByEmail } from "../repositories/user.repository";
 
 const auth = new Hono<HonoPinoEnv>().basePath("/auth");
 
@@ -23,76 +22,19 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-type UserRecord = typeof usersTable.$inferSelect;
-
-const sanitizeUser = (user: UserRecord) => ({
-  id: user.id,
-  email: user.email,
-  name: user.name,
-  is_active: user.is_active,
-  created_at: user.created_at,
-  updated_at: user.updated_at,
-});
-
-const getBearerToken = (authorizationHeader?: string | null) => {
-  if (!authorizationHeader) {
-    return null;
-  }
-
-  const [scheme, token] = authorizationHeader.split(" ");
-  if (scheme !== "Bearer" || !token) {
-    return null;
-  }
-
-  return token;
-};
-
-const getAuthToken = (c: Context) =>
-  getCookie(c, env.AUTH_COOKIE_NAME) ?? getBearerToken(c.req.header("authorization"));
-
-const setAuthCookie = (c: Context, token: string) => {
-  setCookie(c, env.AUTH_COOKIE_NAME, token, {
-    httpOnly: true,
-    maxAge: env.AUTH_COOKIE_TTL_SECONDS,
-    path: "/",
-    sameSite: "Lax",
-    secure: true,
-  });
-};
-
-const logErrorResponse = (c: Context<HonoPinoEnv>, reason: string) => {
-  const logger = c.get("logger");
-
-  logger.assign({
-    error: {
-      reason,
-    },
-  });
-  logger.setResMessage(reason);
-  logger.setResLevel("warn");
-};
-
-const logGenericErrorResponse = (c: Context<HonoPinoEnv>) => {
-  const logger = c.get("logger");
-
-  logger.setResMessage("Request failed");
-  logger.setResLevel("warn");
-};
-
+/**
+ * Creates a user account and immediately establishes an authenticated session.
+ */
 auth.post("/register", async (c) => {
   const payload = await c.req.json().catch(() => null);
   const parsed = registerSchema.safeParse(payload);
 
   if (!parsed.success) {
     logErrorResponse(c, "Invalid request body");
-    return c.json({ error: "Invalid request body", issues: parsed.error.flatten() }, 400);
+    return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
   }
 
-  const [existingUser] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.email, parsed.data.email))
-    .limit(1);
+  const existingUser = await findActiveUserByEmail(db, parsed.data.email);
 
   if (existingUser) {
     logGenericErrorResponse(c);
@@ -101,14 +43,11 @@ auth.post("/register", async (c) => {
 
   const hashedPassword = await hash(parsed.data.password, env.BCRYPT_SALT);
 
-  const [user] = await db
-    .insert(usersTable)
-    .values({
-      email: parsed.data.email,
-      name: parsed.data.name,
-      password_hash: hashedPassword,
-    })
-    .returning();
+  const user = await createUser(db, {
+    email: parsed.data.email,
+    name: parsed.data.name,
+    password_hash: hashedPassword,
+  });
 
   const safeUser = sanitizeUser(user);
   const token = await sign({ sub: user.id, user: safeUser }, env.JWT_SECRET);
@@ -117,20 +56,19 @@ auth.post("/register", async (c) => {
   return c.json({ user: safeUser }, 201);
 });
 
+/**
+ * Authenticates an existing user and refreshes the session cookie.
+ */
 auth.post("/login", async (c) => {
   const payload = await c.req.json().catch(() => null);
   const parsed = loginSchema.safeParse(payload);
 
   if (!parsed.success) {
     logErrorResponse(c, "Invalid request body");
-    return c.json({ error: "Invalid request body", issues: parsed.error.flatten() }, 400);
+    return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
   }
 
-  const [user] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.email, parsed.data.email))
-    .limit(1);
+  const user = await findActiveUserByEmail(db, parsed.data.email);
 
   if (!user) {
     logErrorResponse(c, "Invalid credentials");
@@ -151,34 +89,17 @@ auth.post("/login", async (c) => {
   return c.json({ user: safeUser });
 });
 
+/**
+ * Returns the current authenticated user derived from the session token.
+ */
 auth.get("/me", async (c) => {
-  const token = getAuthToken(c);
+  const authResult = await requireAuthenticatedUser(c);
 
-  if (!token) {
-    logErrorResponse(c, "Missing authentication token");
-    return c.json({ error: "Missing authentication token" }, 401);
-  }
-  let payload: JWTPayload & { sub?: string };
-  try {
-    payload = await verify(token, env.JWT_SECRET, "HS256");
-  } catch {
-    logErrorResponse(c, "Invalid token");
-    return c.json({ error: "Invalid token" }, 401);
+  if ("response" in authResult) {
+    return authResult.response;
   }
 
-  if (!payload.sub) {
-    logErrorResponse(c, "Invalid token payload");
-    return c.json({ error: "Invalid token payload" }, 401);
-  }
-
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, payload.sub)).limit(1);
-
-  if (!user) {
-    logErrorResponse(c, "User not found");
-    return c.json({ error: "User not found" }, 404);
-  }
-
-  return c.json({ user: sanitizeUser(user) });
+  return c.json({ user: sanitizeUser(authResult.user) });
 });
 
 export { auth };
