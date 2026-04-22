@@ -17,6 +17,7 @@ let postgresContainer: StartedTestContainer | undefined;
 let cleanupPool: Pool | undefined;
 let appServer: ReturnType<typeof createAdaptorServer> | undefined;
 let appDbPool: Pool | undefined;
+let resolvedJwtSecret: string | undefined;
 
 const getDatabaseUrl = () => {
   if (!postgresContainer) {
@@ -107,9 +108,14 @@ beforeAll(async () => {
   cleanupPool = new Pool({ connectionString: databaseUrl });
   await migrate(drizzle(cleanupPool), { migrationsFolder: "drizzle" });
 
-  const [{ app }, dbModule] = await Promise.all([import("../index"), import("../db")]);
+  const [{ app }, dbModule, envModule] = await Promise.all([
+    import("../index"),
+    import("../db"),
+    import("../env"),
+  ]);
   appDbPool = dbModule.pool;
   appServer = createAdaptorServer({ fetch: app.fetch });
+  resolvedJwtSecret = envModule.env.JWT_SECRET;
 }, containerStartupTimeout);
 
 beforeEach(async () => {
@@ -253,7 +259,7 @@ describe("auth routes", () => {
     "returns not found when token user does not exist",
     async () => {
       const missingUserId = "00000000-0000-0000-0000-000000000000";
-      const token = await sign({ sub: missingUserId }, jwtSecret, "HS256");
+      const token = await sign({ sub: missingUserId }, resolvedJwtSecret ?? jwtSecret, "HS256");
 
       const response = await request(getAppServer())
         .get("/api/auth/me")

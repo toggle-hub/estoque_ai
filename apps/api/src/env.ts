@@ -9,9 +9,19 @@ const envSchema = z.object({
   BCRYPT_SALT: z.string().regex(/^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{22}$/, {
     message: "BCRYPT_SALT must be a valid bcrypt salt",
   }),
-  LOG_LEVEL: z
-    .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
-    .default("info"),
+  AUTH_COOKIE_NAME: z
+    .string()
+    .min(1, "AUTH_COOKIE_NAME must not be empty")
+    .regex(/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/, {
+      message: "AUTH_COOKIE_NAME must be a valid cookie name",
+    })
+    .default("__Host-estoque_ai_session"),
+  AUTH_COOKIE_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60 * 60 * 24 * 7),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
 });
 
