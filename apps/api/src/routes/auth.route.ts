@@ -1,15 +1,16 @@
 import { compare, hash } from "bcrypt";
 import { eq } from "drizzle-orm";
 import { type Context, Hono } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
 import { sign, verify } from "hono/jwt";
 import type { JWTPayload } from "hono/utils/jwt/types";
-import { getLogger } from "hono-pino";
+import type { Env as HonoPinoEnv } from "hono-pino";
 import { z } from "zod";
 import { db } from "../db";
 import { usersTable } from "../db/schema";
 import { env } from "../env";
 
-const auth = new Hono().basePath("/auth");
+const auth = new Hono<HonoPinoEnv>().basePath("/auth");
 
 const registerSchema = z.object({
   email: z.email(),
@@ -46,8 +47,21 @@ const getBearerToken = (authorizationHeader?: string | null) => {
   return token;
 };
 
-const logErrorResponse = (c: Context, reason: string) => {
-  const logger = getLogger(c);
+const getAuthToken = (c: Context) =>
+  getCookie(c, env.AUTH_COOKIE_NAME) ?? getBearerToken(c.req.header("authorization"));
+
+const setAuthCookie = (c: Context, token: string) => {
+  setCookie(c, env.AUTH_COOKIE_NAME, token, {
+    httpOnly: true,
+    maxAge: env.AUTH_COOKIE_TTL_SECONDS,
+    path: "/",
+    sameSite: "Lax",
+    secure: true,
+  });
+};
+
+const logErrorResponse = (c: Context<HonoPinoEnv>, reason: string) => {
+  const logger = c.get("logger");
 
   logger.assign({
     error: {
@@ -58,8 +72,8 @@ const logErrorResponse = (c: Context, reason: string) => {
   logger.setResLevel("warn");
 };
 
-const logGenericErrorResponse = (c: Context) => {
-  const logger = getLogger(c);
+const logGenericErrorResponse = (c: Context<HonoPinoEnv>) => {
+  const logger = c.get("logger");
 
   logger.setResMessage("Request failed");
   logger.setResLevel("warn");
@@ -98,8 +112,9 @@ auth.post("/register", async (c) => {
 
   const safeUser = sanitizeUser(user);
   const token = await sign({ sub: user.id, user: safeUser }, env.JWT_SECRET);
+  setAuthCookie(c, token);
 
-  return c.json({ token, user: safeUser }, 201);
+  return c.json({ user: safeUser }, 201);
 });
 
 auth.post("/login", async (c) => {
@@ -131,16 +146,17 @@ auth.post("/login", async (c) => {
 
   const safeUser = sanitizeUser(user);
   const token = await sign({ sub: user.id, user: safeUser }, env.JWT_SECRET);
+  setAuthCookie(c, token);
 
-  return c.json({ token, user: safeUser });
+  return c.json({ user: safeUser });
 });
 
 auth.get("/me", async (c) => {
-  const token = getBearerToken(c.req.header("authorization"));
+  const token = getAuthToken(c);
 
   if (!token) {
-    logErrorResponse(c, "Missing or invalid authorization header");
-    return c.json({ error: "Missing or invalid authorization header" }, 401);
+    logErrorResponse(c, "Missing authentication token");
+    return c.json({ error: "Missing authentication token" }, 401);
   }
   let payload: JWTPayload & { sub?: string };
   try {

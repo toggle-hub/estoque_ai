@@ -7,7 +7,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "local": "pnpm dlx tsx src/local.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -27,8 +27,12 @@
     "@types/bcrypt": "^6.0.0",
     "@types/node": "^25.6.0",
     "@types/pg": "^8.20.0",
+    "@types/supertest": "^7.2.0",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.0",
-    "tsx": "^4.21.0"
+    "supertest": "^7.2.2",
+    "testcontainers": "^11.14.0",
+    "tsx": "^4.21.0",
+    "vitest": "^4.1.4"
   }
 }
