@@ -50,23 +50,19 @@ export const getDatabaseError = (error: unknown): DatabaseError | null => {
  * Returns true when the error is a PostgreSQL unique constraint violation.
  *
  * @param error Unknown thrown value.
+ * @param constraint Expected constraint name when a specific index should match.
  * @returns Whether the error matches PostgreSQL error code `23505`.
  */
-export const isUniqueViolationError = (error: unknown) => {
+export const isUniqueConstraintViolation = (error: unknown, constraint?: string): boolean => {
   const databaseError = getDatabaseError(error);
 
-  return databaseError?.code === "23505";
-};
+  if (databaseError?.code !== "23505") {
+    return false;
+  }
 
-/**
- * Returns true when the error is a unique violation for the given constraint.
- *
- * @param error Unknown thrown value.
- * @param constraint Expected constraint name.
- * @returns Whether the error is a matching unique constraint violation.
- */
-export const isUniqueConstraintViolation = (error: unknown, constraint: string): boolean => {
-  const databaseError = getDatabaseError(error);
+  if (!constraint) {
+    return true;
+  }
 
-  return databaseError?.code === "23505" && databaseError.constraint === constraint;
+  return databaseError.constraint === constraint;
 };

@@ -12,7 +12,7 @@ import {
   sanitizeUser,
   setAuthCookie,
 } from "../lib/auth";
-import { getDatabaseError, isUniqueViolationError } from "../lib/database-errors";
+import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse, logGenericErrorResponse } from "../lib/http-log";
 import { createUser, findActiveUserByEmail } from "../repositories/user.repository";
 
@@ -94,7 +94,7 @@ auth.post("/register", async (c) => {
 
     return c.json({ user: safeUser }, 201);
   } catch (error) {
-    if (isUniqueViolationError(error)) {
+    if (isUniqueConstraintViolation(error)) {
       const databaseError = getDatabaseError(error);
       const logger = c.get("logger");
 

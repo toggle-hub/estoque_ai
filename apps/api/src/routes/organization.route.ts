@@ -8,7 +8,7 @@ import {
   getAuthenticatedUser,
   sanitizeUser,
 } from "../lib/auth";
-import { getDatabaseError, isUniqueViolationError } from "../lib/database-errors";
+import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
 import {
   createOrganizationWithAdminMembership,
@@ -96,7 +96,7 @@ organizations.post("/", async (c) => {
       201,
     );
   } catch (error) {
-    if (isUniqueViolationError(error)) {
+    if (isUniqueConstraintViolation(error)) {
       const databaseError = getDatabaseError(error);
       const logger = c.get("logger");
 
