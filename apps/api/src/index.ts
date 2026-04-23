@@ -1,11 +1,33 @@
 import "./env";
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { logGenericErrorResponse } from "./lib/http-log";
 import { httpLogger } from "./logger";
 import { auth } from "./routes/auth.route";
+import { organizations } from "./routes/organization.route";
 
 export const app = new Hono().basePath("/api");
 
 app.use("*", httpLogger);
 
+app.onError((error, c) => {
+  const logger = c.get("logger");
+
+  logger.error(
+    {
+      error,
+    },
+    "Unhandled request error",
+  );
+  logGenericErrorResponse(c);
+
+  if (error instanceof HTTPException) {
+    return error.getResponse();
+  }
+
+  return c.json({ error: "Internal server error" }, 500);
+});
+
 app.get("/", (c) => c.text("Hello Hono!"));
 app.route("/", auth);
+app.route("/", organizations);

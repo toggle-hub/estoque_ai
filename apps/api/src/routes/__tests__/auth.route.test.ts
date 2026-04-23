@@ -1,4 +1,6 @@
+import { resolve } from "node:path";
 import { createAdaptorServer } from "@hono/node-server";
+import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { sign } from "hono/jwt";
@@ -7,11 +9,31 @@ import request from "supertest";
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-const postgresUser = "test";
-const postgresPassword = "test";
-const postgresDatabase = "estoque_ai_test";
-const jwtSecret = "integration-test-secret";
-const bcryptSalt = "$2b$04$KYVbZ5JFVfqu0oV98LnF5e";
+config({ path: resolve(process.cwd(), ".env.test") });
+
+const postgresUser = process.env.POSTGRES_USER;
+const postgresPassword = process.env.POSTGRES_PASSWORD;
+const postgresDatabase = process.env.POSTGRES_DB;
+const jwtSecret = process.env.JWT_SECRET;
+const bcryptSalt = process.env.BCRYPT_SALT;
+const authCookieName = process.env.AUTH_COOKIE_NAME;
+const authCookieTtlSeconds = Number(process.env.AUTH_COOKIE_TTL_SECONDS);
+const containerStartupTimeout = Number(process.env.CONTAINER_STARTUP_TIMEOUT_MS);
+const testTimeout = Number(process.env.TEST_TIMEOUT_MS);
+
+if (
+  !postgresUser ||
+  !postgresPassword ||
+  !postgresDatabase ||
+  !jwtSecret ||
+  !bcryptSalt ||
+  !authCookieName ||
+  Number.isNaN(authCookieTtlSeconds) ||
+  Number.isNaN(containerStartupTimeout) ||
+  Number.isNaN(testTimeout)
+) {
+  throw new Error("Missing required test environment variables");
+}
 
 let postgresContainer: StartedTestContainer | undefined;
 let cleanupPool: Pool | undefined;
@@ -37,11 +59,6 @@ const getAppServer = () => {
 
   return appServer;
 };
-
-const containerStartupTimeout = 120_000;
-const testTimeout = 30_000;
-const authCookieName = "__Host-estoque_ai_test_session";
-const authCookieTtlSeconds = 3_600;
 
 const registerUser = () =>
   request(getAppServer()).post("/api/auth/register").send({
@@ -103,15 +120,15 @@ beforeAll(async () => {
   process.env.BCRYPT_SALT = bcryptSalt;
   process.env.AUTH_COOKIE_NAME = authCookieName;
   process.env.AUTH_COOKIE_TTL_SECONDS = String(authCookieTtlSeconds);
-  process.env.LOG_LEVEL = "silent";
+  process.env.LOG_LEVEL = process.env.LOG_LEVEL ?? "silent";
 
   cleanupPool = new Pool({ connectionString: databaseUrl });
   await migrate(drizzle(cleanupPool), { migrationsFolder: "drizzle" });
 
   const [{ app }, dbModule, envModule] = await Promise.all([
-    import("../index"),
-    import("../db"),
-    import("../env"),
+    import("../../index"),
+    import("../../db"),
+    import("../../env"),
   ]);
   appDbPool = dbModule.pool;
   appServer = createAdaptorServer({ fetch: app.fetch });
