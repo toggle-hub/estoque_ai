@@ -215,6 +215,38 @@ describe("organization routes", () => {
   );
 
   it(
+    "rejects organization creation when the cnpj is already in use",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+      const cnpj = "12.345.678/0001-90";
+
+      await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          name: "Ada Industries",
+          cnpj,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({
+          name: "Grace Systems",
+          cnpj,
+        })
+        .expect(409);
+
+      expect(response.body).toEqual({
+        error: "CNPJ already in use",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "returns an organization only when the current user belongs to it",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");

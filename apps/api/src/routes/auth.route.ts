@@ -12,6 +12,7 @@ import {
   sanitizeUser,
   setAuthCookie,
 } from "../lib/auth";
+import { getDatabaseError, isUniqueViolationError } from "../lib/database-errors";
 import { logErrorResponse, logGenericErrorResponse } from "../lib/http-log";
 import { createUser, findActiveUserByEmail } from "../repositories/user.repository";
 
@@ -48,19 +49,71 @@ auth.post("/register", async (c) => {
     return c.json({ error: "Email already in use" }, 409);
   }
 
-  const hashedPassword = await hash(parsed.data.password, env.BCRYPT_SALT);
+  let hashedPassword: string;
+  try {
+    hashedPassword = await hash(parsed.data.password, env.BCRYPT_SALT);
+  } catch (error) {
+    const logger = c.get("logger");
 
-  const user = await createUser(db, {
-    email: parsed.data.email,
-    name: parsed.data.name,
-    password_hash: hashedPassword,
-  });
+    logger.error(
+      {
+        error,
+        email: parsed.data.email,
+      },
+      "Password hashing failed during user registration",
+    );
+    logGenericErrorResponse(c);
+    return c.json({ error: "Internal server error" }, 500);
+  }
 
-  const safeUser = sanitizeUser(user);
-  const token = await sign({ sub: user.id, user: safeUser }, env.JWT_SECRET);
-  setAuthCookie(c, token);
+  try {
+    const user = await createUser(db, {
+      email: parsed.data.email,
+      name: parsed.data.name,
+      password_hash: hashedPassword,
+    });
 
-  return c.json({ user: safeUser }, 201);
+    const safeUser = sanitizeUser(user);
+    let token: string;
+    try {
+      token = await sign({ sub: user.id, user: safeUser }, env.JWT_SECRET);
+    } catch (error) {
+      const logger = c.get("logger");
+
+      logger.error(
+        {
+          error,
+          userId: user.id,
+        },
+        "JWT signing failed during user registration",
+      );
+      logGenericErrorResponse(c);
+      return c.json({ error: "Internal server error" }, 500);
+    }
+    setAuthCookie(c, token);
+
+    return c.json({ user: safeUser }, 201);
+  } catch (error) {
+    if (isUniqueViolationError(error)) {
+      const databaseError = getDatabaseError(error);
+      const logger = c.get("logger");
+
+      logger.error(
+        {
+          error: {
+            code: databaseError?.code,
+            constraint: databaseError?.constraint,
+            email: parsed.data.email,
+          },
+        },
+        "User register failed due to duplicate email",
+      );
+      logGenericErrorResponse(c);
+      return c.json({ error: "Email already in use" }, 409);
+    }
+
+    throw error;
+  }
 });
 
 /**
@@ -75,14 +128,44 @@ auth.post("/login", async (c) => {
     return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
   }
 
-  const user = await findActiveUserByEmail(db, parsed.data.email);
+  let user: Awaited<ReturnType<typeof findActiveUserByEmail>>;
+  try {
+    user = await findActiveUserByEmail(db, parsed.data.email);
+  } catch (error) {
+    const logger = c.get("logger");
+
+    logger.error(
+      {
+        error,
+        email: parsed.data.email,
+      },
+      "User lookup failed during login",
+    );
+    logGenericErrorResponse(c);
+    return c.json({ error: "Internal server error" }, 500);
+  }
 
   if (!user) {
     logErrorResponse(c, "Invalid credentials");
     return c.json({ error: "Invalid credentials" }, 401);
   }
 
-  const passwordMatches = await compare(parsed.data.password, user.password_hash);
+  let passwordMatches: boolean;
+  try {
+    passwordMatches = await compare(parsed.data.password, user.password_hash);
+  } catch (error) {
+    const logger = c.get("logger");
+
+    logger.error(
+      {
+        error,
+        userId: user.id,
+      },
+      "Password comparison failed during login",
+    );
+    logGenericErrorResponse(c);
+    return c.json({ error: "Internal server error" }, 500);
+  }
 
   if (!passwordMatches) {
     logErrorResponse(c, "Invalid credentials");
@@ -90,7 +173,22 @@ auth.post("/login", async (c) => {
   }
 
   const safeUser = sanitizeUser(user);
-  const token = await sign({ sub: user.id, user: safeUser }, env.JWT_SECRET);
+  let token: string;
+  try {
+    token = await sign({ sub: user.id, user: safeUser }, env.JWT_SECRET);
+  } catch (error) {
+    const logger = c.get("logger");
+
+    logger.error(
+      {
+        error,
+        userId: user.id,
+      },
+      "JWT signing failed during login",
+    );
+    logGenericErrorResponse(c);
+    return c.json({ error: "Internal server error" }, 500);
+  }
   setAuthCookie(c, token);
 
   return c.json({ user: safeUser });

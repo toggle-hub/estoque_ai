@@ -1,13 +1,29 @@
 import type { Context, Input, MiddlewareHandler } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { verify } from "hono/jwt";
-import type { JWTPayload } from "hono/utils/jwt/types";
+import {
+  type JWTPayload,
+  JwtAlgorithmMismatch,
+  JwtAlgorithmNotAllowed,
+  JwtAlgorithmRequired,
+  JwtHeaderInvalid,
+  JwtHeaderRequiresKid,
+  JwtPayloadRequiresAud,
+  JwtSymmetricAlgorithmNotAllowed,
+  JwtTokenAudience,
+  JwtTokenExpired,
+  JwtTokenInvalid,
+  JwtTokenIssuedAt,
+  JwtTokenIssuer,
+  JwtTokenNotBefore,
+  JwtTokenSignatureMismatched,
+} from "hono/utils/jwt/types";
 import type { Env as HonoPinoEnv } from "hono-pino";
 import { db } from "../db";
 import type { usersTable } from "../db/schema";
 import { env } from "../env";
 import { findActiveUserById } from "../repositories/user.repository";
-import { logErrorResponse } from "./http-log";
+import { logErrorResponse, logGenericErrorResponse } from "./http-log";
 
 type UserRecord = typeof usersTable.$inferSelect;
 
@@ -19,6 +35,22 @@ export type AuthenticatedAppEnv = HonoPinoEnv & {
     authTokenPayload: AuthenticatedPayload;
   };
 };
+
+const isJwtClientError = (error: unknown) =>
+  error instanceof JwtAlgorithmMismatch ||
+  error instanceof JwtAlgorithmNotAllowed ||
+  error instanceof JwtAlgorithmRequired ||
+  error instanceof JwtHeaderInvalid ||
+  error instanceof JwtHeaderRequiresKid ||
+  error instanceof JwtPayloadRequiresAud ||
+  error instanceof JwtSymmetricAlgorithmNotAllowed ||
+  error instanceof JwtTokenAudience ||
+  error instanceof JwtTokenExpired ||
+  error instanceof JwtTokenInvalid ||
+  error instanceof JwtTokenIssuedAt ||
+  error instanceof JwtTokenIssuer ||
+  error instanceof JwtTokenNotBefore ||
+  error instanceof JwtTokenSignatureMismatched;
 
 /**
  * Extracts the JWT from a standard `Bearer <token>` authorization header.
@@ -102,9 +134,22 @@ export const resolveAuthenticatedUser = async <
   let payload: JWTPayload & { sub?: string };
   try {
     payload = await verify(token, env.JWT_SECRET, "HS256");
-  } catch {
-    logErrorResponse(c, "Invalid token");
-    return { response: c.json({ error: "Invalid token" }, 401) };
+  } catch (error) {
+    if (isJwtClientError(error)) {
+      logErrorResponse(c, "Invalid token");
+      return { response: c.json({ error: "Invalid token" }, 401) };
+    }
+
+    const logger = c.get("logger");
+
+    logger.error(
+      {
+        error,
+      },
+      "Token verification failed unexpectedly",
+    );
+    logGenericErrorResponse(c);
+    return { response: c.json({ error: "Internal server error" }, 500) };
   }
 
   if (!payload.sub) {

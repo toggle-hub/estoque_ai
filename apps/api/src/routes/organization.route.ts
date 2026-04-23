@@ -8,6 +8,7 @@ import {
   getAuthenticatedUser,
   sanitizeUser,
 } from "../lib/auth";
+import { getDatabaseError, isUniqueViolationError } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
 import {
   createOrganizationWithAdminMembership,
@@ -69,7 +70,6 @@ organizations.get("/", async (c) => {
  */
 organizations.post("/", async (c) => {
   const user = getAuthenticatedUser(c);
-
   const payload = await c.req.json().catch(() => null);
   const parsed = organizationSchema.safeParse(payload);
 
@@ -78,22 +78,45 @@ organizations.post("/", async (c) => {
     return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
   }
 
-  const { organization, role } = await createOrganizationWithAdminMembership(db, {
-    userId: user.id,
-    name: parsed.data.name,
-    cnpj: parsed.data.cnpj,
-    email: parsed.data.email,
-    phone: parsed.data.phone,
-    plan_type: parsed.data.plan_type,
-  });
+  try {
+    const { organization, role } = await createOrganizationWithAdminMembership(db, {
+      userId: user.id,
+      name: parsed.data.name,
+      cnpj: parsed.data.cnpj,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+      plan_type: parsed.data.plan_type,
+    });
 
-  return c.json(
-    {
-      organization: sanitizeOrganization(organization, role),
-      user: sanitizeUser(user),
-    },
-    201,
-  );
+    return c.json(
+      {
+        organization: sanitizeOrganization(organization, role),
+        user: sanitizeUser(user),
+      },
+      201,
+    );
+  } catch (error) {
+    if (isUniqueViolationError(error)) {
+      const databaseError = getDatabaseError(error);
+      const logger = c.get("logger");
+
+      logger.error(
+        {
+          error: {
+            code: databaseError?.code,
+            constraint: databaseError?.constraint,
+            cnpj: parsed.data.cnpj,
+            userId: user.id,
+          },
+        },
+        "Organization create failed due to duplicate CNPJ",
+      );
+      logErrorResponse(c, "Organization CNPJ already in use");
+      return c.json({ error: "CNPJ already in use" }, 409);
+    }
+
+    throw error;
+  }
 });
 
 /**
