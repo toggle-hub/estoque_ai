@@ -5,11 +5,18 @@ import type { Env as HonoPinoEnv } from "hono-pino";
 import { z } from "zod";
 import { db } from "../db";
 import { env } from "../env";
-import { requireAuthenticatedUser, sanitizeUser, setAuthCookie } from "../lib/auth";
+import {
+  type AuthenticatedAppEnv,
+  authMiddleware,
+  getAuthenticatedUser,
+  sanitizeUser,
+  setAuthCookie,
+} from "../lib/auth";
 import { logErrorResponse, logGenericErrorResponse } from "../lib/http-log";
 import { createUser, findActiveUserByEmail } from "../repositories/user.repository";
 
 const auth = new Hono<HonoPinoEnv>().basePath("/auth");
+const protectedAuth = new Hono<AuthenticatedAppEnv>();
 
 const registerSchema = z.object({
   email: z.email(),
@@ -89,17 +96,13 @@ auth.post("/login", async (c) => {
   return c.json({ user: safeUser });
 });
 
+protectedAuth.use("/me", authMiddleware);
+
 /**
  * Returns the current authenticated user derived from the session token.
  */
-auth.get("/me", async (c) => {
-  const authResult = await requireAuthenticatedUser(c);
+protectedAuth.get("/me", async (c) => c.json({ user: sanitizeUser(getAuthenticatedUser(c)) }));
 
-  if ("response" in authResult) {
-    return authResult.response;
-  }
-
-  return c.json({ user: sanitizeUser(authResult.user) });
-});
+auth.route("/", protectedAuth);
 
 export { auth };

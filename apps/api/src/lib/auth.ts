@@ -1,4 +1,4 @@
-import type { Context } from "hono";
+import type { Context, Input, MiddlewareHandler } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { verify } from "hono/jwt";
 import type { JWTPayload } from "hono/utils/jwt/types";
@@ -11,9 +11,14 @@ import { logErrorResponse } from "./http-log";
 
 type UserRecord = typeof usersTable.$inferSelect;
 
-type AuthenticationResult =
-  | { user: UserRecord; payload: JWTPayload & { sub: string } }
-  | { response: Response };
+export type AuthenticatedPayload = JWTPayload & { sub: string };
+
+export type AuthenticatedAppEnv = HonoPinoEnv & {
+  Variables: HonoPinoEnv["Variables"] & {
+    authUser: UserRecord;
+    authTokenPayload: AuthenticatedPayload;
+  };
+};
 
 /**
  * Extracts the JWT from a standard `Bearer <token>` authorization header.
@@ -80,16 +85,18 @@ export const sanitizeUser = (user: UserRecord) => ({
  * @param c Hono request context.
  * @returns Authenticated user and token payload, or an HTTP response for auth failures.
  */
-export const requireAuthenticatedUser = async (
-  c: Context<HonoPinoEnv>,
-): Promise<AuthenticationResult> => {
+export const resolveAuthenticatedUser = async <
+  E extends HonoPinoEnv,
+  P extends string,
+  I extends Input,
+>(
+  c: Context<E, P, I>,
+) => {
   const token = getAuthToken(c);
 
   if (!token) {
     logErrorResponse(c, "Missing authentication token");
-    return {
-      response: c.json({ error: "Missing authentication token" }, 401),
-    };
+    return { response: c.json({ error: "Missing authentication token" }, 401) };
   }
 
   let payload: JWTPayload & { sub?: string };
@@ -114,6 +121,30 @@ export const requireAuthenticatedUser = async (
 
   return {
     user,
-    payload: payload as JWTPayload & { sub: string },
+    payload: payload as AuthenticatedPayload,
   };
 };
+
+/**
+ * Authenticates the request and stores the current user in the Hono context.
+ */
+export const authMiddleware: MiddlewareHandler<AuthenticatedAppEnv> = async (c, next) => {
+  const authResult = await resolveAuthenticatedUser(c);
+
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
+  c.set("authUser", authResult.user);
+  c.set("authTokenPayload", authResult.payload);
+
+  await next();
+};
+
+/**
+ * Returns the authenticated user injected by the auth middleware.
+ *
+ * @param c Hono request context.
+ * @returns Current authenticated user.
+ */
+export const getAuthenticatedUser = (c: Context<AuthenticatedAppEnv>) => c.get("authUser");

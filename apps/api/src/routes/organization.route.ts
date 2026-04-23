@@ -1,9 +1,13 @@
 import { Hono } from "hono";
-import type { Env as HonoPinoEnv } from "hono-pino";
 import { z } from "zod";
 import { db } from "../db";
 import type { organizationsTable } from "../db/schema";
-import { requireAuthenticatedUser, sanitizeUser } from "../lib/auth";
+import {
+  type AuthenticatedAppEnv,
+  authMiddleware,
+  getAuthenticatedUser,
+  sanitizeUser,
+} from "../lib/auth";
 import { logErrorResponse } from "../lib/http-log";
 import {
   createOrganizationWithAdminMembership,
@@ -11,7 +15,7 @@ import {
   listActiveOrganizationMembershipsByUserId,
 } from "../repositories/organization.repository";
 
-const organizations = new Hono<HonoPinoEnv>().basePath("/organizations");
+const organizations = new Hono<AuthenticatedAppEnv>().basePath("/organizations");
 
 const organizationSchema = z.object({
   name: z.string().trim().min(1),
@@ -43,17 +47,15 @@ const sanitizeOrganization = (
   ...(role ? { role } : {}),
 });
 
+organizations.use("*", authMiddleware);
+
 /**
  * Lists the organizations the current user belongs to.
  */
 organizations.get("/", async (c) => {
-  const authResult = await requireAuthenticatedUser(c);
+  const user = getAuthenticatedUser(c);
 
-  if ("response" in authResult) {
-    return authResult.response;
-  }
-
-  const memberships = await listActiveOrganizationMembershipsByUserId(db, authResult.user.id);
+  const memberships = await listActiveOrganizationMembershipsByUserId(db, user.id);
 
   return c.json({
     organizations: memberships.map(({ organization, role }) =>
@@ -66,11 +68,7 @@ organizations.get("/", async (c) => {
  * Creates a new organization and grants the creator admin membership.
  */
 organizations.post("/", async (c) => {
-  const authResult = await requireAuthenticatedUser(c);
-
-  if ("response" in authResult) {
-    return authResult.response;
-  }
+  const user = getAuthenticatedUser(c);
 
   const payload = await c.req.json().catch(() => null);
   const parsed = organizationSchema.safeParse(payload);
@@ -81,7 +79,7 @@ organizations.post("/", async (c) => {
   }
 
   const { organization, role } = await createOrganizationWithAdminMembership(db, {
-    userId: authResult.user.id,
+    userId: user.id,
     name: parsed.data.name,
     cnpj: parsed.data.cnpj,
     email: parsed.data.email,
@@ -92,7 +90,7 @@ organizations.post("/", async (c) => {
   return c.json(
     {
       organization: sanitizeOrganization(organization, role),
-      user: sanitizeUser(authResult.user),
+      user: sanitizeUser(user),
     },
     201,
   );
@@ -102,15 +100,11 @@ organizations.post("/", async (c) => {
  * Returns one organization when the current user has an active membership in it.
  */
 organizations.get("/:organizationId", async (c) => {
-  const authResult = await requireAuthenticatedUser(c);
-
-  if ("response" in authResult) {
-    return authResult.response;
-  }
+  const user = getAuthenticatedUser(c);
 
   const organizationId = c.req.param("organizationId");
 
-  const membership = await findActiveOrganizationMembership(db, authResult.user.id, organizationId);
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
 
   if (!membership) {
     logErrorResponse(c, "Organization not found");
