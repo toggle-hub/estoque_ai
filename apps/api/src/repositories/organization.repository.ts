@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { db } from "../db";
-import { organizationsTable, userOrganizationsTable } from "../db/schema";
+import { locationsTable, organizationsTable, userOrganizationsTable } from "../db/schema";
 
 type Database = typeof db;
 
@@ -115,4 +115,31 @@ export const createOrganizationWithAdminMembership = async (
     organization,
     role: "admin" as const,
   };
+};
+
+/**
+ * Creates a location owned by one organization.
+ *
+ * @param database Database handle.
+ * @param input Location fields.
+ * @returns Inserted location record.
+ */
+export const createLocation = async (
+  database: Database,
+  input: {
+    organizationId: string;
+    name: string;
+    address?: string;
+  },
+) => {
+  const [location] = await database
+    .insert(locationsTable)
+    .values({
+      organization_id: input.organizationId,
+      name: input.name,
+      address: input.address,
+    })
+    .returning();
+
+  return location;
 };
