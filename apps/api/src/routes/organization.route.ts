@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../db";
-import type { organizationsTable } from "../db/schema";
+import type { locationsTable, organizationsTable } from "../db/schema";
 import {
   type AuthenticatedAppEnv,
   authMiddleware,
@@ -11,6 +11,7 @@ import {
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
 import {
+  createLocation,
   createOrganizationWithAdminMembership,
   findActiveOrganizationMembership,
   listActiveOrganizationMembershipsByUserId,
@@ -24,6 +25,11 @@ const organizationSchema = z.object({
   email: z.email().optional(),
   phone: z.string().trim().min(1).max(20).optional(),
   plan_type: z.string().trim().min(1).max(50).optional(),
+});
+
+const locationSchema = z.object({
+  name: z.string().trim().min(1),
+  address: z.string().trim().min(1).optional(),
 });
 
 /**
@@ -46,6 +52,22 @@ const sanitizeOrganization = (
   created_at: organization.created_at,
   updated_at: organization.updated_at,
   ...(role ? { role } : {}),
+});
+
+/**
+ * Removes internal-only location fields before returning location data.
+ *
+ * @param location Persisted location record.
+ * @returns Location payload safe to expose in API responses.
+ */
+const sanitizeLocation = (location: typeof locationsTable.$inferSelect) => ({
+  id: location.id,
+  organization_id: location.organization_id,
+  name: location.name,
+  address: location.address,
+  is_active: location.is_active,
+  created_at: location.created_at,
+  updated_at: location.updated_at,
 });
 
 organizations.use("*", authMiddleware);
@@ -137,6 +159,41 @@ organizations.get("/:organizationId", async (c) => {
   return c.json({
     organization: sanitizeOrganization(membership.organization, membership.role),
   });
+});
+
+/**
+ * Creates a location for one organization when the current user can manage it.
+ */
+organizations.post("/:orgId/locations", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("orgId");
+  const payload = await c.req.json().catch(() => null);
+  const parsed = locationSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    logErrorResponse(c, "Invalid request body");
+    return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  if (!["admin", "manager"].includes(membership.role)) {
+    logErrorResponse(c, "Insufficient permissions");
+    return c.json({ error: "Insufficient permissions" }, 403);
+  }
+
+  const location = await createLocation(db, {
+    organizationId,
+    name: parsed.data.name,
+    address: parsed.data.address,
+  });
+
+  return c.json({ location: sanitizeLocation(location) }, 201);
 });
 
 export { organizations };
