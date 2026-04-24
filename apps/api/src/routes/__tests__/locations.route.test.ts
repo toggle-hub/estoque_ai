@@ -194,7 +194,7 @@ describe("location routes", () => {
         ]);
 
       const ownLocationsResponse = await request(getAppServer())
-        .get(`/api/locations/${organizationId}`)
+        .get(`/api/organizations/${organizationId}/locations`)
         .set("Cookie", getAuthCookie(adaResponse))
         .expect(200);
 
@@ -215,7 +215,7 @@ describe("location routes", () => {
       ]);
 
       const missingMembershipResponse = await request(getAppServer())
-        .get(`/api/locations/${organizationId}`)
+        .get(`/api/organizations/${organizationId}/locations`)
         .set("Cookie", getAuthCookie(graceResponse))
         .expect(404);
 
@@ -229,7 +229,9 @@ describe("location routes", () => {
   it(
     "rejects location listing without authentication",
     async () => {
-      const response = await request(getAppServer()).get("/api/locations/test-org").expect(401);
+      const response = await request(getAppServer())
+        .get("/api/organizations/test-org/locations")
+        .expect(401);
 
       expect(response.body).toEqual({
         error: "Missing authentication token",
