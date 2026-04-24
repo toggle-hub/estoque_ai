@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { logGenericErrorResponse } from "./lib/http-log";
 import { httpLogger } from "./logger";
 import { auth } from "./routes/auth.route";
+import { locations } from "./routes/locations.route";
 import { organizations } from "./routes/organization.route";
 
 export const app = new Hono().basePath("/api");
@@ -30,4 +31,5 @@ app.onError((error, c) => {
 
 app.get("/", (c) => c.text("Hello Hono!"));
 app.route("/", auth);
+app.route("/", locations);
 app.route("/", organizations);
