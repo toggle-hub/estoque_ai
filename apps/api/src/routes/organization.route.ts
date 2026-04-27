@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../db";
-import type { organizationsTable } from "../db/schema";
+import type { locationsTable, organizationsTable } from "../db/schema";
 import {
   type AuthenticatedAppEnv,
   authMiddleware,
@@ -10,6 +10,7 @@ import {
 } from "../lib/auth";
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
+import { listActiveLocationsByOrganizationId } from "../repositories/location.repository";
 import {
   createOrganizationWithAdminMembership,
   findActiveOrganizationMembership,
@@ -46,6 +47,22 @@ const sanitizeOrganization = (
   created_at: organization.created_at,
   updated_at: organization.updated_at,
   ...(role ? { role } : {}),
+});
+
+/**
+ * Removes internal-only fields from a location record.
+ *
+ * @param location Persisted location record.
+ * @returns Location payload safe to expose in API responses.
+ */
+const sanitizeLocation = (location: typeof locationsTable.$inferSelect) => ({
+  id: location.id,
+  organization_id: location.organization_id,
+  name: location.name,
+  address: location.address,
+  is_active: location.is_active,
+  created_at: location.created_at,
+  updated_at: location.updated_at,
 });
 
 organizations.use("*", authMiddleware);
@@ -136,6 +153,27 @@ organizations.get("/:organizationId", async (c) => {
 
   return c.json({
     organization: sanitizeOrganization(membership.organization, membership.role),
+  });
+});
+
+/**
+ * Lists all locations for one organization when the current user is a member.
+ */
+organizations.get("/:organizationId/locations", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const organizationLocations = await listActiveLocationsByOrganizationId(db, organizationId);
+
+  return c.json({
+    locations: organizationLocations.map(sanitizeLocation),
   });
 });
 
