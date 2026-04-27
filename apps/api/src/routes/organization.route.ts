@@ -10,6 +10,7 @@ import {
 } from "../lib/auth";
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
+import { listActiveLocationsByOrganizationId } from "../repositories/location.repository";
 import {
   createLocation,
   createOrganizationWithAdminMembership,
@@ -55,7 +56,7 @@ const sanitizeOrganization = (
 });
 
 /**
- * Removes internal-only location fields before returning location data.
+ * Removes internal-only fields from a location record.
  *
  * @param location Persisted location record.
  * @returns Location payload safe to expose in API responses.
@@ -162,11 +163,32 @@ organizations.get("/:organizationId", async (c) => {
 });
 
 /**
+ * Lists all locations for one organization when the current user is a member.
+ */
+organizations.get("/:organizationId/locations", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const organizationLocations = await listActiveLocationsByOrganizationId(db, organizationId);
+
+  return c.json({
+    locations: organizationLocations.map(sanitizeLocation),
+  });
+});
+
+/**
  * Creates a location for one organization when the current user can manage it.
  */
-organizations.post("/:orgId/locations", async (c) => {
+organizations.post("/:organizationId/locations", async (c) => {
   const user = getAuthenticatedUser(c);
-  const organizationId = c.req.param("orgId");
+  const organizationId = c.req.param("organizationId");
   const payload = await c.req.json().catch(() => null);
   const parsed = locationSchema.safeParse(payload);
 
