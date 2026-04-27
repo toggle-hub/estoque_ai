@@ -7,7 +7,7 @@ import { Pool } from "pg";
 import request from "supertest";
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { locationsTable } from "../../db/schema";
+import { categoriesTable, itemsTable, locationsTable } from "../../db/schema";
 
 config({ path: resolve(process.cwd(), ".env.test") });
 
@@ -133,7 +133,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await cleanupPool?.query(
-    "TRUNCATE TABLE locations, user_organizations, organizations, users RESTART IDENTITY CASCADE",
+    "TRUNCATE TABLE items, categories, locations, user_organizations, organizations, users RESTART IDENTITY CASCADE",
   );
 }, testTimeout);
 
@@ -156,6 +156,223 @@ afterAll(async () => {
 }, containerStartupTimeout);
 
 describe("location routes", () => {
+  it(
+    "creates an item for a location when the user can manage the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [[location], [category]] = await Promise.all([
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: organizationId,
+            name: "Main Warehouse",
+          })
+          .returning(),
+        getDatabase()
+          .insert(categoriesTable)
+          .values({
+            organization_id: organizationId,
+            name: "Components",
+          })
+          .returning(),
+      ]);
+
+      const response = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: category.id,
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          description: "Temperature sensor",
+          unit_price: 199.9,
+          reorder_point: 5,
+        })
+        .expect(201);
+
+      expect(response.body.item).toMatchObject({
+        id: expect.any(String),
+        organization_id: organizationId,
+        category_id: category.id,
+        sku: "COMP-001",
+        name: "Industrial Sensor",
+        description: "Temperature sensor",
+        unit_price: "199.90",
+        reorder_point: 5,
+        is_active: true,
+      });
+
+      const createdItems = await getDatabase().select().from(itemsTable);
+      expect(createdItems).toHaveLength(1);
+      expect(createdItems[0]).toMatchObject({
+        organization_id: organizationId,
+        category_id: category.id,
+        sku: "COMP-001",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects item creation when the user is a viewer",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: organizationId,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "viewer"],
+      );
+
+      const response = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(403);
+
+      expect(response.body).toEqual({
+        error: "Insufficient permissions",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects item creation when the category is not in the location organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const firstOrganizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const secondOrganizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Grace Retail" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: firstOrganizationResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const [category] = await getDatabase()
+        .insert(categoriesTable)
+        .values({
+          organization_id: secondOrganizationResponse.body.organization.id,
+          name: "Other Organization Category",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: category.id,
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid category_id",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects item creation with an invalid payload",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "",
+          name: "Industrial Sensor",
+          unit_price: -1,
+        })
+        .expect(400);
+
+      expect(response.body.error).toBe("Invalid request body");
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects item creation without authentication",
+    async () => {
+      const response = await request(getAppServer())
+        .post("/api/locations/test-location/items")
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(401);
+
+      expect(response.body).toEqual({
+        error: "Missing authentication token",
+      });
+    },
+    testTimeout,
+  );
+
   it(
     "returns a location only when the current user belongs to its organization",
     async () => {
