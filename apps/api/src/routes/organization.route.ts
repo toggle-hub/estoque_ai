@@ -12,6 +12,7 @@ import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-e
 import { logErrorResponse } from "../lib/http-log";
 import { listActiveLocationsByOrganizationId } from "../repositories/location.repository";
 import {
+  createLocation,
   createOrganizationWithAdminMembership,
   findActiveOrganizationMembership,
   listActiveOrganizationMembershipsByUserId,
@@ -25,6 +26,11 @@ const organizationSchema = z.object({
   email: z.email().optional(),
   phone: z.string().trim().min(1).max(20).optional(),
   plan_type: z.string().trim().min(1).max(50).optional(),
+});
+
+const locationSchema = z.object({
+  name: z.string().trim().min(1),
+  address: z.string().trim().min(1).optional(),
 });
 
 /**
@@ -175,6 +181,41 @@ organizations.get("/:organizationId/locations", async (c) => {
   return c.json({
     locations: organizationLocations.map(sanitizeLocation),
   });
+});
+
+/**
+ * Creates a location for one organization when the current user can manage it.
+ */
+organizations.post("/:organizationId/locations", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+  const payload = await c.req.json().catch(() => null);
+  const parsed = locationSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    logErrorResponse(c, "Invalid request body");
+    return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  if (!["admin", "manager"].includes(membership.role)) {
+    logErrorResponse(c, "Insufficient permissions");
+    return c.json({ error: "Insufficient permissions" }, 403);
+  }
+
+  const location = await createLocation(db, {
+    organizationId,
+    name: parsed.data.name,
+    address: parsed.data.address,
+  });
+
+  return c.json({ location: sanitizeLocation(location) }, 201);
 });
 
 export { organizations };

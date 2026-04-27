@@ -303,4 +303,140 @@ describe("organization routes", () => {
     },
     testTimeout,
   );
+
+  it(
+    "creates a location for an organization when the user is an admin",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const response = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/locations`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({
+          name: "Main Warehouse",
+          address: "Rua das Flores, 100",
+        })
+        .expect(201);
+
+      expect(response.body.location).toMatchObject({
+        id: expect.any(String),
+        organization_id: organizationId,
+        name: "Main Warehouse",
+        address: "Rua das Flores, 100",
+        is_active: true,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location creation with an invalid payload",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const response = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/locations`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({
+          name: "   ",
+        })
+        .expect(400);
+
+      expect(response.body.error).toBe("Invalid request body");
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location creation when the current user does not belong to the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const response = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/locations`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({ name: "Main Warehouse" })
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Organization not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location creation when the current user is a viewer",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "viewer"],
+      );
+
+      const response = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/locations`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({ name: "Main Warehouse" })
+        .expect(403);
+
+      expect(response.body).toEqual({
+        error: "Insufficient permissions",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location creation without authentication",
+    async () => {
+      const response = await request(getAppServer())
+        .post("/api/organizations/test-org/locations")
+        .send({ name: "No Auth Warehouse" })
+        .expect(401);
+
+      expect(response.body).toEqual({
+        error: "Missing authentication token",
+      });
+    },
+    testTimeout,
+  );
 });
