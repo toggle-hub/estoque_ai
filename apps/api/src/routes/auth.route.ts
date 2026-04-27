@@ -9,12 +9,12 @@ import {
   type AuthenticatedAppEnv,
   authMiddleware,
   getAuthenticatedUser,
-  sanitizeUser,
   setAuthCookie,
 } from "../lib/auth";
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse, logGenericErrorResponse } from "../lib/http-log";
 import { createUser, findActiveUserByEmail } from "../repositories/user.repository";
+import { sanitizeUser } from "../serializers/user.serializer";
 
 const auth = new Hono<HonoPinoEnv>().basePath("/auth");
 const protectedAuth = new Hono<AuthenticatedAppEnv>();

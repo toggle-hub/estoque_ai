@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../db";
-import type { itemsTable, locationsTable } from "../db/schema";
 import { type AuthenticatedAppEnv, authMiddleware, getAuthenticatedUser } from "../lib/auth";
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
@@ -19,42 +18,6 @@ const itemSchema = z.object({
   description: z.string().trim().min(1).optional(),
   unit_price: z.number().nonnegative(),
   reorder_point: z.number().int().nonnegative().optional(),
-});
-
-/**
- * Removes internal-only fields from a location record.
- *
- * @param location Persisted location record.
- * @returns Location payload safe to expose in API responses.
- */
-const sanitizeLocation = (location: typeof locationsTable.$inferSelect) => ({
-  id: location.id,
-  organization_id: location.organization_id,
-  name: location.name,
-  address: location.address,
-  is_active: location.is_active,
-  created_at: location.created_at,
-  updated_at: location.updated_at,
-});
-
-/**
- * Removes internal-only fields from an item record.
- *
- * @param item Persisted item record.
- * @returns Item payload safe to expose in API responses.
- */
-const sanitizeItem = (item: typeof itemsTable.$inferSelect) => ({
-  id: item.id,
-  organization_id: item.organization_id,
-  category_id: item.category_id,
-  sku: item.sku,
-  name: item.name,
-  description: item.description,
-  unit_price: item.unit_price,
-  reorder_point: item.reorder_point,
-  is_active: item.is_active,
-  created_at: item.created_at,
-  updated_at: item.updated_at,
 });
 
 locations.use("*", authMiddleware);
@@ -80,7 +43,7 @@ locations.get("/:locationId", async (c) => {
     return c.json({ error: "Location not found" }, 404);
   }
 
-  return c.json({ location: sanitizeLocation(location) });
+  return c.json({ location });
 });
 
 /**
@@ -140,7 +103,7 @@ locations.post("/:locationId/items", async (c) => {
       reorderPoint: parsed.data.reorder_point,
     });
 
-    return c.json({ item: sanitizeItem(item) }, 201);
+    return c.json({ item }, 201);
   } catch (error) {
     if (isUniqueConstraintViolation(error)) {
       const databaseError = getDatabaseError(error);
