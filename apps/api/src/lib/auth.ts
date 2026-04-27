@@ -97,21 +97,6 @@ export const setAuthCookie = (c: Context, token: string) => {
 };
 
 /**
- * Removes sensitive user fields before returning user data to API clients.
- *
- * @param user Database user record.
- * @returns User payload safe to expose in API responses.
- */
-export const sanitizeUser = (user: UserRecord) => ({
-  id: user.id,
-  email: user.email,
-  name: user.name,
-  is_active: user.is_active,
-  created_at: user.created_at,
-  updated_at: user.updated_at,
-});
-
-/**
  * Resolves the current authenticated user from the JWT and returns an HTTP response on failure.
  *
  * @param c Hono request context.

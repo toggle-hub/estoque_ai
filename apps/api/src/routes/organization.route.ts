@@ -1,13 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../db";
-import type { locationsTable, organizationsTable } from "../db/schema";
-import {
-  type AuthenticatedAppEnv,
-  authMiddleware,
-  getAuthenticatedUser,
-  sanitizeUser,
-} from "../lib/auth";
+import { type AuthenticatedAppEnv, authMiddleware, getAuthenticatedUser } from "../lib/auth";
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
 import { listActiveLocationsByOrganizationId } from "../repositories/location.repository";
@@ -17,6 +11,8 @@ import {
   findActiveOrganizationMembership,
   listActiveOrganizationMembershipsByUserId,
 } from "../repositories/organization.repository";
+import { serializeOrganization } from "../serializers/organization.serializer";
+import { sanitizeUser } from "../serializers/user.serializer";
 
 const organizations = new Hono<AuthenticatedAppEnv>().basePath("/organizations");
 
@@ -33,44 +29,6 @@ const locationSchema = z.object({
   address: z.string().trim().min(1).optional(),
 });
 
-/**
- * Removes internal-only fields and optionally adds the caller's membership role.
- *
- * @param organization Persisted organization record.
- * @param role Membership role associated with the current user.
- * @returns Organization payload safe to expose in API responses.
- */
-const sanitizeOrganization = (
-  organization: typeof organizationsTable.$inferSelect,
-  role?: string,
-) => ({
-  id: organization.id,
-  name: organization.name,
-  cnpj: organization.cnpj,
-  email: organization.email,
-  phone: organization.phone,
-  plan_type: organization.plan_type,
-  created_at: organization.created_at,
-  updated_at: organization.updated_at,
-  ...(role ? { role } : {}),
-});
-
-/**
- * Removes internal-only fields from a location record.
- *
- * @param location Persisted location record.
- * @returns Location payload safe to expose in API responses.
- */
-const sanitizeLocation = (location: typeof locationsTable.$inferSelect) => ({
-  id: location.id,
-  organization_id: location.organization_id,
-  name: location.name,
-  address: location.address,
-  is_active: location.is_active,
-  created_at: location.created_at,
-  updated_at: location.updated_at,
-});
-
 organizations.use("*", authMiddleware);
 
 /**
@@ -83,7 +41,7 @@ organizations.get("/", async (c) => {
 
   return c.json({
     organizations: memberships.map(({ organization, role }) =>
-      sanitizeOrganization(organization, role),
+      serializeOrganization(organization, role),
     ),
   });
 });
@@ -113,7 +71,7 @@ organizations.post("/", async (c) => {
 
     return c.json(
       {
-        organization: sanitizeOrganization(organization, role),
+        organization: serializeOrganization(organization, role),
         user: sanitizeUser(user),
       },
       201,
@@ -158,7 +116,7 @@ organizations.get("/:organizationId", async (c) => {
   }
 
   return c.json({
-    organization: sanitizeOrganization(membership.organization, membership.role),
+    organization: serializeOrganization(membership.organization, membership.role),
   });
 });
 
@@ -179,7 +137,7 @@ organizations.get("/:organizationId/locations", async (c) => {
   const organizationLocations = await listActiveLocationsByOrganizationId(db, organizationId);
 
   return c.json({
-    locations: organizationLocations.map(sanitizeLocation),
+    locations: organizationLocations,
   });
 });
 
@@ -215,7 +173,7 @@ organizations.post("/:organizationId/locations", async (c) => {
     address: parsed.data.address,
   });
 
-  return c.json({ location: sanitizeLocation(location) }, 201);
+  return c.json({ location }, 201);
 });
 
 export { organizations };
