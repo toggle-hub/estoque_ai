@@ -22,3 +22,20 @@ export const listActiveLocationsByOrganizationId = async (
       and(eq(locationsTable.organization_id, organizationId), isNull(locationsTable.deleted_at)),
     )
     .orderBy(locationsTable.name);
+
+/**
+ * Returns one active location by id.
+ *
+ * @param database Database handle.
+ * @param locationId Location identifier.
+ * @returns Matching location when found, otherwise `undefined`.
+ */
+export const findActiveLocationById = async (database: Database, locationId: string) => {
+  const [location] = await database
+    .select()
+    .from(locationsTable)
+    .where(and(eq(locationsTable.id, locationId), isNull(locationsTable.deleted_at)))
+    .limit(1);
+
+  return location;
+};

@@ -157,6 +157,101 @@ afterAll(async () => {
 
 describe("location routes", () => {
   it(
+    "returns a location only when the current user belongs to its organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: organizationId,
+          name: "Main Warehouse",
+          address: "Rua A, 100",
+          is_active: true,
+        })
+        .returning();
+
+      const ownLocationResponse = await request(getAppServer())
+        .get(`/api/locations/${location.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(200);
+
+      expect(ownLocationResponse.body.location).toMatchObject({
+        id: location.id,
+        name: "Main Warehouse",
+        organization_id: organizationId,
+        address: "Rua A, 100",
+        is_active: true,
+      });
+
+      const missingMembershipResponse = await request(getAppServer())
+        .get(`/api/locations/${location.id}`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(404);
+
+      expect(missingMembershipResponse.body).toEqual({
+        error: "Location not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "does not return deleted locations",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Archived Location",
+          deleted_at: new Date(),
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Location not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location fetching without authentication",
+    async () => {
+      const response = await request(getAppServer())
+        .get("/api/locations/test-location")
+        .expect(401);
+
+      expect(response.body).toEqual({
+        error: "Missing authentication token",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "lists active organization locations for members only",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
