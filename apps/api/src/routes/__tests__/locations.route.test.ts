@@ -7,7 +7,7 @@ import { Pool } from "pg";
 import request from "supertest";
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { categoriesTable, itemsTable, locationsTable } from "../../db/schema";
+import { categoriesTable, itemsTable, locationsTable, stockLevelsTable } from "../../db/schema";
 
 config({ path: resolve(process.cwd(), ".env.test") });
 
@@ -133,7 +133,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await cleanupPool?.query(
-    "TRUNCATE TABLE items, categories, locations, user_organizations, organizations, users RESTART IDENTITY CASCADE",
+    "TRUNCATE TABLE stock_levels, items, categories, locations, user_organizations, organizations, users RESTART IDENTITY CASCADE",
   );
 }, testTimeout);
 
@@ -196,6 +196,7 @@ describe("location routes", () => {
           description: "Temperature sensor",
           unit_price: 199.9,
           reorder_point: 5,
+          quantity: 12,
         })
         .expect(201);
 
@@ -208,7 +209,13 @@ describe("location routes", () => {
         description: "Temperature sensor",
         unit_price: "199.90",
         reorder_point: 5,
+        quantity: 12,
         is_active: true,
+        category: expect.objectContaining({
+          id: category.id,
+          organization_id: organizationId,
+          name: "Components",
+        }),
       });
 
       const createdItems = await getDatabase().select().from(itemsTable);
@@ -217,6 +224,156 @@ describe("location routes", () => {
         organization_id: organizationId,
         category_id: category.id,
         sku: "COMP-001",
+      });
+
+      const createdStockLevels = await getDatabase().select().from(stockLevelsTable);
+      expect(createdStockLevels).toHaveLength(1);
+      expect(createdStockLevels[0]).toMatchObject({
+        organization_id: organizationId,
+        location_id: location.id,
+        item_id: response.body.item.id,
+        quantity: 12,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "lists location items with categories for organization members",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [[location], [otherLocation], [category]] = await Promise.all([
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: organizationId,
+            name: "Main Warehouse",
+          })
+          .returning(),
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: organizationId,
+            name: "Secondary Store",
+          })
+          .returning(),
+        getDatabase()
+          .insert(categoriesTable)
+          .values({
+            organization_id: organizationId,
+            name: "Components",
+          })
+          .returning(),
+      ]);
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "viewer"],
+      );
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: category.id,
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+          reorder_point: 5,
+        })
+        .expect(201);
+
+      await request(getAppServer())
+        .post(`/api/locations/${otherLocation.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: category.id,
+          sku: "COMP-002",
+          name: "Pressure Sensor",
+          unit_price: 149.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(200);
+
+      expect(response.body.items).toEqual([
+        expect.objectContaining({
+          id: createItemResponse.body.item.id,
+          organization_id: organizationId,
+          category_id: category.id,
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: "199.90",
+          reorder_point: 5,
+          quantity: 0,
+          category: expect.objectContaining({
+            id: category.id,
+            organization_id: organizationId,
+            name: "Components",
+          }),
+        }),
+      ]);
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item listing when the user does not belong to the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Location not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item listing without authentication",
+    async () => {
+      const response = await request(getAppServer())
+        .get("/api/locations/test-location/items")
+        .expect(401);
+
+      expect(response.body).toEqual({
+        error: "Missing authentication token",
       });
     },
     testTimeout,
