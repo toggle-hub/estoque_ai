@@ -334,6 +334,171 @@ describe("location routes", () => {
   );
 
   it(
+    "gets one location item with its category for organization members",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [[location], [category]] = await Promise.all([
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: organizationId,
+            name: "Main Warehouse",
+          })
+          .returning(),
+        getDatabase()
+          .insert(categoriesTable)
+          .values({
+            organization_id: organizationId,
+            name: "Components",
+          })
+          .returning(),
+      ]);
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "viewer"],
+      );
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: category.id,
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+          quantity: 7,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(200);
+
+      expect(response.body.item).toMatchObject({
+        id: createItemResponse.body.item.id,
+        organization_id: organizationId,
+        category_id: category.id,
+        sku: "COMP-001",
+        name: "Industrial Sensor",
+        unit_price: "199.90",
+        quantity: 7,
+        category: expect.objectContaining({
+          id: category.id,
+          organization_id: organizationId,
+          name: "Components",
+        }),
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "does not get a location item when the user does not belong to the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Location not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "does not get an item from another location",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [location, otherLocation] = await getDatabase()
+        .insert(locationsTable)
+        .values([
+          {
+            organization_id: organizationId,
+            name: "Main Warehouse",
+          },
+          {
+            organization_id: organizationId,
+            name: "Secondary Store",
+          },
+        ])
+        .returning();
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${otherLocation.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Item not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects location item listing when the user does not belong to the organization",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
