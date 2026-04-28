@@ -5,7 +5,7 @@ import { type AuthenticatedAppEnv, authMiddleware, getAuthenticatedUser } from "
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
 import { findActiveCategoryByIdAndOrganizationId } from "../repositories/category.repository";
-import { createItem } from "../repositories/item.repository";
+import { createItem, listActiveItemsByLocation } from "../repositories/item.repository";
 import { findActiveLocationById } from "../repositories/location.repository";
 import { findActiveOrganizationMembership } from "../repositories/organization.repository";
 
@@ -18,6 +18,7 @@ const itemSchema = z.object({
   description: z.string().trim().min(1).optional(),
   unit_price: z.number().nonnegative(),
   reorder_point: z.number().int().nonnegative().optional(),
+  quantity: z.number().int().nonnegative().optional(),
 });
 
 locations.use("*", authMiddleware);
@@ -44,6 +45,41 @@ locations.get("/:locationId", async (c) => {
   }
 
   return c.json({ location });
+});
+
+/**
+ * Lists items for one location when the current user belongs to its organization.
+ */
+locations.get("/:locationId/items", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const locationId = c.req.param("locationId");
+
+  const location = await findActiveLocationById(db, locationId);
+
+  if (!location?.organization_id) {
+    logErrorResponse(c, "Location not found");
+    return c.json({ error: "Location not found" }, 404);
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, location.organization_id);
+
+  if (!membership) {
+    logErrorResponse(c, "Location not found");
+    return c.json({ error: "Location not found" }, 404);
+  }
+
+  const locationItems = await listActiveItemsByLocation(db, {
+    locationId,
+    organizationId: location.organization_id,
+  });
+
+  return c.json({
+    items: locationItems.map(({ item, category, quantity }) => ({
+      ...item,
+      category,
+      quantity,
+    })),
+  });
 });
 
 /**
@@ -79,8 +115,9 @@ locations.post("/:locationId/items", async (c) => {
     return c.json({ error: "Insufficient permissions" }, 403);
   }
 
+  let category: Awaited<ReturnType<typeof findActiveCategoryByIdAndOrganizationId>> | null = null;
   if (parsed.data.category_id) {
-    const category = await findActiveCategoryByIdAndOrganizationId(
+    category = await findActiveCategoryByIdAndOrganizationId(
       db,
       parsed.data.category_id,
       location.organization_id,
@@ -95,15 +132,26 @@ locations.post("/:locationId/items", async (c) => {
   try {
     const item = await createItem(db, {
       organizationId: location.organization_id,
+      locationId,
       categoryId: parsed.data.category_id,
       sku: parsed.data.sku,
       name: parsed.data.name,
       description: parsed.data.description,
       unitPrice: parsed.data.unit_price.toFixed(2),
       reorderPoint: parsed.data.reorder_point,
+      quantity: parsed.data.quantity,
     });
 
-    return c.json({ item }, 201);
+    return c.json(
+      {
+        item: {
+          ...item,
+          category,
+          quantity: parsed.data.quantity ?? 0,
+        },
+      },
+      201,
+    );
   } catch (error) {
     if (isUniqueConstraintViolation(error)) {
       const databaseError = getDatabaseError(error);
