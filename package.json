@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
+    "db:seed": "pnpm --filter api db:seed",
     "dev": "turbo run dev",
     "lint": "turbo run lint && biome lint .",
     "lint:fix": "biome check --write .",
@@ -12,10 +13,11 @@
     "format:check": "biome format .",
     "check:biome": "biome check .",
     "check-types": "turbo run check-types",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "lefthook install"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
+    "lefthook": "^2.1.6",
     "prettier": "^3.7.4",
     "turbo": "^2.9.4",
     "typescript": "5.9.2"
