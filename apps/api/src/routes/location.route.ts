@@ -5,7 +5,11 @@ import { type AuthenticatedAppEnv, authMiddleware, getAuthenticatedUser } from "
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
 import { findActiveCategoryByIdAndOrganizationId } from "../repositories/category.repository";
-import { createItem, listActiveItemsByLocation } from "../repositories/item.repository";
+import {
+  createItem,
+  findActiveItemByLocation,
+  listActiveItemsByLocation,
+} from "../repositories/item.repository";
 import { findActiveLocationById } from "../repositories/location.repository";
 import { findActiveOrganizationMembership } from "../repositories/organization.repository";
 
@@ -40,7 +44,7 @@ locations.get("/:locationId", async (c) => {
   const membership = await findActiveOrganizationMembership(db, user.id, location.organization_id);
 
   if (!membership) {
-    logErrorResponse(c, "Location not found");
+    logErrorResponse(c, "User is not a member of the location organization");
     return c.json({ error: "Location not found" }, 404);
   }
 
@@ -64,7 +68,7 @@ locations.get("/:locationId/items", async (c) => {
   const membership = await findActiveOrganizationMembership(db, user.id, location.organization_id);
 
   if (!membership) {
-    logErrorResponse(c, "Location not found");
+    logErrorResponse(c, "User is not a member of the location organization");
     return c.json({ error: "Location not found" }, 404);
   }
 
@@ -79,6 +83,48 @@ locations.get("/:locationId/items", async (c) => {
       category,
       quantity,
     })),
+  });
+});
+
+/**
+ * Returns one item from one location when the current user belongs to its organization.
+ */
+locations.get("/:locationId/items/:itemId", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const locationId = c.req.param("locationId");
+  const itemId = c.req.param("itemId");
+
+  const location = await findActiveLocationById(db, locationId);
+
+  if (!location?.organization_id) {
+    logErrorResponse(c, "Location not found");
+    return c.json({ error: "Location not found" }, 404);
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, location.organization_id);
+
+  if (!membership) {
+    logErrorResponse(c, "User is not a member of the location organization");
+    return c.json({ error: "Location not found" }, 404);
+  }
+
+  const locationItem = await findActiveItemByLocation(db, {
+    itemId,
+    locationId,
+    organizationId: location.organization_id,
+  });
+
+  if (!locationItem) {
+    logErrorResponse(c, "Item not found");
+    return c.json({ error: "Item not found" }, 404);
+  }
+
+  return c.json({
+    item: {
+      ...locationItem.item,
+      category: locationItem.category,
+      quantity: locationItem.quantity,
+    },
   });
 });
 
@@ -106,7 +152,7 @@ locations.post("/:locationId/items", async (c) => {
   const membership = await findActiveOrganizationMembership(db, user.id, location.organization_id);
 
   if (!membership) {
-    logErrorResponse(c, "Location not found");
+    logErrorResponse(c, "User is not a member of the location organization");
     return c.json({ error: "Location not found" }, 404);
   }
 

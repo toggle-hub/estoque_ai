@@ -85,3 +85,48 @@ export const listActiveItemsByLocation = async (
       ),
     )
     .orderBy(itemsTable.name);
+
+/**
+ * Returns one active item linked to one location with its category when available.
+ *
+ * @param database Database handle.
+ * @param input Item, location, and organization scope.
+ * @returns Matching item payload when found, otherwise `undefined`.
+ */
+export const findActiveItemByLocation = async (
+  database: Database,
+  input: {
+    locationId: string;
+    organizationId: string;
+    itemId: string;
+  },
+) => {
+  const [locationItem] = await database
+    .select({
+      item: itemsTable,
+      category: categoriesTable,
+      quantity: stockLevelsTable.quantity,
+    })
+    .from(stockLevelsTable)
+    .innerJoin(
+      itemsTable,
+      and(
+        eq(itemsTable.id, stockLevelsTable.item_id),
+        eq(itemsTable.id, input.itemId),
+        isNull(itemsTable.deleted_at),
+      ),
+    )
+    .leftJoin(
+      categoriesTable,
+      and(eq(categoriesTable.id, itemsTable.category_id), isNull(categoriesTable.deleted_at)),
+    )
+    .where(
+      and(
+        eq(stockLevelsTable.location_id, input.locationId),
+        eq(stockLevelsTable.organization_id, input.organizationId),
+      ),
+    )
+    .limit(1);
+
+  return locationItem;
+};
