@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { db } from "../db";
 import { type AuthenticatedAppEnv, authMiddleware, getAuthenticatedUser } from "../lib/auth";
@@ -9,6 +9,7 @@ import {
   createItem,
   findActiveItemByLocation,
   listActiveItemsByLocation,
+  softDeleteItemByLocation,
 } from "../repositories/item.repository";
 import { findActiveLocationById } from "../repositories/location.repository";
 import { findActiveOrganizationMembership } from "../repositories/organization.repository";
@@ -28,53 +29,73 @@ const itemSchema = z.object({
 locations.use("*", authMiddleware);
 
 /**
- * Returns one location when the current user belongs to its parent organization.
+ * Loads the active location and current user's membership for location-scoped routes.
+ *
+ * @param c Hono request context.
+ * @param options Permission requirements for the route.
+ * @returns Location context or an HTTP response when access should stop.
  */
-locations.get("/:locationId", async (c) => {
+const getLocationContext = async (
+  c: Context<AuthenticatedAppEnv>,
+  options: { requireWrite?: boolean } = {},
+) => {
   const user = getAuthenticatedUser(c);
   const locationId = c.req.param("locationId");
 
-  const location = await findActiveLocationById(db, locationId);
-
-  if (!location?.organization_id) {
+  if (!locationId) {
     logErrorResponse(c, "Location not found");
-    return c.json({ error: "Location not found" }, 404);
+    return { response: c.json({ error: "Location not found" }, 404) };
   }
 
-  const membership = await findActiveOrganizationMembership(db, user.id, location.organization_id);
+  const location = await findActiveLocationById(db, locationId);
+  const organizationId = location?.organization_id;
+
+  if (!location || !organizationId) {
+    logErrorResponse(c, "Location not found");
+    return { response: c.json({ error: "Location not found" }, 404) };
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
 
   if (!membership) {
     logErrorResponse(c, "User is not a member of the location organization");
-    return c.json({ error: "Location not found" }, 404);
+    return { response: c.json({ error: "Location not found" }, 404) };
   }
 
-  return c.json({ location });
+  if (options.requireWrite && membership.role === "viewer") {
+    logErrorResponse(c, "Insufficient permissions");
+    return { response: c.json({ error: "Insufficient permissions" }, 403) };
+  }
+
+  return { location, locationId, membership, organizationId, response: null, user };
+};
+
+/**
+ * Returns one location when the current user belongs to its parent organization.
+ */
+locations.get("/:locationId", async (c) => {
+  const locationContext = await getLocationContext(c);
+
+  if (locationContext.response !== null) {
+    return locationContext.response;
+  }
+
+  return c.json({ location: locationContext.location });
 });
 
 /**
  * Lists items for one location when the current user belongs to its organization.
  */
 locations.get("/:locationId/items", async (c) => {
-  const user = getAuthenticatedUser(c);
-  const locationId = c.req.param("locationId");
+  const locationContext = await getLocationContext(c);
 
-  const location = await findActiveLocationById(db, locationId);
-
-  if (!location?.organization_id) {
-    logErrorResponse(c, "Location not found");
-    return c.json({ error: "Location not found" }, 404);
-  }
-
-  const membership = await findActiveOrganizationMembership(db, user.id, location.organization_id);
-
-  if (!membership) {
-    logErrorResponse(c, "User is not a member of the location organization");
-    return c.json({ error: "Location not found" }, 404);
+  if (locationContext.response !== null) {
+    return locationContext.response;
   }
 
   const locationItems = await listActiveItemsByLocation(db, {
-    locationId,
-    organizationId: location.organization_id,
+    locationId: locationContext.locationId,
+    organizationId: locationContext.organizationId,
   });
 
   return c.json({
@@ -90,28 +111,22 @@ locations.get("/:locationId/items", async (c) => {
  * Returns one item from one location when the current user belongs to its organization.
  */
 locations.get("/:locationId/items/:itemId", async (c) => {
-  const user = getAuthenticatedUser(c);
-  const locationId = c.req.param("locationId");
+  const locationContext = await getLocationContext(c);
   const itemId = c.req.param("itemId");
 
-  const location = await findActiveLocationById(db, locationId);
-
-  if (!location?.organization_id) {
-    logErrorResponse(c, "Location not found");
-    return c.json({ error: "Location not found" }, 404);
+  if (!itemId) {
+    logErrorResponse(c, "Item not found");
+    return c.json({ error: "Item not found" }, 404);
   }
 
-  const membership = await findActiveOrganizationMembership(db, user.id, location.organization_id);
-
-  if (!membership) {
-    logErrorResponse(c, "User is not a member of the location organization");
-    return c.json({ error: "Location not found" }, 404);
+  if (locationContext.response !== null) {
+    return locationContext.response;
   }
 
   const locationItem = await findActiveItemByLocation(db, {
     itemId,
-    locationId,
-    organizationId: location.organization_id,
+    locationId: locationContext.locationId,
+    organizationId: locationContext.organizationId,
   });
 
   if (!locationItem) {
@@ -129,11 +144,39 @@ locations.get("/:locationId/items/:itemId", async (c) => {
 });
 
 /**
+ * Soft deletes one item from a location when the current user can manage it.
+ */
+locations.delete("/:locationId/items/:itemId", async (c) => {
+  const locationContext = await getLocationContext(c, { requireWrite: true });
+  const itemId = c.req.param("itemId");
+
+  if (!itemId) {
+    logErrorResponse(c, "Item not found");
+    return c.json({ error: "Item not found" }, 404);
+  }
+
+  if (locationContext.response !== null) {
+    return locationContext.response;
+  }
+
+  const item = await softDeleteItemByLocation(db, {
+    itemId,
+    locationId: locationContext.locationId,
+    organizationId: locationContext.organizationId,
+  });
+
+  if (!item) {
+    logErrorResponse(c, "Item not found");
+    return c.json({ error: "Item not found" }, 404);
+  }
+
+  return c.body(null, 204);
+});
+
+/**
  * Creates an item for the location organization when the current user can manage it.
  */
 locations.post("/:locationId/items", async (c) => {
-  const user = getAuthenticatedUser(c);
-  const locationId = c.req.param("locationId");
   const payload = await c.req.json().catch(() => null);
   const parsed = itemSchema.safeParse(payload);
 
@@ -142,23 +185,10 @@ locations.post("/:locationId/items", async (c) => {
     return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
   }
 
-  const location = await findActiveLocationById(db, locationId);
+  const locationContext = await getLocationContext(c, { requireWrite: true });
 
-  if (!location?.organization_id) {
-    logErrorResponse(c, "Location not found");
-    return c.json({ error: "Location not found" }, 404);
-  }
-
-  const membership = await findActiveOrganizationMembership(db, user.id, location.organization_id);
-
-  if (!membership) {
-    logErrorResponse(c, "User is not a member of the location organization");
-    return c.json({ error: "Location not found" }, 404);
-  }
-
-  if (membership.role === "viewer") {
-    logErrorResponse(c, "Insufficient permissions");
-    return c.json({ error: "Insufficient permissions" }, 403);
+  if (locationContext.response !== null) {
+    return locationContext.response;
   }
 
   let category: Awaited<ReturnType<typeof findActiveCategoryByIdAndOrganizationId>> | null = null;
@@ -166,7 +196,7 @@ locations.post("/:locationId/items", async (c) => {
     category = await findActiveCategoryByIdAndOrganizationId(
       db,
       parsed.data.category_id,
-      location.organization_id,
+      locationContext.organizationId,
     );
 
     if (!category) {
@@ -177,8 +207,8 @@ locations.post("/:locationId/items", async (c) => {
 
   try {
     const item = await createItem(db, {
-      organizationId: location.organization_id,
-      locationId,
+      organizationId: locationContext.organizationId,
+      locationId: locationContext.locationId,
       categoryId: parsed.data.category_id,
       sku: parsed.data.sku,
       name: parsed.data.name,
@@ -208,9 +238,9 @@ locations.post("/:locationId/items", async (c) => {
           error: {
             code: databaseError?.code,
             constraint: databaseError?.constraint,
-            locationId,
+            locationId: locationContext.locationId,
             sku: parsed.data.sku,
-            userId: user.id,
+            userId: locationContext.user.id,
           },
         },
         "Item create failed due to duplicate SKU",
