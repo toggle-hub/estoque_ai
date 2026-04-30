@@ -499,6 +499,163 @@ describe("location routes", () => {
   );
 
   it(
+    "soft deletes a location item when the user can manage the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: organizationId,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+          quantity: 7,
+        })
+        .expect(201);
+
+      await request(getAppServer())
+        .delete(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(204);
+
+      const [deletedItem] = await getDatabase().select().from(itemsTable);
+      expect(deletedItem).toMatchObject({
+        id: createItemResponse.body.item.id,
+        is_active: false,
+      });
+      expect(deletedItem.deleted_at).toBeInstanceOf(Date);
+
+      await request(getAppServer())
+        .get(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(404);
+
+      const listResponse = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(200);
+
+      expect(listResponse.body.items).toEqual([]);
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item deletion when the user is a viewer",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: organizationId,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "viewer"],
+      );
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .delete(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(403);
+
+      expect(response.body).toEqual({
+        error: "Insufficient permissions",
+      });
+
+      const [item] = await getDatabase().select().from(itemsTable);
+      expect(item.deleted_at).toBeNull();
+      expect(item.is_active).toBe(true);
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item deletion when the user does not belong to the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .delete(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Location not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects location item listing when the user does not belong to the organization",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");

@@ -130,3 +130,61 @@ export const findActiveItemByLocation = async (
 
   return locationItem;
 };
+
+/**
+ * Soft deletes one active item linked to one location.
+ *
+ * @param database Database handle.
+ * @param input Item, location, and organization scope.
+ * @returns Deleted item when found, otherwise `undefined`.
+ */
+export const softDeleteItemByLocation = async (
+  database: Database,
+  input: {
+    locationId: string;
+    organizationId: string;
+    itemId: string;
+  },
+) =>
+  database.transaction(async (tx) => {
+    const [locationItem] = await tx
+      .select({ item: itemsTable })
+      .from(stockLevelsTable)
+      .innerJoin(
+        itemsTable,
+        and(
+          eq(itemsTable.id, stockLevelsTable.item_id),
+          eq(itemsTable.id, input.itemId),
+          isNull(itemsTable.deleted_at),
+        ),
+      )
+      .where(
+        and(
+          eq(stockLevelsTable.location_id, input.locationId),
+          eq(stockLevelsTable.organization_id, input.organizationId),
+        ),
+      )
+      .limit(1);
+
+    if (!locationItem) {
+      return undefined;
+    }
+
+    const [item] = await tx
+      .update(itemsTable)
+      .set({
+        deleted_at: new Date(),
+        is_active: false,
+        updated_at: new Date(),
+      })
+      .where(
+        and(
+          eq(itemsTable.id, input.itemId),
+          eq(itemsTable.organization_id, input.organizationId),
+          isNull(itemsTable.deleted_at),
+        ),
+      )
+      .returning();
+
+    return item;
+  });
