@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Eye, EyeOff } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -49,14 +49,14 @@ class LoginError extends Error {
  * @param values Login form values.
  * @returns Authenticated user payload.
  */
-const login = async ({ email, password }: LoginPayload) => {
+const login = async ({ email, password, remember }: LoginPayload) => {
   const response = await fetch(getApiUrl("/api/auth/login"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     credentials: "include",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, remember }),
   });
   const payload = (await response.json().catch(() => ({}))) as LoginResponse;
 
@@ -87,6 +87,7 @@ export default function LoginRoute() {
  */
 function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
   const {
@@ -108,7 +109,10 @@ function LoginPage() {
     onSuccess: async (payload) => {
       queryClient.setQueryData(["auth", "me"], payload.user);
       await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-      router.replace("/dashboard");
+      const next = searchParams.get("next");
+      const redirectPath = next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+
+      router.replace(redirectPath);
     },
   });
   const emailFieldClassName = `flex min-h-[55px] w-full cursor-text flex-col rounded-[10px] border px-4 py-[7px] focus-within:outline-[3px] focus-within:outline-offset-2 ${

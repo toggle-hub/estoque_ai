@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
 import { ApiError, getCurrentUser } from "../../lib/api";
 
@@ -18,6 +18,7 @@ type AuthGuardProps = {
 export function AuthGuard({ children }: AuthGuardProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const authQuery = useQuery({
     queryKey: ["auth", "me"],
     queryFn: getCurrentUser,
@@ -30,9 +31,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
       return;
     }
 
-    const nextPath = encodeURIComponent(pathname);
+    const search = searchParams.toString();
+    const fullPath = search ? `${pathname}?${search}` : pathname;
+    const nextPath = encodeURIComponent(fullPath);
     router.replace(`/auth/login?next=${nextPath}`);
-  }, [isUnauthorized, pathname, router]);
+  }, [isUnauthorized, pathname, router, searchParams]);
 
   if (authQuery.isPending || isUnauthorized) {
     return (
