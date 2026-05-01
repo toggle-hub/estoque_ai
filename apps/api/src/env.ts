@@ -23,6 +23,7 @@ const envSchema = z.object({
     .default(60 * 60 * 24 * 7),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
+  WEB_ORIGIN: z.url().default("http://localhost:3000"),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

@@ -59,13 +59,13 @@ const getApiUrl = (path: string) => {
  * @param values Login form values.
  * @returns Authenticated user payload.
  */
-const login = async ({ email, password, remember }: LoginPayload) => {
+const login = async ({ email, password }: LoginPayload) => {
   const response = await fetch(getApiUrl("/api/auth/login"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    credentials: remember ? "include" : "same-origin",
+    credentials: "include",
     body: JSON.stringify({ email, password }),
   });
   const payload = (await response.json().catch(() => ({}))) as LoginResponse;

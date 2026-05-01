@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { Navbar } from "../components/navbar";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -42,7 +42,10 @@ const Dashboard = () => {
           {/* Profile */}
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium">{user.name}</span>
-            <Image src={user.avatar} alt="avatar" className="w-10 h-10 rounded-full" />
+            <Avatar>
+              <AvatarImage src={user.avatar} alt={user.name} />
+              <AvatarFallback>FE</AvatarFallback>
+            </Avatar>
           </div>
         </header>
 

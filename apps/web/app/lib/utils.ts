@@ -1,0 +1,10 @@
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/**
+ * Merges conditional class names and resolves Tailwind class conflicts.
+ *
+ * @param inputs Class values to combine.
+ * @returns A normalized className string.
+ */
+export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
