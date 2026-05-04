@@ -14,26 +14,11 @@ import {
 } from "../repositories/organization.repository";
 import { serializeOrganization } from "../serializers/organization.serializer";
 import { sanitizeUser } from "../serializers/user.serializer";
+import { categorySchema } from "./schemas/category.schema";
+import { locationSchema } from "./schemas/location.schema";
+import { organizationSchema } from "./schemas/organization.schema";
 
 const organizations = new Hono<AuthenticatedAppEnv>().basePath("/organizations");
-
-const organizationSchema = z.object({
-  name: z.string().trim().min(1),
-  cnpj: z.string().trim().min(1).max(18).optional(),
-  email: z.email().optional(),
-  phone: z.string().trim().min(1).max(20).optional(),
-  plan_type: z.string().trim().min(1).max(50).optional(),
-});
-
-const locationSchema = z.object({
-  name: z.string().trim().min(1),
-  address: z.string().trim().min(1).optional(),
-});
-
-const categorySchema = z.object({
-  name: z.string().trim().min(1).max(255),
-  description: z.string().trim().min(1).optional(),
-});
 
 organizations.use("*", authMiddleware);
 
