@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
 import { getCurrentUser } from "../../lib/api";
+import { Spinner } from "../ui/spinner";
 
 type GuestGuardProps = {
   children: ReactNode;
@@ -33,8 +34,8 @@ export function GuestGuard({ children }: GuestGuardProps) {
 
   if (authQuery.isPending || authQuery.data) {
     return (
-      <main className="grid min-h-svh place-items-center bg-white text-sm text-[#667085]">
-        Loading...
+      <main className="grid min-h-svh place-items-center bg-white">
+        <Spinner />
       </main>
     );
   }

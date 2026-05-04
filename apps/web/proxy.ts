@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const authCookieName = process.env.AUTH_COOKIE_NAME ?? "__Host-estoque_ai_session";
+const sessionVerificationTimeoutMs = 3_000;
 
 /**
  * Builds an API URL from the optional public API origin.
@@ -26,11 +27,17 @@ const verifySession = async (request: NextRequest) => {
     return false;
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), sessionVerificationTimeoutMs);
+
   const response = await fetch(getApiUrl(request, "/api/auth/me"), {
     headers: {
       cookie: request.headers.get("cookie") ?? "",
     },
+    signal: controller.signal,
   }).catch(() => null);
+
+  clearTimeout(timeout);
 
   return response?.ok ?? false;
 };

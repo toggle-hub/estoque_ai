@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
 import { ApiError, getCurrentUser } from "../../lib/api";
+import { Spinner } from "../ui/spinner";
 
 type AuthGuardProps = {
   children: ReactNode;
@@ -38,8 +39,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   if (authQuery.isPending || isUnauthorized) {
     return (
-      <main className="grid min-h-svh place-items-center bg-white text-sm text-[#667085]">
-        Loading...
+      <main className="grid min-h-svh place-items-center bg-white">
+        <Spinner />
       </main>
     );
   }
