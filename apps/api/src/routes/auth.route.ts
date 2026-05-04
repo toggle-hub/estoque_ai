@@ -15,20 +15,10 @@ import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-e
 import { logErrorResponse, logGenericErrorResponse } from "../lib/http-log";
 import { createUser, findActiveUserByEmail } from "../repositories/user.repository";
 import { sanitizeUser } from "../serializers/user.serializer";
+import { loginSchema, registerSchema } from "./schemas/auth.schema";
 
 const auth = new Hono<HonoPinoEnv>().basePath("/auth");
 const protectedAuth = new Hono<AuthenticatedAppEnv>();
-
-const registerSchema = z.object({
-  email: z.email(),
-  name: z.string().trim().min(1),
-  password: z.string().min(8),
-});
-
-const loginSchema = z.object({
-  email: z.email(),
-  password: z.string().min(1),
-});
 
 /**
  * Creates a user account and immediately establishes an authenticated session.

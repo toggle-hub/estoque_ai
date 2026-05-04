@@ -4,6 +4,7 @@ import { db } from "../db";
 import { type AuthenticatedAppEnv, authMiddleware, getAuthenticatedUser } from "../lib/auth";
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
+import { createCategory } from "../repositories/category.repository";
 import { listActiveLocationsByOrganizationId } from "../repositories/location.repository";
 import {
   createLocation,
@@ -13,21 +14,11 @@ import {
 } from "../repositories/organization.repository";
 import { serializeOrganization } from "../serializers/organization.serializer";
 import { sanitizeUser } from "../serializers/user.serializer";
+import { categorySchema } from "./schemas/category.schema";
+import { locationSchema } from "./schemas/location.schema";
+import { organizationSchema } from "./schemas/organization.schema";
 
 const organizations = new Hono<AuthenticatedAppEnv>().basePath("/organizations");
-
-const organizationSchema = z.object({
-  name: z.string().trim().min(1),
-  cnpj: z.string().trim().min(1).max(18).optional(),
-  email: z.email().optional(),
-  phone: z.string().trim().min(1).max(20).optional(),
-  plan_type: z.string().trim().min(1).max(50).optional(),
-});
-
-const locationSchema = z.object({
-  name: z.string().trim().min(1),
-  address: z.string().trim().min(1).optional(),
-});
 
 organizations.use("*", authMiddleware);
 
@@ -174,6 +165,47 @@ organizations.post("/:organizationId/locations", async (c) => {
   });
 
   return c.json({ location }, 201);
+});
+
+/**
+ * Creates a category for one organization when the current user can manage it.
+ */
+organizations.post("/:organizationId/categories", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+
+  if (!z.string().uuid().safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
+
+  const payload = await c.req.json().catch(() => null);
+  const parsed = categorySchema.safeParse(payload);
+
+  if (!parsed.success) {
+    logErrorResponse(c, "Invalid request body");
+    return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  if (!["admin", "manager"].includes(membership.role)) {
+    logErrorResponse(c, "Insufficient permissions");
+    return c.json({ error: "Insufficient permissions" }, 403);
+  }
+
+  const category = await createCategory(db, {
+    organizationId,
+    name: parsed.data.name,
+    description: parsed.data.description,
+  });
+
+  return c.json({ category }, 201);
 });
 
 export { organizations };
