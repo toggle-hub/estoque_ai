@@ -17,6 +17,21 @@ const getApiUrl = (request: NextRequest, path: string) => {
 };
 
 /**
+ * Extracts the auth cookie from a Cookie header.
+ *
+ * @param cookieHeader Raw Cookie header value.
+ * @returns Cookie header containing only the auth cookie.
+ */
+const getAuthCookie = (cookieHeader: string | null) => {
+  const authCookie = cookieHeader
+    ?.split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${authCookieName}=`));
+
+  return authCookie ?? "";
+};
+
+/**
  * Verifies the current request cookie against the auth API.
  *
  * @param request Incoming Next.js request.
@@ -29,10 +44,11 @@ const verifySession = async (request: NextRequest) => {
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), sessionVerificationTimeoutMs);
+  const authCookie = getAuthCookie(request.headers.get("cookie"));
 
   const response = await fetch(getApiUrl(request, "/api/auth/me"), {
     headers: {
-      cookie: request.headers.get("cookie") ?? "",
+      cookie: authCookie,
     },
     signal: controller.signal,
   }).catch(() => null);
@@ -44,9 +60,6 @@ const verifySession = async (request: NextRequest) => {
 
 /**
  * Redirects protected routes when the current session cannot be verified.
- *
- * @param request Incoming Next.js request.
- * @returns Proxy response.
  */
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
