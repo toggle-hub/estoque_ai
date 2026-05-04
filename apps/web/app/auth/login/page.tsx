@@ -28,6 +28,9 @@ type LoginPayload = z.output<typeof loginSchema>;
 
 type LoginResponse = {
   error?: string;
+  user: AuthenticatedUser;
+};
+type LoginResponsePayload = Omit<LoginResponse, "user"> & {
   user?: AuthenticatedUser | null;
 };
 
@@ -58,7 +61,7 @@ const login = async ({ email, password, remember }: LoginPayload) => {
     credentials: "include",
     body: JSON.stringify({ email, password, remember }),
   });
-  const payload = (await response.json().catch(() => ({}))) as LoginResponse;
+  const payload = (await response.json().catch(() => ({}))) as LoginResponsePayload;
 
   if (!response.ok) {
     throw new LoginError(payload.error ?? "Login failed. Check your email and password.");
@@ -68,7 +71,10 @@ const login = async ({ email, password, remember }: LoginPayload) => {
     throw new LoginError("Login response did not include an authenticated user.");
   }
 
-  return payload;
+  return {
+    ...payload,
+    user: payload.user,
+  } satisfies LoginResponse;
 };
 
 /**
@@ -110,6 +116,10 @@ function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: async (payload) => {
+      if (!payload.user) {
+        throw new LoginError("Login response did not include an authenticated user.");
+      }
+
       queryClient.setQueryData(["auth", "me"], payload.user);
       await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
       const next = new URLSearchParams(window.location.search).get("next");
