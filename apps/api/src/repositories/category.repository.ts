@@ -5,6 +5,33 @@ import { categoriesTable } from "../db/schema";
 type Database = typeof db;
 
 /**
+ * Creates a category owned by one organization.
+ *
+ * @param database Database handle.
+ * @param input Category attributes and organization scope.
+ * @returns Inserted category.
+ */
+export const createCategory = async (
+  database: Database,
+  input: {
+    organizationId: string;
+    name: string;
+    description?: string;
+  },
+) => {
+  const [category] = await database
+    .insert(categoriesTable)
+    .values({
+      organization_id: input.organizationId,
+      name: input.name,
+      description: input.description,
+    })
+    .returning();
+
+  return category;
+};
+
+/**
  * Returns one active category scoped to an organization.
  *
  * @param database Database handle.

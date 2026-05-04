@@ -439,4 +439,139 @@ describe("organization routes", () => {
     },
     testTimeout,
   );
+
+  it(
+    "creates a category for an organization when the user is an admin",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const response = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/categories`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({
+          name: "Raw Materials",
+          description: "Inputs used in production",
+        })
+        .expect(201);
+
+      expect(response.body.category).toMatchObject({
+        id: expect.any(String),
+        organization_id: organizationId,
+        name: "Raw Materials",
+        description: "Inputs used in production",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category creation with an invalid payload",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const response = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/categories`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({
+          name: "   ",
+        })
+        .expect(400);
+
+      expect(response.body.error).toBe("Invalid request body");
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category creation when the current user does not belong to the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const response = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/categories`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({ name: "Raw Materials" })
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Organization not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category creation when the current user is a viewer",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "viewer"],
+      );
+
+      const response = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/categories`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({ name: "Raw Materials" })
+        .expect(403);
+
+      expect(response.body).toEqual({
+        error: "Insufficient permissions",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category creation without authentication",
+    async () => {
+      const response = await request(getAppServer())
+        .post("/api/organizations/test-org/categories")
+        .send({ name: "No Auth Category" })
+        .expect(401);
+
+      expect(response.body).toEqual({
+        error: "Missing authentication token",
+      });
+    },
+    testTimeout,
+  );
 });
