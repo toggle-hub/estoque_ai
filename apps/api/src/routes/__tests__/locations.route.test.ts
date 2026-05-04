@@ -329,6 +329,124 @@ describe("location routes", () => {
           }),
         }),
       ]);
+      expect(response.body.pagination).toEqual({
+        limit: 50,
+        offset: 0,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "paginates location items",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      await Promise.all([
+        request(getAppServer())
+          .post(`/api/locations/${location.id}/items`)
+          .set("Cookie", getAuthCookie(adaResponse))
+          .send({
+            sku: "COMP-001",
+            name: "Alpha Sensor",
+            unit_price: 199.9,
+          })
+          .expect(201),
+        request(getAppServer())
+          .post(`/api/locations/${location.id}/items`)
+          .set("Cookie", getAuthCookie(adaResponse))
+          .send({
+            sku: "COMP-002",
+            name: "Beta Sensor",
+            unit_price: 149.9,
+          })
+          .expect(201),
+        request(getAppServer())
+          .post(`/api/locations/${location.id}/items`)
+          .set("Cookie", getAuthCookie(adaResponse))
+          .send({
+            sku: "COMP-003",
+            name: "Gamma Sensor",
+            unit_price: 249.9,
+          })
+          .expect(201),
+      ]);
+
+      const firstPageResponse = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items?limit=2`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(200);
+
+      expect(firstPageResponse.body.items).toEqual([
+        expect.objectContaining({ name: "Alpha Sensor" }),
+        expect.objectContaining({ name: "Beta Sensor" }),
+      ]);
+      expect(firstPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 0,
+        nextOffset: 2,
+        hasMore: true,
+      });
+
+      const secondPageResponse = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items?limit=2&offset=2`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(200);
+
+      expect(secondPageResponse.body.items).toEqual([
+        expect.objectContaining({ name: "Gamma Sensor" }),
+      ]);
+      expect(secondPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 2,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item listing with invalid pagination parameters",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items?limit=0`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(400);
+
+      expect(response.body.error).toBe("Invalid query parameters");
     },
     testTimeout,
   );
@@ -499,6 +617,37 @@ describe("location routes", () => {
   );
 
   it(
+    "rejects location item fetching with an invalid item id",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items/test-item`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid itemId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "soft deletes a location item when the user can manage the organization",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
@@ -656,6 +805,37 @@ describe("location routes", () => {
   );
 
   it(
+    "rejects location item deletion with an invalid item id",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .delete(`/api/locations/${location.id}/items/test-item`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid itemId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects location item listing when the user does not belong to the organization",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
@@ -786,6 +966,43 @@ describe("location routes", () => {
         .set("Cookie", getAuthCookie(adaResponse))
         .send({
           category_id: category.id,
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid category_id",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects item creation with an invalid category id",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: "test-category",
           sku: "COMP-001",
           name: "Industrial Sensor",
           unit_price: 199.9,
@@ -948,6 +1165,23 @@ describe("location routes", () => {
   );
 
   it(
+    "rejects location fetching with an invalid location id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/locations/test-location")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid locationId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "lists active organization locations for members only",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
@@ -1004,6 +1238,12 @@ describe("location routes", () => {
           is_active: false,
         }),
       ]);
+      expect(ownLocationsResponse.body.pagination).toEqual({
+        limit: 50,
+        offset: 0,
+        nextOffset: null,
+        hasMore: false,
+      });
 
       const missingMembershipResponse = await request(getAppServer())
         .get(`/api/organizations/${organizationId}/locations`)
@@ -1013,6 +1253,91 @@ describe("location routes", () => {
       expect(missingMembershipResponse.body).toEqual({
         error: "Organization not found",
       });
+    },
+    testTimeout,
+  );
+
+  it(
+    "paginates organization locations",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      await getDatabase()
+        .insert(locationsTable)
+        .values([
+          {
+            organization_id: organizationId,
+            name: "Alpha Warehouse",
+          },
+          {
+            organization_id: organizationId,
+            name: "Beta Store",
+          },
+          {
+            organization_id: organizationId,
+            name: "Gamma Depot",
+          },
+        ]);
+
+      const firstPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/locations?limit=2`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(200);
+
+      expect(firstPageResponse.body.locations).toEqual([
+        expect.objectContaining({ name: "Alpha Warehouse" }),
+        expect.objectContaining({ name: "Beta Store" }),
+      ]);
+      expect(firstPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 0,
+        nextOffset: 2,
+        hasMore: true,
+      });
+
+      const secondPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/locations?limit=2&offset=2`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(200);
+
+      expect(secondPageResponse.body.locations).toEqual([
+        expect.objectContaining({ name: "Gamma Depot" }),
+      ]);
+      expect(secondPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 2,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects organization location listing with invalid pagination parameters",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${createResponse.body.organization.id}/locations?limit=0`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(400);
+
+      expect(response.body.error).toBe("Invalid query parameters");
     },
     testTimeout,
   );

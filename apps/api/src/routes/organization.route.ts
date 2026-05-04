@@ -4,7 +4,10 @@ import { db } from "../db";
 import { type AuthenticatedAppEnv, authMiddleware, getAuthenticatedUser } from "../lib/auth";
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
-import { createCategory } from "../repositories/category.repository";
+import {
+  createCategory,
+  listActiveCategoriesByOrganizationId,
+} from "../repositories/category.repository";
 import { listActiveLocationsByOrganizationId } from "../repositories/location.repository";
 import {
   createLocation,
@@ -17,6 +20,8 @@ import { sanitizeUser } from "../serializers/user.serializer";
 import { categorySchema } from "./schemas/category.schema";
 import { locationSchema } from "./schemas/location.schema";
 import { organizationSchema } from "./schemas/organization.schema";
+import { paginationQuerySchema } from "./schemas/pagination.schema";
+import { uuidSchema } from "./schemas/uuid.schema";
 
 const organizations = new Hono<AuthenticatedAppEnv>().basePath("/organizations");
 
@@ -96,8 +101,12 @@ organizations.post("/", async (c) => {
  */
 organizations.get("/:organizationId", async (c) => {
   const user = getAuthenticatedUser(c);
-
   const organizationId = c.req.param("organizationId");
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
 
   const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
 
@@ -118,6 +127,11 @@ organizations.get("/:organizationId/locations", async (c) => {
   const user = getAuthenticatedUser(c);
   const organizationId = c.req.param("organizationId");
 
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
+
   const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
 
   if (!membership) {
@@ -125,10 +139,88 @@ organizations.get("/:organizationId/locations", async (c) => {
     return c.json({ error: "Organization not found" }, 404);
   }
 
-  const organizationLocations = await listActiveLocationsByOrganizationId(db, organizationId);
+  const parsedQuery = paginationQuerySchema.safeParse({
+    limit: c.req.query("limit"),
+    offset: c.req.query("offset"),
+  });
+
+  if (!parsedQuery.success) {
+    logErrorResponse(c, "Invalid query parameters");
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedQuery.error) },
+      400,
+    );
+  }
+
+  const locationPage = await listActiveLocationsByOrganizationId(db, {
+    organizationId,
+    limit: parsedQuery.data.limit,
+    offset: parsedQuery.data.offset,
+  });
+  const hasMore = locationPage.length > parsedQuery.data.limit;
+  const organizationLocations = hasMore
+    ? locationPage.slice(0, parsedQuery.data.limit)
+    : locationPage;
 
   return c.json({
     locations: organizationLocations,
+    pagination: {
+      limit: parsedQuery.data.limit,
+      offset: parsedQuery.data.offset,
+      nextOffset: hasMore ? parsedQuery.data.offset + parsedQuery.data.limit : null,
+      hasMore,
+    },
+  });
+});
+
+/**
+ * Lists all categories for one organization when the current user is a member.
+ */
+organizations.get("/:organizationId/categories", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const parsedQuery = paginationQuerySchema.safeParse({
+    limit: c.req.query("limit"),
+    offset: c.req.query("offset"),
+  });
+
+  if (!parsedQuery.success) {
+    logErrorResponse(c, "Invalid query parameters");
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedQuery.error) },
+      400,
+    );
+  }
+
+  const categoryPage = await listActiveCategoriesByOrganizationId(db, {
+    organizationId,
+    limit: parsedQuery.data.limit,
+    offset: parsedQuery.data.offset,
+  });
+  const hasMore = categoryPage.length > parsedQuery.data.limit;
+  const categories = hasMore ? categoryPage.slice(0, parsedQuery.data.limit) : categoryPage;
+
+  return c.json({
+    categories,
+    pagination: {
+      limit: parsedQuery.data.limit,
+      offset: parsedQuery.data.offset,
+      nextOffset: hasMore ? parsedQuery.data.offset + parsedQuery.data.limit : null,
+      hasMore,
+    },
   });
 });
 
@@ -140,6 +232,11 @@ organizations.post("/:organizationId/locations", async (c) => {
   const organizationId = c.req.param("organizationId");
   const payload = await c.req.json().catch(() => null);
   const parsed = locationSchema.safeParse(payload);
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
 
   if (!parsed.success) {
     logErrorResponse(c, "Invalid request body");
@@ -174,7 +271,7 @@ organizations.post("/:organizationId/categories", async (c) => {
   const user = getAuthenticatedUser(c);
   const organizationId = c.req.param("organizationId");
 
-  if (!z.string().uuid().safeParse(organizationId).success) {
+  if (!uuidSchema.safeParse(organizationId).success) {
     logErrorResponse(c, "Invalid organizationId");
     return c.json({ error: "Invalid organizationId" }, 400);
   }

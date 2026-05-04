@@ -284,6 +284,23 @@ describe("organization routes", () => {
   );
 
   it(
+    "rejects organization fetching with an invalid organization id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/organizations/test-org")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid organizationId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects organization routes without authentication",
     async () => {
       const listResponse = await request(getAppServer()).get("/api/organizations").expect(401);
@@ -441,6 +458,23 @@ describe("organization routes", () => {
   );
 
   it(
+    "rejects location listing with an invalid organization id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/organizations/test-org/locations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid organizationId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "creates a category for an organization when the user is an admin",
     async () => {
       const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
@@ -467,6 +501,247 @@ describe("organization routes", () => {
         organization_id: organizationId,
         name: "Raw Materials",
         description: "Inputs used in production",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "lists categories for an organization when the user belongs to it",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const firstOrganizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const secondOrganizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Grace Retail" })
+        .expect(201);
+
+      const organizationId = firstOrganizationResponse.body.organization.id;
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO categories (organization_id, name, description, deleted_at)
+          VALUES
+            ($1, $2, $3, NULL),
+            ($1, $4, $5, NULL),
+            ($1, $6, $7, NOW()),
+            ($8, $9, $10, NULL)
+        `,
+        [
+          organizationId,
+          "Beta Supplies",
+          "Listed second",
+          "Alpha Materials",
+          "Listed first",
+          "Deleted Category",
+          "Filtered out",
+          secondOrganizationResponse.body.organization.id,
+          "Other Organization Category",
+          "Filtered by organization",
+        ],
+      );
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/categories`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(response.body.categories).toHaveLength(2);
+      expect(response.body.categories).toEqual([
+        expect.objectContaining({
+          id: expect.any(String),
+          organization_id: organizationId,
+          name: "Alpha Materials",
+          description: "Listed first",
+        }),
+        expect.objectContaining({
+          id: expect.any(String),
+          organization_id: organizationId,
+          name: "Beta Supplies",
+          description: "Listed second",
+        }),
+      ]);
+      expect(response.body.pagination).toEqual({
+        limit: 50,
+        offset: 0,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "paginates categories for infinite scrolling",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO categories (organization_id, name)
+          VALUES
+            ($1, $2),
+            ($1, $3),
+            ($1, $4)
+        `,
+        [organizationId, "Alpha Materials", "Beta Supplies", "Gamma Tools"],
+      );
+
+      const firstPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/categories?limit=2`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(firstPageResponse.body.categories).toEqual([
+        expect.objectContaining({
+          name: "Alpha Materials",
+        }),
+        expect.objectContaining({
+          name: "Beta Supplies",
+        }),
+      ]);
+      expect(firstPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 0,
+        nextOffset: 2,
+        hasMore: true,
+      });
+
+      const secondPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/categories?limit=2&offset=2`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(secondPageResponse.body.categories).toEqual([
+        expect.objectContaining({
+          name: "Gamma Tools",
+        }),
+      ]);
+      expect(secondPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 2,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category listing with invalid pagination parameters",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationResponse.body.organization.id}/categories?limit=0`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body.error).toBe("Invalid query parameters");
+    },
+    testTimeout,
+  );
+
+  it(
+    "returns an empty category list for an organization without categories",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationResponse.body.organization.id}/categories`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(response.body).toEqual({
+        categories: [],
+        pagination: {
+          limit: 50,
+          offset: 0,
+          nextOffset: null,
+          hasMore: false,
+        },
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category listing when the current user does not belong to the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationResponse.body.organization.id}/categories`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Organization not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category listing with an invalid organization id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/organizations/test-org/categories")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid organizationId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category listing without authentication",
+    async () => {
+      const response = await request(getAppServer())
+        .get("/api/organizations/test-org/categories")
+        .expect(401);
+
+      expect(response.body).toEqual({
+        error: "Missing authentication token",
       });
     },
     testTimeout,

@@ -14,6 +14,8 @@ import {
 import { findActiveLocationById } from "../repositories/location.repository";
 import { findActiveOrganizationMembership } from "../repositories/organization.repository";
 import { itemSchema } from "./schemas/item.schema";
+import { paginationQuerySchema } from "./schemas/pagination.schema";
+import { uuidSchema } from "./schemas/uuid.schema";
 
 const locations = new Hono<AuthenticatedAppEnv>().basePath("/locations");
 
@@ -33,9 +35,9 @@ const getLocationContext = async (
   const user = getAuthenticatedUser(c);
   const locationId = c.req.param("locationId");
 
-  if (!locationId) {
-    logErrorResponse(c, "Location not found");
-    return { response: c.json({ error: "Location not found" }, 404) };
+  if (!uuidSchema.safeParse(locationId).success) {
+    logErrorResponse(c, "Invalid locationId");
+    return { response: c.json({ error: "Invalid locationId" }, 400) };
   }
 
   const location = await findActiveLocationById(db, locationId);
@@ -84,10 +86,27 @@ locations.get("/:locationId/items", async (c) => {
     return locationContext.response;
   }
 
-  const locationItems = await listActiveItemsByLocation(db, {
+  const parsedQuery = paginationQuerySchema.safeParse({
+    limit: c.req.query("limit"),
+    offset: c.req.query("offset"),
+  });
+
+  if (!parsedQuery.success) {
+    logErrorResponse(c, "Invalid query parameters");
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedQuery.error) },
+      400,
+    );
+  }
+
+  const itemPage = await listActiveItemsByLocation(db, {
     locationId: locationContext.locationId,
     organizationId: locationContext.organizationId,
+    limit: parsedQuery.data.limit,
+    offset: parsedQuery.data.offset,
   });
+  const hasMore = itemPage.length > parsedQuery.data.limit;
+  const locationItems = hasMore ? itemPage.slice(0, parsedQuery.data.limit) : itemPage;
 
   return c.json({
     items: locationItems.map(({ item, category, quantity }) => ({
@@ -95,6 +114,12 @@ locations.get("/:locationId/items", async (c) => {
       category,
       quantity,
     })),
+    pagination: {
+      limit: parsedQuery.data.limit,
+      offset: parsedQuery.data.offset,
+      nextOffset: hasMore ? parsedQuery.data.offset + parsedQuery.data.limit : null,
+      hasMore,
+    },
   });
 });
 
@@ -105,9 +130,9 @@ locations.get("/:locationId/items/:itemId", async (c) => {
   const locationContext = await getLocationContext(c);
   const itemId = c.req.param("itemId");
 
-  if (!itemId) {
-    logErrorResponse(c, "Item not found");
-    return c.json({ error: "Item not found" }, 404);
+  if (!uuidSchema.safeParse(itemId).success) {
+    logErrorResponse(c, "Invalid itemId");
+    return c.json({ error: "Invalid itemId" }, 400);
   }
 
   if (locationContext.response !== null) {
@@ -141,9 +166,9 @@ locations.delete("/:locationId/items/:itemId", async (c) => {
   const locationContext = await getLocationContext(c, { requireWrite: true });
   const itemId = c.req.param("itemId");
 
-  if (!itemId) {
-    logErrorResponse(c, "Item not found");
-    return c.json({ error: "Item not found" }, 404);
+  if (!uuidSchema.safeParse(itemId).success) {
+    logErrorResponse(c, "Invalid itemId");
+    return c.json({ error: "Invalid itemId" }, 400);
   }
 
   if (locationContext.response !== null) {
@@ -184,6 +209,11 @@ locations.post("/:locationId/items", async (c) => {
 
   let category: Awaited<ReturnType<typeof findActiveCategoryByIdAndOrganizationId>> | null = null;
   if (parsed.data.category_id) {
+    if (!uuidSchema.safeParse(parsed.data.category_id).success) {
+      logErrorResponse(c, "Invalid category_id");
+      return c.json({ error: "Invalid category_id" }, 400);
+    }
+
     category = await findActiveCategoryByIdAndOrganizationId(
       db,
       parsed.data.category_id,

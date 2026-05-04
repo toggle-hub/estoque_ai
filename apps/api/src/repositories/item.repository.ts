@@ -54,13 +54,15 @@ export const createItem = async (
  *
  * @param database Database handle.
  * @param input Location and organization scope.
- * @returns Items ordered by item name with optional category payloads.
+ * @returns Items ordered by item name with optional category payloads plus one extra row when another page exists.
  */
 export const listActiveItemsByLocation = async (
   database: Database,
   input: {
     locationId: string;
     organizationId: string;
+    limit: number;
+    offset: number;
   },
 ) =>
   database
@@ -84,7 +86,9 @@ export const listActiveItemsByLocation = async (
         eq(stockLevelsTable.organization_id, input.organizationId),
       ),
     )
-    .orderBy(itemsTable.name);
+    .orderBy(itemsTable.name)
+    .limit(input.limit + 1)
+    .offset(input.offset);
 
 /**
  * Returns one active item linked to one location with its category when available.

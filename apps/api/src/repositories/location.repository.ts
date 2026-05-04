@@ -8,20 +8,29 @@ type Database = typeof db;
  * Returns all active locations for one organization.
  *
  * @param database Database handle.
- * @param organizationId Organization identifier.
- * @returns Active locations ordered by name.
+ * @param input Organization scope and pagination controls.
+ * @returns Active locations ordered by name plus one extra row when another page exists.
  */
 export const listActiveLocationsByOrganizationId = async (
   database: Database,
-  organizationId: string,
+  input: {
+    organizationId: string;
+    limit: number;
+    offset: number;
+  },
 ) =>
   database
     .select()
     .from(locationsTable)
     .where(
-      and(eq(locationsTable.organization_id, organizationId), isNull(locationsTable.deleted_at)),
+      and(
+        eq(locationsTable.organization_id, input.organizationId),
+        isNull(locationsTable.deleted_at),
+      ),
     )
-    .orderBy(locationsTable.name);
+    .orderBy(locationsTable.name)
+    .limit(input.limit + 1)
+    .offset(input.offset);
 
 /**
  * Returns one active location by id.
