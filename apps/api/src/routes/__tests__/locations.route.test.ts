@@ -920,6 +920,79 @@ describe("location routes", () => {
   );
 
   it(
+    "detaches a category when updating a location item with null category_id",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [[location], [category]] = await Promise.all([
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: organizationId,
+            name: "Main Warehouse",
+          })
+          .returning(),
+        getDatabase()
+          .insert(categoriesTable)
+          .values({
+            organization_id: organizationId,
+            name: "Components",
+          })
+          .returning(),
+      ]);
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: category.id,
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          description: "Temperature sensor",
+          unit_price: 199.9,
+          reorder_point: 5,
+          quantity: 12,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .patch(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: null,
+          sku: "COMP-001-A",
+          name: "Industrial Sensor Updated",
+          description: null,
+          unit_price: 249.99,
+          reorder_point: 7,
+        })
+        .expect(200);
+
+      expect(response.body.item).toMatchObject({
+        id: createItemResponse.body.item.id,
+        organization_id: organizationId,
+        category_id: null,
+        sku: "COMP-001-A",
+        name: "Industrial Sensor Updated",
+        description: null,
+        unit_price: "249.99",
+        reorder_point: 7,
+        quantity: 12,
+        category: null,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects location item update when the user is a viewer",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
@@ -1044,6 +1117,60 @@ describe("location routes", () => {
           name: "Other Organization Category",
         })
         .returning();
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .patch(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ category_id: category.id })
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid category_id",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item update when the category is soft deleted",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [[location], [category]] = await Promise.all([
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: organizationId,
+            name: "Main Warehouse",
+          })
+          .returning(),
+        getDatabase()
+          .insert(categoriesTable)
+          .values({
+            organization_id: organizationId,
+            name: "Archived Category",
+            deleted_at: new Date(),
+          })
+          .returning(),
+      ]);
 
       const createItemResponse = await request(getAppServer())
         .post(`/api/locations/${location.id}/items`)

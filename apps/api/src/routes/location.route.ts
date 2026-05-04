@@ -219,17 +219,6 @@ locations.patch("/:locationId/items/:itemId", async (c) => {
       logErrorResponse(c, "Invalid category_id");
       return c.json({ error: "Invalid category_id" }, 400);
     }
-
-    const category = await findActiveCategoryByIdAndOrganizationId(
-      db,
-      parsed.data.category_id,
-      locationContext.organizationId,
-    );
-
-    if (!category) {
-      logErrorResponse(c, "Invalid category_id");
-      return c.json({ error: "Invalid category_id" }, 400);
-    }
   }
 
   try {
@@ -248,6 +237,11 @@ locations.patch("/:locationId/items/:itemId", async (c) => {
     if (!locationItem) {
       logErrorResponse(c, "Item not found");
       return c.json({ error: "Item not found" }, 404);
+    }
+
+    if ("error" in locationItem) {
+      logErrorResponse(c, "Invalid category_id");
+      return c.json({ error: "Invalid category_id" }, 400);
     }
 
     return c.json({

@@ -4,6 +4,14 @@ import { categoriesTable, itemsTable, stockLevelsTable } from "../db/schema";
 
 type Database = typeof db;
 
+type LocationItemPayload = {
+  item: typeof itemsTable.$inferSelect;
+  category: typeof categoriesTable.$inferSelect | null;
+  quantity: number;
+};
+
+type UpdateItemByLocationResult = LocationItemPayload | { error: "invalid_category" } | undefined;
+
 /**
  * Creates an item owned by one organization.
  *
@@ -140,7 +148,7 @@ export const findActiveItemByLocation = async (
  *
  * @param database Database handle.
  * @param input Item, location, organization scope, and update fields.
- * @returns Updated item payload when found, otherwise `undefined`.
+ * @returns Updated item payload, invalid-category marker, or `undefined` when the item is not found.
  */
 export const updateItemByLocation = async (
   database: Database,
@@ -155,7 +163,7 @@ export const updateItemByLocation = async (
     unitPrice?: string;
     reorderPoint?: number;
   },
-) =>
+): Promise<UpdateItemByLocationResult> =>
   database.transaction(async (tx) => {
     const [locationItem] = await tx
       .select({ quantity: stockLevelsTable.quantity })
@@ -178,6 +186,24 @@ export const updateItemByLocation = async (
 
     if (!locationItem) {
       return undefined;
+    }
+
+    if (input.categoryId !== undefined && input.categoryId !== null) {
+      const [category] = await tx
+        .select({ id: categoriesTable.id })
+        .from(categoriesTable)
+        .where(
+          and(
+            eq(categoriesTable.id, input.categoryId),
+            eq(categoriesTable.organization_id, input.organizationId),
+            isNull(categoriesTable.deleted_at),
+          ),
+        )
+        .limit(1);
+
+      if (!category) {
+        return { error: "invalid_category" as const };
+      }
     }
 
     const [item] = await tx
