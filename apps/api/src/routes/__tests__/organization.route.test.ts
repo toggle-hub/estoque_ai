@@ -748,6 +748,196 @@ describe("organization routes", () => {
   );
 
   it(
+    "gets a category for an organization when the user belongs to it",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const createCategoryResponse = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/categories`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({
+          name: "Raw Materials",
+          description: "Inputs used in production",
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(
+          `/api/organizations/${organizationId}/categories/${createCategoryResponse.body.category.id}`,
+        )
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(response.body.category).toMatchObject({
+        id: createCategoryResponse.body.category.id,
+        organization_id: organizationId,
+        name: "Raw Materials",
+        description: "Inputs used in production",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category fetching when the category is missing",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(
+          `/api/organizations/${organizationResponse.body.organization.id}/categories/00000000-0000-4000-8000-000000000001`,
+        )
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Category not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category fetching when the category belongs to another organization",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const firstOrganizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const secondOrganizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Grace Retail" })
+        .expect(201);
+
+      const createCategoryResponse = await request(getAppServer())
+        .post(`/api/organizations/${secondOrganizationResponse.body.organization.id}/categories`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Other Organization Category" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(
+          `/api/organizations/${firstOrganizationResponse.body.organization.id}/categories/${createCategoryResponse.body.category.id}`,
+        )
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Category not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category fetching when the current user does not belong to the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const createCategoryResponse = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/categories`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Raw Materials" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(
+          `/api/organizations/${organizationId}/categories/${createCategoryResponse.body.category.id}`,
+        )
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Organization not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category fetching when the category is soft deleted",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const deletedCategoryResponse = await cleanupPool?.query<{ id: string }>(
+        `
+          INSERT INTO categories (organization_id, name, deleted_at)
+          VALUES ($1, $2, NOW())
+          RETURNING id
+        `,
+        [organizationId, "Archived Category"],
+      );
+      const category = deletedCategoryResponse?.rows[0];
+
+      if (!category) {
+        throw new Error("Expected deleted category to be created");
+      }
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/categories/${category.id}`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Category not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category fetching without authentication",
+    async () => {
+      const response = await request(getAppServer())
+        .get(
+          "/api/organizations/00000000-0000-4000-8000-000000000001/categories/00000000-0000-4000-8000-000000000002",
+        )
+        .expect(401);
+
+      expect(response.body).toEqual({
+        error: "Missing authentication token",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "creates a category for an organization when the user is a manager",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
