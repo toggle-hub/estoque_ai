@@ -526,6 +526,24 @@ describe("organization routes", () => {
   );
 
   it(
+    "rejects category creation with an invalid organization id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .post("/api/organizations/test-org/categories")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Raw Materials" })
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid organizationId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects category creation when the current user is a viewer",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");

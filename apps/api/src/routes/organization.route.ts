@@ -173,6 +173,12 @@ organizations.post("/:organizationId/locations", async (c) => {
 organizations.post("/:organizationId/categories", async (c) => {
   const user = getAuthenticatedUser(c);
   const organizationId = c.req.param("organizationId");
+
+  if (!z.string().uuid().safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
+
   const payload = await c.req.json().catch(() => null);
   const parsed = categorySchema.safeParse(payload);
 
