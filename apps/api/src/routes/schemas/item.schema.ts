@@ -15,3 +15,14 @@ export const itemSchema = z.object({
   reorder_point: z.number().int().nonnegative().optional(),
   quantity: z.number().int().nonnegative().optional(),
 });
+
+export const itemUpdateSchema = itemSchema
+  .omit({ quantity: true })
+  .extend({
+    category_id: z.string().nullable().optional(),
+    description: z.string().trim().min(1).nullable().optional(),
+  })
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field must be provided",
+  });
