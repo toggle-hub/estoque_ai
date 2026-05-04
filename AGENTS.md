@@ -37,6 +37,10 @@ Use database row-level isolation with organization_id on every table. Simpler th
 
 All functions must be documented with JSDoc. Use `@param` tags for helpers and other non-obvious functions, but do not add `@param` for route handlers. Add `@returns` when the return value is not obvious or is part of the function contract.
 
+## Frontend Component Workflow
+
+Every new React component must include a Storybook story in `apps/web/stories`. Update an existing story when changing component variants, props, or important visual states.
+
 2. Authentication
 JWT with refresh tokens. Store tokens in database or Lambda@Edge for validation. Three roles: Admin (full access), Manager (can edit), Viewer (read-only).
 
