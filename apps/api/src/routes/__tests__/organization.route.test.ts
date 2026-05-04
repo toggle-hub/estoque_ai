@@ -284,6 +284,23 @@ describe("organization routes", () => {
   );
 
   it(
+    "rejects organization fetching with an invalid organization id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/organizations/test-org")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid organizationId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects organization routes without authentication",
     async () => {
       const listResponse = await request(getAppServer()).get("/api/organizations").expect(401);
@@ -441,6 +458,23 @@ describe("organization routes", () => {
   );
 
   it(
+    "rejects location listing with an invalid organization id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/organizations/test-org/locations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid organizationId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "creates a category for an organization when the user is an admin",
     async () => {
       const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
@@ -580,6 +614,23 @@ describe("organization routes", () => {
 
       expect(response.body).toEqual({
         error: "Organization not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category listing with an invalid organization id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/organizations/test-org/categories")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid organizationId",
       });
     },
     testTimeout,

@@ -25,6 +25,8 @@ const organizations = new Hono<AuthenticatedAppEnv>().basePath("/organizations")
 
 organizations.use("*", authMiddleware);
 
+const uuidSchema = z.string().uuid();
+
 /**
  * Lists the organizations the current user belongs to.
  */
@@ -99,8 +101,12 @@ organizations.post("/", async (c) => {
  */
 organizations.get("/:organizationId", async (c) => {
   const user = getAuthenticatedUser(c);
-
   const organizationId = c.req.param("organizationId");
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
 
   const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
 
@@ -120,6 +126,11 @@ organizations.get("/:organizationId", async (c) => {
 organizations.get("/:organizationId/locations", async (c) => {
   const user = getAuthenticatedUser(c);
   const organizationId = c.req.param("organizationId");
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
 
   const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
 
@@ -141,6 +152,11 @@ organizations.get("/:organizationId/locations", async (c) => {
 organizations.get("/:organizationId/categories", async (c) => {
   const user = getAuthenticatedUser(c);
   const organizationId = c.req.param("organizationId");
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
 
   const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
 
@@ -164,6 +180,11 @@ organizations.post("/:organizationId/locations", async (c) => {
   const organizationId = c.req.param("organizationId");
   const payload = await c.req.json().catch(() => null);
   const parsed = locationSchema.safeParse(payload);
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
 
   if (!parsed.success) {
     logErrorResponse(c, "Invalid request body");
@@ -198,7 +219,7 @@ organizations.post("/:organizationId/categories", async (c) => {
   const user = getAuthenticatedUser(c);
   const organizationId = c.req.param("organizationId");
 
-  if (!z.string().uuid().safeParse(organizationId).success) {
+  if (!uuidSchema.safeParse(organizationId).success) {
     logErrorResponse(c, "Invalid organizationId");
     return c.json({ error: "Invalid organizationId" }, 400);
   }

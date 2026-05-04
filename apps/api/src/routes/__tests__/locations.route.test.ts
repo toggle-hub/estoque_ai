@@ -499,6 +499,37 @@ describe("location routes", () => {
   );
 
   it(
+    "rejects location item fetching with an invalid item id",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/items/test-item`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid itemId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "soft deletes a location item when the user can manage the organization",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
@@ -656,6 +687,37 @@ describe("location routes", () => {
   );
 
   it(
+    "rejects location item deletion with an invalid item id",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .delete(`/api/locations/${location.id}/items/test-item`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid itemId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects location item listing when the user does not belong to the organization",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
@@ -786,6 +848,43 @@ describe("location routes", () => {
         .set("Cookie", getAuthCookie(adaResponse))
         .send({
           category_id: category.id,
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid category_id",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects item creation with an invalid category id",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: "test-category",
           sku: "COMP-001",
           name: "Industrial Sensor",
           unit_price: 199.9,
@@ -942,6 +1041,23 @@ describe("location routes", () => {
 
       expect(response.body).toEqual({
         error: "Missing authentication token",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location fetching with an invalid location id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/locations/test-location")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid locationId",
       });
     },
     testTimeout,

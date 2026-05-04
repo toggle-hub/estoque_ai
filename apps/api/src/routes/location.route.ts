@@ -19,6 +19,8 @@ const locations = new Hono<AuthenticatedAppEnv>().basePath("/locations");
 
 locations.use("*", authMiddleware);
 
+const uuidSchema = z.string().uuid();
+
 /**
  * Loads the active location and current user's membership for location-scoped routes.
  *
@@ -33,9 +35,9 @@ const getLocationContext = async (
   const user = getAuthenticatedUser(c);
   const locationId = c.req.param("locationId");
 
-  if (!locationId) {
-    logErrorResponse(c, "Location not found");
-    return { response: c.json({ error: "Location not found" }, 404) };
+  if (!uuidSchema.safeParse(locationId).success) {
+    logErrorResponse(c, "Invalid locationId");
+    return { response: c.json({ error: "Invalid locationId" }, 400) };
   }
 
   const location = await findActiveLocationById(db, locationId);
@@ -105,9 +107,9 @@ locations.get("/:locationId/items/:itemId", async (c) => {
   const locationContext = await getLocationContext(c);
   const itemId = c.req.param("itemId");
 
-  if (!itemId) {
-    logErrorResponse(c, "Item not found");
-    return c.json({ error: "Item not found" }, 404);
+  if (!uuidSchema.safeParse(itemId).success) {
+    logErrorResponse(c, "Invalid itemId");
+    return c.json({ error: "Invalid itemId" }, 400);
   }
 
   if (locationContext.response !== null) {
@@ -141,9 +143,9 @@ locations.delete("/:locationId/items/:itemId", async (c) => {
   const locationContext = await getLocationContext(c, { requireWrite: true });
   const itemId = c.req.param("itemId");
 
-  if (!itemId) {
-    logErrorResponse(c, "Item not found");
-    return c.json({ error: "Item not found" }, 404);
+  if (!uuidSchema.safeParse(itemId).success) {
+    logErrorResponse(c, "Invalid itemId");
+    return c.json({ error: "Invalid itemId" }, 400);
   }
 
   if (locationContext.response !== null) {
@@ -184,6 +186,11 @@ locations.post("/:locationId/items", async (c) => {
 
   let category: Awaited<ReturnType<typeof findActiveCategoryByIdAndOrganizationId>> | null = null;
   if (parsed.data.category_id) {
+    if (!uuidSchema.safeParse(parsed.data.category_id).success) {
+      logErrorResponse(c, "Invalid category_id");
+      return c.json({ error: "Invalid category_id" }, 400);
+    }
+
     category = await findActiveCategoryByIdAndOrganizationId(
       db,
       parsed.data.category_id,

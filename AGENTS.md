@@ -181,6 +181,9 @@ Authentication:
 - JWT validation at API Gateway or Lambda
 - No sessions (stateless Lambda)
 
+Route input validation:
+- Validate path parameters used in UUID database columns before calling repositories or queries. Return a 400 client error for malformed UUIDs instead of passing invalid IDs to PostgreSQL.
+
 Authorization:
 - Validate organization_id from JWT on every request
 - Role-based access control in Lambda
