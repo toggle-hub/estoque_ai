@@ -118,7 +118,7 @@ export const categoriesTable = pgTable(
     }),
     name: varchar({ length: 255 }).notNull(),
     description: text(),
-    created_at: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    created_at: createdAt,
     deleted_at: deletedAt,
   },
   (table) => [index("idx_categories_org").on(table.organization_id)],
@@ -197,7 +197,7 @@ export const transactionsTable = pgTable(
     reference: varchar({ length: 255 }),
     notes: text(),
     performed_by: uuid().references(() => usersTable.id),
-    created_at: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    created_at: createdAt,
   },
   (table) => [
     index("idx_transactions_org").on(table.organization_id),
