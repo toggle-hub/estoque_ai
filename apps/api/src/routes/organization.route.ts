@@ -6,6 +6,7 @@ import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-e
 import { logErrorResponse } from "../lib/http-log";
 import {
   createCategory,
+  findActiveCategoryByIdAndOrganizationId,
   listActiveCategoriesByOrganizationId,
 } from "../repositories/category.repository";
 import { listActiveLocationsByOrganizationId } from "../repositories/location.repository";
@@ -222,6 +223,41 @@ organizations.get("/:organizationId/categories", async (c) => {
       hasMore,
     },
   });
+});
+
+/**
+ * Returns one category for an organization when the current user is a member.
+ */
+organizations.get("/:organizationId/categories/:categoryId", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+  const categoryId = c.req.param("categoryId");
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
+
+  if (!uuidSchema.safeParse(categoryId).success) {
+    logErrorResponse(c, "Invalid categoryId");
+    return c.json({ error: "Invalid categoryId" }, 400);
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const category = await findActiveCategoryByIdAndOrganizationId(db, categoryId, organizationId);
+
+  if (!category) {
+    logErrorResponse(c, "Category not found");
+    return c.json({ error: "Category not found" }, 404);
+  }
+
+  return c.json({ category });
 });
 
 /**
