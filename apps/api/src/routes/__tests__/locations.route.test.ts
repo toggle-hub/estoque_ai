@@ -836,6 +836,398 @@ describe("location routes", () => {
   );
 
   it(
+    "updates a location item when the user can manage the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [[location], [firstCategory], [secondCategory]] = await Promise.all([
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: organizationId,
+            name: "Main Warehouse",
+          })
+          .returning(),
+        getDatabase()
+          .insert(categoriesTable)
+          .values({
+            organization_id: organizationId,
+            name: "Components",
+          })
+          .returning(),
+        getDatabase()
+          .insert(categoriesTable)
+          .values({
+            organization_id: organizationId,
+            name: "Replacement Parts",
+          })
+          .returning(),
+      ]);
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: firstCategory.id,
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          description: "Temperature sensor",
+          unit_price: 199.9,
+          reorder_point: 5,
+          quantity: 12,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .patch(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: secondCategory.id,
+          sku: "COMP-001-A",
+          name: "Industrial Sensor Updated",
+          description: null,
+          unit_price: 249.99,
+          reorder_point: 7,
+        })
+        .expect(200);
+
+      expect(response.body.item).toMatchObject({
+        id: createItemResponse.body.item.id,
+        organization_id: organizationId,
+        category_id: secondCategory.id,
+        sku: "COMP-001-A",
+        name: "Industrial Sensor Updated",
+        description: null,
+        unit_price: "249.99",
+        reorder_point: 7,
+        quantity: 12,
+        category: expect.objectContaining({
+          id: secondCategory.id,
+          organization_id: organizationId,
+          name: "Replacement Parts",
+        }),
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item update when the user is a viewer",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: organizationId,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "viewer"],
+      );
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .patch(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({ name: "Viewer Update" })
+        .expect(403);
+
+      expect(response.body).toEqual({
+        error: "Insufficient permissions",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item update with an empty payload",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .patch(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({})
+        .expect(400);
+
+      expect(response.body.error).toBe("Invalid request body");
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item update when the category is not in the location organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const firstOrganizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const secondOrganizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Grace Retail" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: firstOrganizationResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const [category] = await getDatabase()
+        .insert(categoriesTable)
+        .values({
+          organization_id: secondOrganizationResponse.body.organization.id,
+          name: "Other Organization Category",
+        })
+        .returning();
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .patch(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ category_id: category.id })
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid category_id",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item update when the sku is already in use",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const secondItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-002",
+          name: "Pressure Sensor",
+          unit_price: 149.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .patch(`/api/locations/${location.id}/items/${secondItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ sku: "COMP-001" })
+        .expect(409);
+
+      expect(response.body).toEqual({
+        error: "SKU already in use",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item update from another location",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [location, otherLocation] = await getDatabase()
+        .insert(locationsTable)
+        .values([
+          {
+            organization_id: organizationId,
+            name: "Main Warehouse",
+          },
+          {
+            organization_id: organizationId,
+            name: "Secondary Store",
+          },
+        ])
+        .returning();
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${otherLocation.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .patch(`/api/locations/${location.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Wrong Location Update" })
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Item not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects location item update from another organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const firstOrganizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const secondOrganizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Grace Retail" })
+        .expect(201);
+
+      const [[firstLocation], [secondLocation]] = await Promise.all([
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: firstOrganizationResponse.body.organization.id,
+            name: "Main Warehouse",
+          })
+          .returning(),
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: secondOrganizationResponse.body.organization.id,
+            name: "Secondary Store",
+          })
+          .returning(),
+      ]);
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${firstLocation.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .patch(`/api/locations/${secondLocation.id}/items/${createItemResponse.body.item.id}`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Wrong Organization Update" })
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Item not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects location item listing when the user does not belong to the organization",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");

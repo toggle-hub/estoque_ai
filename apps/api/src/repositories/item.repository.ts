@@ -136,6 +136,99 @@ export const findActiveItemByLocation = async (
 };
 
 /**
+ * Updates one active item linked to one location.
+ *
+ * @param database Database handle.
+ * @param input Item, location, organization scope, and update fields.
+ * @returns Updated item payload when found, otherwise `undefined`.
+ */
+export const updateItemByLocation = async (
+  database: Database,
+  input: {
+    locationId: string;
+    organizationId: string;
+    itemId: string;
+    categoryId?: string | null;
+    sku?: string;
+    name?: string;
+    description?: string | null;
+    unitPrice?: string;
+    reorderPoint?: number;
+  },
+) =>
+  database.transaction(async (tx) => {
+    const [locationItem] = await tx
+      .select({ quantity: stockLevelsTable.quantity })
+      .from(stockLevelsTable)
+      .innerJoin(
+        itemsTable,
+        and(
+          eq(itemsTable.id, stockLevelsTable.item_id),
+          eq(itemsTable.id, input.itemId),
+          isNull(itemsTable.deleted_at),
+        ),
+      )
+      .where(
+        and(
+          eq(stockLevelsTable.location_id, input.locationId),
+          eq(stockLevelsTable.organization_id, input.organizationId),
+        ),
+      )
+      .limit(1);
+
+    if (!locationItem) {
+      return undefined;
+    }
+
+    const [item] = await tx
+      .update(itemsTable)
+      .set({
+        category_id: input.categoryId,
+        sku: input.sku,
+        name: input.name,
+        description: input.description,
+        unit_price: input.unitPrice,
+        reorder_point: input.reorderPoint,
+        updated_at: new Date(),
+      })
+      .where(
+        and(
+          eq(itemsTable.id, input.itemId),
+          eq(itemsTable.organization_id, input.organizationId),
+          isNull(itemsTable.deleted_at),
+        ),
+      )
+      .returning();
+
+    if (!item) {
+      return undefined;
+    }
+
+    const [updatedItem] = await tx
+      .select({
+        item: itemsTable,
+        category: categoriesTable,
+      })
+      .from(itemsTable)
+      .leftJoin(
+        categoriesTable,
+        and(eq(categoriesTable.id, itemsTable.category_id), isNull(categoriesTable.deleted_at)),
+      )
+      .where(and(eq(itemsTable.id, item.id), eq(itemsTable.organization_id, input.organizationId)))
+      .limit(1);
+
+    if (!updatedItem) {
+      return undefined;
+    }
+
+    return {
+      item: updatedItem.item,
+      category: updatedItem.category,
+      quantity: locationItem.quantity,
+    };
+  });
+
+/**
  * Soft deletes one active item linked to one location.
  *
  * @param database Database handle.

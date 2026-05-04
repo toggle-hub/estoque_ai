@@ -10,10 +10,11 @@ import {
   findActiveItemByLocation,
   listActiveItemsByLocation,
   softDeleteItemByLocation,
+  updateItemByLocation,
 } from "../repositories/item.repository";
 import { findActiveLocationById } from "../repositories/location.repository";
 import { findActiveOrganizationMembership } from "../repositories/organization.repository";
-import { itemSchema } from "./schemas/item.schema";
+import { itemSchema, itemUpdateSchema } from "./schemas/item.schema";
 import { paginationQuerySchema } from "./schemas/pagination.schema";
 import { uuidSchema } from "./schemas/uuid.schema";
 
@@ -190,6 +191,99 @@ locations.delete("/:locationId/items/:itemId", async (c) => {
 });
 
 /**
+ * Updates one item in a location when the current user can manage the organization.
+ */
+locations.patch("/:locationId/items/:itemId", async (c) => {
+  const locationContext = await getLocationContext(c, { requireWrite: true });
+  const itemId = c.req.param("itemId");
+
+  if (!uuidSchema.safeParse(itemId).success) {
+    logErrorResponse(c, "Invalid itemId");
+    return c.json({ error: "Invalid itemId" }, 400);
+  }
+
+  if (locationContext.response !== null) {
+    return locationContext.response;
+  }
+
+  const payload = await c.req.json().catch(() => null);
+  const parsed = itemUpdateSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    logErrorResponse(c, "Invalid request body");
+    return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
+  }
+
+  if (parsed.data.category_id !== undefined && parsed.data.category_id !== null) {
+    if (!uuidSchema.safeParse(parsed.data.category_id).success) {
+      logErrorResponse(c, "Invalid category_id");
+      return c.json({ error: "Invalid category_id" }, 400);
+    }
+
+    const category = await findActiveCategoryByIdAndOrganizationId(
+      db,
+      parsed.data.category_id,
+      locationContext.organizationId,
+    );
+
+    if (!category) {
+      logErrorResponse(c, "Invalid category_id");
+      return c.json({ error: "Invalid category_id" }, 400);
+    }
+  }
+
+  try {
+    const locationItem = await updateItemByLocation(db, {
+      itemId,
+      locationId: locationContext.locationId,
+      organizationId: locationContext.organizationId,
+      categoryId: parsed.data.category_id,
+      sku: parsed.data.sku,
+      name: parsed.data.name,
+      description: parsed.data.description,
+      unitPrice: parsed.data.unit_price?.toFixed(2),
+      reorderPoint: parsed.data.reorder_point,
+    });
+
+    if (!locationItem) {
+      logErrorResponse(c, "Item not found");
+      return c.json({ error: "Item not found" }, 404);
+    }
+
+    return c.json({
+      item: {
+        ...locationItem.item,
+        category: locationItem.category,
+        quantity: locationItem.quantity,
+      },
+    });
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) {
+      const databaseError = getDatabaseError(error);
+      const logger = c.get("logger");
+
+      logger.error(
+        {
+          error: {
+            code: databaseError?.code,
+            constraint: databaseError?.constraint,
+            itemId,
+            locationId: locationContext.locationId,
+            sku: parsed.data.sku,
+            userId: locationContext.user.id,
+          },
+        },
+        "Item update failed due to duplicate SKU",
+      );
+      logErrorResponse(c, "Item SKU already in use");
+      return c.json({ error: "SKU already in use" }, 409);
+    }
+
+    throw error;
+  }
+});
+
+/**
  * Creates an item for the location organization when the current user can manage it.
  */
 locations.post("/:locationId/items", async (c) => {
@@ -208,7 +302,7 @@ locations.post("/:locationId/items", async (c) => {
   }
 
   let category: Awaited<ReturnType<typeof findActiveCategoryByIdAndOrganizationId>> | null = null;
-  if (parsed.data.category_id) {
+  if (parsed.data.category_id !== undefined) {
     if (!uuidSchema.safeParse(parsed.data.category_id).success) {
       logErrorResponse(c, "Invalid category_id");
       return c.json({ error: "Invalid category_id" }, 400);
