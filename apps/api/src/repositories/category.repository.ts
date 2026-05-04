@@ -8,20 +8,29 @@ type Database = typeof db;
  * Returns active categories for one organization ordered by category name.
  *
  * @param database Database handle.
- * @param organizationId Organization identifier.
- * @returns Matching categories.
+ * @param input Organization scope and pagination controls.
+ * @returns Matching categories plus one extra row when another page exists.
  */
 export const listActiveCategoriesByOrganizationId = async (
   database: Database,
-  organizationId: string,
+  input: {
+    organizationId: string;
+    limit: number;
+    offset: number;
+  },
 ) =>
   database
     .select()
     .from(categoriesTable)
     .where(
-      and(eq(categoriesTable.organization_id, organizationId), isNull(categoriesTable.deleted_at)),
+      and(
+        eq(categoriesTable.organization_id, input.organizationId),
+        isNull(categoriesTable.deleted_at),
+      ),
     )
-    .orderBy(categoriesTable.name);
+    .orderBy(categoriesTable.name)
+    .limit(input.limit + 1)
+    .offset(input.offset);
 
 /**
  * Creates a category owned by one organization.

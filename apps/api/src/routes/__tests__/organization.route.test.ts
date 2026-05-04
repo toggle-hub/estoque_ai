@@ -568,6 +568,97 @@ describe("organization routes", () => {
           description: "Listed second",
         }),
       ]);
+      expect(response.body.pagination).toEqual({
+        limit: 50,
+        offset: 0,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "paginates categories for infinite scrolling",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO categories (organization_id, name)
+          VALUES
+            ($1, $2),
+            ($1, $3),
+            ($1, $4)
+        `,
+        [organizationId, "Alpha Materials", "Beta Supplies", "Gamma Tools"],
+      );
+
+      const firstPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/categories?limit=2`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(firstPageResponse.body.categories).toEqual([
+        expect.objectContaining({
+          name: "Alpha Materials",
+        }),
+        expect.objectContaining({
+          name: "Beta Supplies",
+        }),
+      ]);
+      expect(firstPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 0,
+        nextOffset: 2,
+        hasMore: true,
+      });
+
+      const secondPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/categories?limit=2&offset=2`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(secondPageResponse.body.categories).toEqual([
+        expect.objectContaining({
+          name: "Gamma Tools",
+        }),
+      ]);
+      expect(secondPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 2,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category listing with invalid pagination parameters",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationResponse.body.organization.id}/categories?limit=0`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body.error).toBe("Invalid query parameters");
     },
     testTimeout,
   );
@@ -590,6 +681,12 @@ describe("organization routes", () => {
 
       expect(response.body).toEqual({
         categories: [],
+        pagination: {
+          limit: 50,
+          offset: 0,
+          nextOffset: null,
+          hasMore: false,
+        },
       });
     },
     testTimeout,

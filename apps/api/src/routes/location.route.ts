@@ -14,12 +14,12 @@ import {
 import { findActiveLocationById } from "../repositories/location.repository";
 import { findActiveOrganizationMembership } from "../repositories/organization.repository";
 import { itemSchema } from "./schemas/item.schema";
+import { paginationQuerySchema } from "./schemas/pagination.schema";
+import { uuidSchema } from "./schemas/uuid.schema";
 
 const locations = new Hono<AuthenticatedAppEnv>().basePath("/locations");
 
 locations.use("*", authMiddleware);
-
-const uuidSchema = z.string().uuid();
 
 /**
  * Loads the active location and current user's membership for location-scoped routes.
@@ -86,10 +86,27 @@ locations.get("/:locationId/items", async (c) => {
     return locationContext.response;
   }
 
-  const locationItems = await listActiveItemsByLocation(db, {
+  const parsedQuery = paginationQuerySchema.safeParse({
+    limit: c.req.query("limit"),
+    offset: c.req.query("offset"),
+  });
+
+  if (!parsedQuery.success) {
+    logErrorResponse(c, "Invalid query parameters");
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedQuery.error) },
+      400,
+    );
+  }
+
+  const itemPage = await listActiveItemsByLocation(db, {
     locationId: locationContext.locationId,
     organizationId: locationContext.organizationId,
+    limit: parsedQuery.data.limit,
+    offset: parsedQuery.data.offset,
   });
+  const hasMore = itemPage.length > parsedQuery.data.limit;
+  const locationItems = hasMore ? itemPage.slice(0, parsedQuery.data.limit) : itemPage;
 
   return c.json({
     items: locationItems.map(({ item, category, quantity }) => ({
@@ -97,6 +114,12 @@ locations.get("/:locationId/items", async (c) => {
       category,
       quantity,
     })),
+    pagination: {
+      limit: parsedQuery.data.limit,
+      offset: parsedQuery.data.offset,
+      nextOffset: hasMore ? parsedQuery.data.offset + parsedQuery.data.limit : null,
+      hasMore,
+    },
   });
 });
 

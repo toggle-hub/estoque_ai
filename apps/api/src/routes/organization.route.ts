@@ -20,12 +20,12 @@ import { sanitizeUser } from "../serializers/user.serializer";
 import { categorySchema } from "./schemas/category.schema";
 import { locationSchema } from "./schemas/location.schema";
 import { organizationSchema } from "./schemas/organization.schema";
+import { paginationQuerySchema } from "./schemas/pagination.schema";
+import { uuidSchema } from "./schemas/uuid.schema";
 
 const organizations = new Hono<AuthenticatedAppEnv>().basePath("/organizations");
 
 organizations.use("*", authMiddleware);
-
-const uuidSchema = z.string().uuid();
 
 /**
  * Lists the organizations the current user belongs to.
@@ -139,10 +139,37 @@ organizations.get("/:organizationId/locations", async (c) => {
     return c.json({ error: "Organization not found" }, 404);
   }
 
-  const organizationLocations = await listActiveLocationsByOrganizationId(db, organizationId);
+  const parsedQuery = paginationQuerySchema.safeParse({
+    limit: c.req.query("limit"),
+    offset: c.req.query("offset"),
+  });
+
+  if (!parsedQuery.success) {
+    logErrorResponse(c, "Invalid query parameters");
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedQuery.error) },
+      400,
+    );
+  }
+
+  const locationPage = await listActiveLocationsByOrganizationId(db, {
+    organizationId,
+    limit: parsedQuery.data.limit,
+    offset: parsedQuery.data.offset,
+  });
+  const hasMore = locationPage.length > parsedQuery.data.limit;
+  const organizationLocations = hasMore
+    ? locationPage.slice(0, parsedQuery.data.limit)
+    : locationPage;
 
   return c.json({
     locations: organizationLocations,
+    pagination: {
+      limit: parsedQuery.data.limit,
+      offset: parsedQuery.data.offset,
+      nextOffset: hasMore ? parsedQuery.data.offset + parsedQuery.data.limit : null,
+      hasMore,
+    },
   });
 });
 
@@ -165,10 +192,35 @@ organizations.get("/:organizationId/categories", async (c) => {
     return c.json({ error: "Organization not found" }, 404);
   }
 
-  const categories = await listActiveCategoriesByOrganizationId(db, organizationId);
+  const parsedQuery = paginationQuerySchema.safeParse({
+    limit: c.req.query("limit"),
+    offset: c.req.query("offset"),
+  });
+
+  if (!parsedQuery.success) {
+    logErrorResponse(c, "Invalid query parameters");
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedQuery.error) },
+      400,
+    );
+  }
+
+  const categoryPage = await listActiveCategoriesByOrganizationId(db, {
+    organizationId,
+    limit: parsedQuery.data.limit,
+    offset: parsedQuery.data.offset,
+  });
+  const hasMore = categoryPage.length > parsedQuery.data.limit;
+  const categories = hasMore ? categoryPage.slice(0, parsedQuery.data.limit) : categoryPage;
 
   return c.json({
     categories,
+    pagination: {
+      limit: parsedQuery.data.limit,
+      offset: parsedQuery.data.offset,
+      nextOffset: hasMore ? parsedQuery.data.offset + parsedQuery.data.limit : null,
+      hasMore,
+    },
   });
 });
 
