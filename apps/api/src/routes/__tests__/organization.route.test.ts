@@ -812,6 +812,48 @@ describe("organization routes", () => {
   );
 
   it(
+    "rejects category fetching with an invalid organization id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/organizations/not-a-uuid/categories/00000000-0000-4000-8000-000000000001")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid organizationId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects category fetching with an invalid category id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(
+          `/api/organizations/${organizationResponse.body.organization.id}/categories/not-a-uuid`,
+        )
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid categoryId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects category fetching when the category belongs to another organization",
     async () => {
       const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
