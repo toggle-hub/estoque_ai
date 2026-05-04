@@ -4,7 +4,10 @@ import { db } from "../db";
 import { type AuthenticatedAppEnv, authMiddleware, getAuthenticatedUser } from "../lib/auth";
 import { getDatabaseError, isUniqueConstraintViolation } from "../lib/database-errors";
 import { logErrorResponse } from "../lib/http-log";
-import { createCategory } from "../repositories/category.repository";
+import {
+  createCategory,
+  listActiveCategoriesByOrganizationId,
+} from "../repositories/category.repository";
 import { listActiveLocationsByOrganizationId } from "../repositories/location.repository";
 import {
   createLocation,
@@ -129,6 +132,27 @@ organizations.get("/:organizationId/locations", async (c) => {
 
   return c.json({
     locations: organizationLocations,
+  });
+});
+
+/**
+ * Lists all categories for one organization when the current user is a member.
+ */
+organizations.get("/:organizationId/categories", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const categories = await listActiveCategoriesByOrganizationId(db, organizationId);
+
+  return c.json({
+    categories,
   });
 });
 

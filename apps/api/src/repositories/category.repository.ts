@@ -5,6 +5,25 @@ import { categoriesTable } from "../db/schema";
 type Database = typeof db;
 
 /**
+ * Returns active categories for one organization ordered by category name.
+ *
+ * @param database Database handle.
+ * @param organizationId Organization identifier.
+ * @returns Matching categories.
+ */
+export const listActiveCategoriesByOrganizationId = async (
+  database: Database,
+  organizationId: string,
+) =>
+  database
+    .select()
+    .from(categoriesTable)
+    .where(
+      and(eq(categoriesTable.organization_id, organizationId), isNull(categoriesTable.deleted_at)),
+    )
+    .orderBy(categoriesTable.name);
+
+/**
  * Creates a category owned by one organization.
  *
  * @param database Database handle.
