@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { GuestGuard } from "../../components/auth/guest-guard";
-import { getApiUrl } from "../../lib/api";
+import { type AuthenticatedUser, getApiUrl } from "../../lib/api";
 
 const loginSchema = z.object({
   email: z
@@ -28,7 +28,7 @@ type LoginPayload = z.output<typeof loginSchema>;
 
 type LoginResponse = {
   error?: string;
-  user?: unknown;
+  user?: AuthenticatedUser | null;
 };
 
 class LoginError extends Error {
@@ -62,6 +62,10 @@ const login = async ({ email, password, remember }: LoginPayload) => {
 
   if (!response.ok) {
     throw new LoginError(payload.error ?? "Login failed. Check your email and password.");
+  }
+
+  if (!payload.user) {
+    throw new LoginError("Login response did not include an authenticated user.");
   }
 
   return payload;
