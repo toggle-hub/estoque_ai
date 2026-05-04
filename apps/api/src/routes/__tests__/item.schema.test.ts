@@ -2,6 +2,17 @@ import { describe, expect, it } from "vitest";
 import { itemSchema } from "../schemas/item.schema";
 
 describe("itemSchema", () => {
+  it("accepts category_id values without route schema UUID validation", () => {
+    expect(
+      itemSchema.safeParse({
+        category_id: "category-1",
+        sku: "COMP-001",
+        name: "Industrial Sensor",
+        unit_price: 199.9,
+      }).success,
+    ).toBe(true);
+  });
+
   it("accepts unit_price values with up to two decimal places", () => {
     expect(
       itemSchema.safeParse({

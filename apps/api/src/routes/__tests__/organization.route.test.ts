@@ -473,6 +473,47 @@ describe("organization routes", () => {
   );
 
   it(
+    "creates a category for an organization when the user is a manager",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "manager"],
+      );
+
+      const response = await request(getAppServer())
+        .post(`/api/organizations/${organizationId}/categories`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({
+          name: "Raw Materials",
+          description: "Inputs used in production",
+        })
+        .expect(201);
+
+      expect(response.body.category).toMatchObject({
+        id: expect.any(String),
+        organization_id: organizationId,
+        name: "Raw Materials",
+        description: "Inputs used in production",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects category creation with an invalid payload",
     async () => {
       const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
