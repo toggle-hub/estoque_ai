@@ -188,6 +188,38 @@ describe("auth routes", () => {
   );
 
   it(
+    "trims email values during registration and login",
+    async () => {
+      const registerResponse = await request(getAppServer())
+        .post("/api/auth/register")
+        .send({
+          email: " ada@example.com ",
+          name: "Ada Lovelace",
+          password: "password123",
+        })
+        .expect(201);
+
+      expect(registerResponse.body.user).toMatchObject({
+        email: "ada@example.com",
+      });
+
+      const loginResponse = await request(getAppServer())
+        .post("/api/auth/login")
+        .send({
+          email: " ada@example.com ",
+          password: "password123",
+        })
+        .expect(200);
+
+      expectAuthCookie(loginResponse);
+      expect(loginResponse.body.user).toMatchObject({
+        email: "ada@example.com",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "logs in an existing user and sets an auth cookie",
     async () => {
       await registerUser().expect(201);
