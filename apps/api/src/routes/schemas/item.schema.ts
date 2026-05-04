@@ -8,6 +8,7 @@ export const itemSchema = z.object({
   unit_price: z
     .number()
     .nonnegative()
+    .max(99999999.99, { message: "unit_price must be <= 99999999.99 (DECIMAL(10,2))" })
     .refine((value) => Math.abs(Math.round(value * 100) - value * 100) < Number.EPSILON * 100, {
       message: "unit_price must have at most 2 decimal places",
     }),
