@@ -28,8 +28,8 @@ export const createReceivingTransaction = async (
     performedBy: string;
   },
 ): Promise<ReceivingTransactionResult | undefined> => {
-  if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
-    throw new RangeError("Receiving transaction quantity must be a positive integer");
+  if (!Number.isSafeInteger(input.quantity) || input.quantity <= 0) {
+    throw new RangeError("Receiving transaction quantity must be a positive safe integer");
   }
 
   return database.transaction(async (tx) => {
