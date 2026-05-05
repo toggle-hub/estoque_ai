@@ -1470,6 +1470,259 @@ describe("organization routes", () => {
   );
 
   it(
+    "returns aggregate stock summary for an organization",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+      const seedResponse = await cleanupPool?.query<{
+        main_location_id: string;
+        store_location_id: string;
+        bolt_id: string;
+        nut_id: string;
+        washer_id: string;
+      }>(
+        `
+          WITH inserted_locations AS (
+            INSERT INTO locations (organization_id, name)
+            VALUES
+              ($1, $2),
+              ($1, $3)
+            RETURNING id, name
+          ),
+          inserted_items AS (
+            INSERT INTO items (organization_id, sku, name, unit_price, reorder_point)
+            VALUES
+              ($1, $4, $5, $6, $7),
+              ($1, $8, $9, $10, $11),
+              ($1, $12, $13, $14, $15)
+            RETURNING id, name
+          )
+          SELECT
+            (SELECT id FROM inserted_locations WHERE name = $2) AS main_location_id,
+            (SELECT id FROM inserted_locations WHERE name = $3) AS store_location_id,
+            (SELECT id FROM inserted_items WHERE name = $5) AS bolt_id,
+            (SELECT id FROM inserted_items WHERE name = $9) AS nut_id,
+            (SELECT id FROM inserted_items WHERE name = $13) AS washer_id
+        `,
+        [
+          organizationId,
+          "Main Warehouse",
+          "Outlet Store",
+          "BOLT-1",
+          "Bolt",
+          "10.00",
+          5,
+          "NUT-1",
+          "Nut",
+          "2.50",
+          5,
+          "WASH-1",
+          "Washer",
+          "1.25",
+          1,
+        ],
+      );
+      const seed = seedResponse?.rows[0];
+
+      if (!seed) {
+        throw new Error("Expected stock summary seed to be created");
+      }
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO stock_levels (organization_id, location_id, item_id, quantity)
+          VALUES
+            ($1, $2, $3, $4),
+            ($1, $2, $5, $6),
+            ($1, $7, $8, $9)
+        `,
+        [
+          organizationId,
+          seed.main_location_id,
+          seed.bolt_id,
+          2,
+          seed.nut_id,
+          5,
+          seed.store_location_id,
+          seed.washer_id,
+          7,
+        ],
+      );
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock/summary`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(response.body).toEqual({
+        summary: {
+          item_count: 3,
+          total_quantity: 14,
+          total_stock_value: "41.25",
+          low_stock_count: 2,
+          location_count: 2,
+        },
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "returns zero stock summary for an empty organization",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationResponse.body.organization.id}/stock/summary`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(response.body).toEqual({
+        summary: {
+          item_count: 0,
+          total_quantity: 0,
+          total_stock_value: "0.00",
+          low_stock_count: 0,
+          location_count: 0,
+        },
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects stock summary when the current user does not belong to the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationResponse.body.organization.id}/stock/summary`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Organization not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "excludes soft-deleted items and locations from stock summary",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+      const seedResponse = await cleanupPool?.query<{
+        active_location_id: string;
+        active_item_id: string;
+      }>(
+        `
+          WITH inserted_locations AS (
+            INSERT INTO locations (organization_id, name, is_active, deleted_at)
+            VALUES
+              ($1, $2, TRUE, NULL),
+              ($1, $3, FALSE, NOW())
+            RETURNING id, name
+          ),
+          inserted_items AS (
+            INSERT INTO items (organization_id, sku, name, unit_price, reorder_point, is_active, deleted_at)
+            VALUES
+              ($1, $4, $5, $6, $7, TRUE, NULL),
+              ($1, $8, $9, $10, $11, FALSE, NOW())
+            RETURNING id, name
+          )
+          SELECT
+            (SELECT id FROM inserted_locations WHERE name = $2) AS active_location_id,
+            (SELECT id FROM inserted_locations WHERE name = $3) AS deleted_location_id,
+            (SELECT id FROM inserted_items WHERE name = $5) AS active_item_id,
+            (SELECT id FROM inserted_items WHERE name = $9) AS deleted_item_id
+        `,
+        [
+          organizationId,
+          "Main Warehouse",
+          "Archived Warehouse",
+          "A-1",
+          "Active Bolt",
+          "2.00",
+          5,
+          "D-1",
+          "Deleted Bolt",
+          "100.00",
+          5,
+        ],
+      );
+      const seed = seedResponse?.rows[0];
+
+      if (!seed) {
+        throw new Error("Expected soft-delete summary seed to be created");
+      }
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO stock_levels (organization_id, location_id, item_id, quantity)
+          VALUES
+            ($1, $2, $3, $4),
+            ($1, $2, (SELECT id FROM items WHERE name = $5), $6),
+            ($1, (SELECT id FROM locations WHERE name = $7), $3, $8)
+        `,
+        [
+          organizationId,
+          seed.active_location_id,
+          seed.active_item_id,
+          3,
+          "Deleted Bolt",
+          10,
+          "Archived Warehouse",
+          10,
+        ],
+      );
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock/summary`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(response.body).toEqual({
+        summary: {
+          item_count: 1,
+          total_quantity: 3,
+          total_stock_value: "6.00",
+          low_stock_count: 1,
+          location_count: 1,
+        },
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects stock listing when the current user does not belong to the organization",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
