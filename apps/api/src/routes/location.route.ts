@@ -15,8 +15,10 @@ import {
 import { findActiveLocationById } from "../repositories/location.repository";
 import { findActiveOrganizationMembership } from "../repositories/organization.repository";
 import { listActiveStockLevelsByLocation } from "../repositories/stock.repository";
+import { createReceivingTransaction } from "../repositories/transaction.repository";
 import { itemSchema, itemUpdateSchema } from "./schemas/item.schema";
 import { paginationQuerySchema } from "./schemas/pagination.schema";
+import { receivingTransactionSchema } from "./schemas/transaction.schema";
 import { uuidSchema } from "./schemas/uuid.schema";
 
 const locations = new Hono<AuthenticatedAppEnv>().basePath("/locations");
@@ -35,7 +37,7 @@ const getLocationContext = async (
   options: { requireWrite?: boolean } = {},
 ) => {
   const user = getAuthenticatedUser(c);
-  const locationId = c.req.param("locationId");
+  const locationId = c.req.param("locationId") ?? "";
 
   if (!uuidSchema.safeParse(locationId).success) {
     logErrorResponse(c, "Invalid locationId");
@@ -152,11 +154,47 @@ locations.get("/:locationId/stock", async (c) => {
 });
 
 /**
+ * Receives stock into an existing location item when the current user can manage it.
+ */
+locations.post("/:locationId/transactions/receiving", async (c) => {
+  const payload = await c.req.json().catch(() => null);
+  const parsed = receivingTransactionSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    logErrorResponse(c, "Invalid request body");
+    return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
+  }
+
+  const locationContext = await getLocationContext(c, { requireWrite: true });
+
+  if (locationContext.response !== null) {
+    return locationContext.response;
+  }
+
+  const receivingTransaction = await createReceivingTransaction(db, {
+    organizationId: locationContext.organizationId,
+    locationId: locationContext.locationId,
+    itemId: parsed.data.item_id,
+    quantity: parsed.data.quantity,
+    reference: parsed.data.reference,
+    notes: parsed.data.notes,
+    performedBy: locationContext.user.id,
+  });
+
+  if (!receivingTransaction) {
+    logErrorResponse(c, "Item not found");
+    return c.json({ error: "Item not found" }, 404);
+  }
+
+  return c.json(receivingTransaction, 201);
+});
+
+/**
  * Returns one item from one location when the current user belongs to its organization.
  */
 locations.get("/:locationId/items/:itemId", async (c) => {
   const locationContext = await getLocationContext(c);
-  const itemId = c.req.param("itemId");
+  const itemId = c.req.param("itemId") ?? "";
 
   if (!uuidSchema.safeParse(itemId).success) {
     logErrorResponse(c, "Invalid itemId");
@@ -192,7 +230,7 @@ locations.get("/:locationId/items/:itemId", async (c) => {
  */
 locations.delete("/:locationId/items/:itemId", async (c) => {
   const locationContext = await getLocationContext(c, { requireWrite: true });
-  const itemId = c.req.param("itemId");
+  const itemId = c.req.param("itemId") ?? "";
 
   if (!uuidSchema.safeParse(itemId).success) {
     logErrorResponse(c, "Invalid itemId");
@@ -222,7 +260,7 @@ locations.delete("/:locationId/items/:itemId", async (c) => {
  */
 locations.patch("/:locationId/items/:itemId", async (c) => {
   const locationContext = await getLocationContext(c, { requireWrite: true });
-  const itemId = c.req.param("itemId");
+  const itemId = c.req.param("itemId") ?? "";
 
   if (!uuidSchema.safeParse(itemId).success) {
     logErrorResponse(c, "Invalid itemId");
