@@ -29,7 +29,7 @@ export function GuestGuard({ children }: GuestGuardProps) {
       return;
     }
 
-    router.replace("/dashboard");
+    router.replace("/organizations/select?next=%2Fdashboard");
   }, [authQuery.data, router]);
 
   if (authQuery.isPending || authQuery.data) {
