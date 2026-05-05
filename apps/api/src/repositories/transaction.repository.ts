@@ -9,6 +9,8 @@ type ReceivingTransactionResult = {
   stock_level: typeof stockLevelsTable.$inferSelect;
 };
 
+const POSTGRES_INT4_MAX = 2_147_483_647;
+
 /**
  * Receives stock into an existing location item stock row and records the immutable movement.
  *
@@ -28,11 +30,43 @@ export const createReceivingTransaction = async (
     performedBy: string;
   },
 ): Promise<ReceivingTransactionResult | undefined> => {
-  if (!Number.isSafeInteger(input.quantity) || input.quantity <= 0) {
-    throw new RangeError("Receiving transaction quantity must be a positive safe integer");
+  if (
+    !Number.isSafeInteger(input.quantity) ||
+    input.quantity <= 0 ||
+    input.quantity > POSTGRES_INT4_MAX
+  ) {
+    throw new RangeError("Receiving transaction quantity must fit a positive PostgreSQL integer");
   }
 
   return database.transaction(async (tx) => {
+    const stockLevelFilter = and(
+      eq(stockLevelsTable.organization_id, input.organizationId),
+      eq(stockLevelsTable.location_id, input.locationId),
+      eq(stockLevelsTable.item_id, input.itemId),
+      sql`exists (
+        select 1
+        from ${itemsTable}
+        where ${itemsTable.id} = ${stockLevelsTable.item_id}
+          and ${itemsTable.organization_id} = ${input.organizationId}
+          and ${itemsTable.is_active} = true
+          and ${itemsTable.deleted_at} is null
+      )`,
+    );
+
+    const [currentStockLevel] = await tx
+      .select({ quantity: stockLevelsTable.quantity })
+      .from(stockLevelsTable)
+      .where(stockLevelFilter)
+      .limit(1);
+
+    if (!currentStockLevel) {
+      return undefined;
+    }
+
+    if (currentStockLevel.quantity > POSTGRES_INT4_MAX - input.quantity) {
+      throw new RangeError("Receiving transaction would overflow PostgreSQL integer bounds");
+    }
+
     const [stockLevel] = await tx
       .update(stockLevelsTable)
       .set({
@@ -41,26 +75,17 @@ export const createReceivingTransaction = async (
       })
       .where(
         and(
-          eq(stockLevelsTable.organization_id, input.organizationId),
-          eq(stockLevelsTable.location_id, input.locationId),
-          eq(stockLevelsTable.item_id, input.itemId),
-          sql`exists (
-            select 1
-            from ${itemsTable}
-            where ${itemsTable.id} = ${stockLevelsTable.item_id}
-              and ${itemsTable.organization_id} = ${input.organizationId}
-              and ${itemsTable.is_active} = true
-              and ${itemsTable.deleted_at} is null
-          )`,
+          stockLevelFilter,
+          sql`${stockLevelsTable.quantity} <= ${POSTGRES_INT4_MAX - input.quantity}`,
         ),
       )
       .returning();
 
     if (!stockLevel) {
-      return undefined;
+      throw new RangeError("Receiving transaction would overflow PostgreSQL integer bounds");
     }
 
-    const previousQuantity = stockLevel.quantity - input.quantity;
+    const previousQuantity = currentStockLevel.quantity;
 
     const [transaction] = await tx
       .insert(transactionsTable)
