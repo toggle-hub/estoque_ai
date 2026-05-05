@@ -16,7 +16,10 @@ import {
   findActiveOrganizationMembership,
   listActiveOrganizationMembershipsByUserId,
 } from "../repositories/organization.repository";
-import { listActiveStockLevelsByOrganizationId } from "../repositories/stock.repository";
+import {
+  listActiveStockLevelsByOrganizationId,
+  listLowStockLevelsByOrganizationId,
+} from "../repositories/stock.repository";
 import { serializeOrganization } from "../serializers/organization.serializer";
 import { sanitizeUser } from "../serializers/user.serializer";
 import { categorySchema } from "./schemas/category.schema";
@@ -292,6 +295,30 @@ organizations.get("/:organizationId/stock", async (c) => {
       hasMore,
     },
   });
+});
+
+/**
+ * Lists low-stock rows for one organization when the current user is a member.
+ */
+organizations.get("/:organizationId/stock/low", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const stock = await listLowStockLevelsByOrganizationId(db, { organizationId });
+
+  return c.json({ stock });
 });
 
 /**
