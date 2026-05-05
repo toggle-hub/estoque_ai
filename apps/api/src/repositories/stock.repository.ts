@@ -1,6 +1,7 @@
 import { and, eq, isNull, lte } from "drizzle-orm";
 import type { db } from "../db";
 import { categoriesTable, itemsTable, locationsTable, stockLevelsTable } from "../db/schema";
+import type { PaginationInput } from "../routes/schemas/pagination.schema";
 
 type Database = typeof db;
 
@@ -9,9 +10,9 @@ type StockFilterInput = {
   locationId?: string;
   itemId?: string;
   lowStock?: boolean;
-  limit: number;
-  offset: number;
 };
+
+type PaginatedStockFilterInput = StockFilterInput & PaginationInput;
 
 /**
  * Builds stock list filters that preserve organization and active row isolation.
@@ -54,7 +55,7 @@ const buildStockFilters = (input: StockFilterInput) => {
  */
 export const listActiveStockLevelsByOrganizationId = async (
   database: Database,
-  input: StockFilterInput,
+  input: PaginatedStockFilterInput,
 ) =>
   database
     .select({
@@ -81,7 +82,45 @@ export const listActiveStockLevelsByOrganizationId = async (
     .innerJoin(itemsTable, eq(itemsTable.id, stockLevelsTable.item_id))
     .innerJoin(locationsTable, eq(locationsTable.id, stockLevelsTable.location_id))
     .where(and(...buildStockFilters(input)))
-    .orderBy(itemsTable.name, locationsTable.name)
+    .orderBy(itemsTable.name, locationsTable.name, stockLevelsTable.id)
+    .limit(input.limit + 1)
+    .offset(input.offset);
+
+/**
+ * Lists low-stock rows for one organization.
+ *
+ * @param database Database handle.
+ * @param input Organization scope and pagination controls.
+ * @returns Low-stock rows ordered by item and location names plus one extra row when another page exists.
+ */
+export const listLowStockLevelsByOrganizationId = async (
+  database: Database,
+  input: { organizationId: string } & PaginationInput,
+) =>
+  database
+    .select({
+      id: stockLevelsTable.id,
+      organization_id: stockLevelsTable.organization_id,
+      location_id: stockLevelsTable.location_id,
+      item_id: stockLevelsTable.item_id,
+      quantity: stockLevelsTable.quantity,
+      item: {
+        id: itemsTable.id,
+        sku: itemsTable.sku,
+        name: itemsTable.name,
+        unit_price: itemsTable.unit_price,
+        reorder_point: itemsTable.reorder_point,
+      },
+      location: {
+        id: locationsTable.id,
+        name: locationsTable.name,
+      },
+    })
+    .from(stockLevelsTable)
+    .innerJoin(itemsTable, eq(itemsTable.id, stockLevelsTable.item_id))
+    .innerJoin(locationsTable, eq(locationsTable.id, stockLevelsTable.location_id))
+    .where(and(...buildStockFilters({ organizationId: input.organizationId, lowStock: true })))
+    .orderBy(itemsTable.name, locationsTable.name, stockLevelsTable.id)
     .limit(input.limit + 1)
     .offset(input.offset);
 
@@ -141,4 +180,4 @@ export const listActiveStockLevelsByLocation = async (
         eq(stockLevelsTable.organization_id, input.organizationId),
       ),
     )
-    .orderBy(itemsTable.name);
+    .orderBy(itemsTable.name, stockLevelsTable.id);
