@@ -14,6 +14,7 @@ import {
 } from "../repositories/item.repository";
 import { findActiveLocationById } from "../repositories/location.repository";
 import { findActiveOrganizationMembership } from "../repositories/organization.repository";
+import { listActiveStockLevelsByLocation } from "../repositories/stock.repository";
 import { itemSchema, itemUpdateSchema } from "./schemas/item.schema";
 import { paginationQuerySchema } from "./schemas/pagination.schema";
 import { uuidSchema } from "./schemas/uuid.schema";
@@ -121,6 +122,32 @@ locations.get("/:locationId/items", async (c) => {
       nextOffset: hasMore ? parsedQuery.data.offset + parsedQuery.data.limit : null,
       hasMore,
     },
+  });
+});
+
+/**
+ * Lists stock levels for one location when the current user belongs to its organization.
+ */
+locations.get("/:locationId/stock", async (c) => {
+  const locationContext = await getLocationContext(c);
+
+  if (locationContext.response !== null) {
+    return locationContext.response;
+  }
+
+  const stock = await listActiveStockLevelsByLocation(db, {
+    locationId: locationContext.locationId,
+    organizationId: locationContext.organizationId,
+  });
+
+  return c.json({
+    stock: stock.map(({ category, item, ...stockLevel }) => ({
+      ...stockLevel,
+      item: {
+        ...item,
+        category,
+      },
+    })),
   });
 });
 

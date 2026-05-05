@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { createAdaptorServer } from "@hono/node-server";
 import { config } from "dotenv";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
@@ -334,6 +335,207 @@ describe("location routes", () => {
         offset: 0,
         nextOffset: null,
         hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "lists location stock with item summaries and categories for organization members",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [[location], [otherLocation], [category]] = await Promise.all([
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: organizationId,
+            name: "Main Warehouse",
+          })
+          .returning(),
+        getDatabase()
+          .insert(locationsTable)
+          .values({
+            organization_id: organizationId,
+            name: "Secondary Store",
+          })
+          .returning(),
+        getDatabase()
+          .insert(categoriesTable)
+          .values({
+            organization_id: organizationId,
+            name: "Components",
+          })
+          .returning(),
+      ]);
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "viewer"],
+      );
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: category.id,
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+          reorder_point: 5,
+          quantity: 12,
+        })
+        .expect(201);
+
+      await request(getAppServer())
+        .post(`/api/locations/${otherLocation.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: category.id,
+          sku: "COMP-002",
+          name: "Pressure Sensor",
+          unit_price: 149.9,
+          quantity: 4,
+        })
+        .expect(201);
+
+      const deletedItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          category_id: category.id,
+          sku: "COMP-003",
+          name: "Archived Sensor",
+          unit_price: 99.9,
+          quantity: 2,
+        })
+        .expect(201);
+
+      await getDatabase()
+        .update(itemsTable)
+        .set({
+          deleted_at: new Date(),
+          is_active: false,
+        })
+        .where(eq(itemsTable.id, deletedItemResponse.body.item.id));
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/stock`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(200);
+
+      expect(response.body.stock).toEqual([
+        expect.objectContaining({
+          id: expect.any(String),
+          organization_id: organizationId,
+          location_id: location.id,
+          item_id: createItemResponse.body.item.id,
+          quantity: 12,
+          item: expect.objectContaining({
+            id: createItemResponse.body.item.id,
+            sku: "COMP-001",
+            name: "Industrial Sensor",
+            unit_price: "199.90",
+            reorder_point: 5,
+            category: expect.objectContaining({
+              id: category.id,
+              organization_id: organizationId,
+              name: "Components",
+            }),
+          }),
+        }),
+      ]);
+    },
+    testTimeout,
+  );
+
+  it(
+    "returns an empty stock list for a location without stock levels",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/stock`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(200);
+
+      expect(response.body).toEqual({
+        stock: [],
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "does not list location stock when the location is missing",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/locations/00000000-0000-4000-8000-000000000001/stock")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Location not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "does not list location stock when the user does not belong to the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .get(`/api/locations/${location.id}/stock`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Location not found",
       });
     },
     testTimeout,
