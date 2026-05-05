@@ -27,8 +27,12 @@ export const createReceivingTransaction = async (
     notes?: string;
     performedBy: string;
   },
-): Promise<ReceivingTransactionResult | undefined> =>
-  database.transaction(async (tx) => {
+): Promise<ReceivingTransactionResult | undefined> => {
+  if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
+    throw new RangeError("Receiving transaction quantity must be a positive integer");
+  }
+
+  return database.transaction(async (tx) => {
     const [stockLevel] = await tx
       .update(stockLevelsTable)
       .set({
@@ -76,3 +80,4 @@ export const createReceivingTransaction = async (
 
     return { transaction, stock_level: stockLevel };
   });
+};
