@@ -1182,6 +1182,89 @@ describe("organization routes", () => {
           }),
         }),
       ]);
+      expect(response.body.pagination).toEqual({
+        limit: 50,
+        offset: 0,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "paginates low-stock rows for an organization",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+      const locationResponse = await cleanupPool?.query<{ id: string }>(
+        `
+          INSERT INTO locations (organization_id, name)
+          VALUES ($1, $2)
+          RETURNING id
+        `,
+        [organizationId, "Main Warehouse"],
+      );
+      const locationId = locationResponse?.rows[0]?.id;
+
+      if (!locationId) {
+        throw new Error("Expected low-stock pagination location to be created");
+      }
+
+      await cleanupPool?.query(
+        `
+          WITH inserted_items AS (
+            INSERT INTO items (organization_id, sku, name, reorder_point)
+            VALUES
+              ($1, $2, $3, $4),
+              ($1, $5, $6, $7),
+              ($1, $8, $9, $10)
+            RETURNING id
+          )
+          INSERT INTO stock_levels (organization_id, location_id, item_id, quantity)
+          SELECT $1, $11, id, 1
+          FROM inserted_items
+        `,
+        [organizationId, "A-1", "Alpha", 5, "B-1", "Beta", 5, "G-1", "Gamma", 5, locationId],
+      );
+
+      const firstPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock/low?limit=2`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(firstPageResponse.body.stock).toEqual([
+        expect.objectContaining({ item: expect.objectContaining({ name: "Alpha" }) }),
+        expect.objectContaining({ item: expect.objectContaining({ name: "Beta" }) }),
+      ]);
+      expect(firstPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 0,
+        nextOffset: 2,
+        hasMore: true,
+      });
+
+      const secondPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock/low?limit=2&offset=2`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(secondPageResponse.body.stock).toEqual([
+        expect.objectContaining({ item: expect.objectContaining({ name: "Gamma" }) }),
+      ]);
+      expect(secondPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 2,
+        nextOffset: null,
+        hasMore: false,
+      });
     },
     testTimeout,
   );
@@ -1225,6 +1308,12 @@ describe("organization routes", () => {
 
       expect(response.body).toEqual({
         stock: [],
+        pagination: {
+          limit: 50,
+          offset: 0,
+          nextOffset: null,
+          hasMore: false,
+        },
       });
     },
     testTimeout,
@@ -1349,6 +1438,33 @@ describe("organization routes", () => {
           }),
         }),
       ]);
+      expect(response.body.pagination).toEqual({
+        limit: 50,
+        offset: 0,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects low-stock listing with invalid pagination parameters",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationResponse.body.organization.id}/stock/low?limit=0`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body.error).toBe("Invalid query parameters");
     },
     testTimeout,
   );

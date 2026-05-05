@@ -309,6 +309,19 @@ organizations.get("/:organizationId/stock/low", async (c) => {
     return c.json({ error: "Invalid organizationId" }, 400);
   }
 
+  const parsedPagination = paginationQuerySchema.safeParse({
+    limit: c.req.query("limit"),
+    offset: c.req.query("offset"),
+  });
+
+  if (!parsedPagination.success) {
+    logErrorResponse(c, "Invalid query parameters");
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedPagination.error) },
+      400,
+    );
+  }
+
   const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
 
   if (!membership) {
@@ -316,9 +329,23 @@ organizations.get("/:organizationId/stock/low", async (c) => {
     return c.json({ error: "Organization not found" }, 404);
   }
 
-  const stock = await listLowStockLevelsByOrganizationId(db, { organizationId });
+  const stock = await listLowStockLevelsByOrganizationId(db, {
+    organizationId,
+    limit: parsedPagination.data.limit,
+    offset: parsedPagination.data.offset,
+  });
+  const hasMore = stock.length > parsedPagination.data.limit;
+  const stockLevels = hasMore ? stock.slice(0, parsedPagination.data.limit) : stock;
 
-  return c.json({ stock });
+  return c.json({
+    stock: stockLevels,
+    pagination: {
+      limit: parsedPagination.data.limit,
+      offset: parsedPagination.data.offset,
+      nextOffset: hasMore ? parsedPagination.data.offset + parsedPagination.data.limit : null,
+      hasMore,
+    },
+  });
 });
 
 /**

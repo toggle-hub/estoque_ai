@@ -92,13 +92,15 @@ export const listActiveStockLevelsByOrganizationId = async (
  * Lists low-stock rows for one organization.
  *
  * @param database Database handle.
- * @param input Organization scope.
- * @returns Low-stock rows ordered by item and location names.
+ * @param input Organization scope and pagination controls.
+ * @returns Low-stock rows ordered by item and location names plus one extra row when another page exists.
  */
 export const listLowStockLevelsByOrganizationId = async (
   database: Database,
   input: {
     organizationId: string;
+    limit: number;
+    offset: number;
   },
 ) =>
   database
@@ -124,7 +126,9 @@ export const listLowStockLevelsByOrganizationId = async (
     .innerJoin(itemsTable, eq(itemsTable.id, stockLevelsTable.item_id))
     .innerJoin(locationsTable, eq(locationsTable.id, stockLevelsTable.location_id))
     .where(and(...buildStockFilters({ organizationId: input.organizationId, lowStock: true })))
-    .orderBy(itemsTable.name, locationsTable.name);
+    .orderBy(itemsTable.name, locationsTable.name)
+    .limit(input.limit + 1)
+    .offset(input.offset);
 
 /**
  * Lists active stock levels for one location with item summaries and categories when available.
