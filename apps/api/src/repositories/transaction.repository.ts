@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { db } from "../db";
 import { itemsTable, stockLevelsTable, transactionsTable } from "../db/schema";
 
@@ -29,47 +29,34 @@ export const createReceivingTransaction = async (
   },
 ): Promise<ReceivingTransactionResult | undefined> =>
   database.transaction(async (tx) => {
-    const [currentStockLevel] = await tx
-      .select({ stockLevel: stockLevelsTable })
-      .from(stockLevelsTable)
-      .innerJoin(
-        itemsTable,
-        and(
-          eq(itemsTable.id, stockLevelsTable.item_id),
-          eq(itemsTable.organization_id, input.organizationId),
-          eq(itemsTable.is_active, true),
-          isNull(itemsTable.deleted_at),
-        ),
-      )
+    const [stockLevel] = await tx
+      .update(stockLevelsTable)
+      .set({
+        quantity: sql`${stockLevelsTable.quantity} + ${input.quantity}`,
+        updated_at: new Date(),
+      })
       .where(
         and(
           eq(stockLevelsTable.organization_id, input.organizationId),
           eq(stockLevelsTable.location_id, input.locationId),
           eq(stockLevelsTable.item_id, input.itemId),
-        ),
-      )
-      .limit(1);
-
-    if (!currentStockLevel) {
-      return undefined;
-    }
-
-    const previousQuantity = currentStockLevel.stockLevel.quantity;
-    const newQuantity = previousQuantity + input.quantity;
-
-    const [stockLevel] = await tx
-      .update(stockLevelsTable)
-      .set({
-        quantity: newQuantity,
-        updated_at: new Date(),
-      })
-      .where(
-        and(
-          eq(stockLevelsTable.id, currentStockLevel.stockLevel.id),
-          eq(stockLevelsTable.organization_id, input.organizationId),
+          sql`exists (
+            select 1
+            from ${itemsTable}
+            where ${itemsTable.id} = ${stockLevelsTable.item_id}
+              and ${itemsTable.organization_id} = ${input.organizationId}
+              and ${itemsTable.is_active} = true
+              and ${itemsTable.deleted_at} is null
+          )`,
         ),
       )
       .returning();
+
+    if (!stockLevel) {
+      return undefined;
+    }
+
+    const previousQuantity = stockLevel.quantity - input.quantity;
 
     const [transaction] = await tx
       .insert(transactionsTable)
@@ -80,7 +67,7 @@ export const createReceivingTransaction = async (
         type: "RECEIVING",
         quantity: input.quantity,
         previous_quantity: previousQuantity,
-        new_quantity: newQuantity,
+        new_quantity: stockLevel.quantity,
         reference: input.reference,
         notes: input.notes,
         performed_by: input.performedBy,
