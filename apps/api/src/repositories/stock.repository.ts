@@ -1,6 +1,7 @@
 import { and, eq, isNull, lte } from "drizzle-orm";
 import type { db } from "../db";
 import { categoriesTable, itemsTable, locationsTable, stockLevelsTable } from "../db/schema";
+import type { PaginationInput } from "../routes/schemas/pagination.schema";
 
 type Database = typeof db;
 
@@ -11,10 +12,7 @@ type StockFilterInput = {
   lowStock?: boolean;
 };
 
-type PaginatedStockFilterInput = StockFilterInput & {
-  limit: number;
-  offset: number;
-};
+type PaginatedStockFilterInput = StockFilterInput & PaginationInput;
 
 /**
  * Builds stock list filters that preserve organization and active row isolation.
@@ -97,11 +95,7 @@ export const listActiveStockLevelsByOrganizationId = async (
  */
 export const listLowStockLevelsByOrganizationId = async (
   database: Database,
-  input: {
-    organizationId: string;
-    limit: number;
-    offset: number;
-  },
+  input: { organizationId: string } & PaginationInput,
 ) =>
   database
     .select({
