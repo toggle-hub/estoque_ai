@@ -16,12 +16,14 @@ import {
   findActiveOrganizationMembership,
   listActiveOrganizationMembershipsByUserId,
 } from "../repositories/organization.repository";
+import { listActiveStockLevelsByOrganizationId } from "../repositories/stock.repository";
 import { serializeOrganization } from "../serializers/organization.serializer";
 import { sanitizeUser } from "../serializers/user.serializer";
 import { categorySchema } from "./schemas/category.schema";
 import { locationSchema } from "./schemas/location.schema";
 import { organizationSchema } from "./schemas/organization.schema";
 import { paginationQuerySchema } from "./schemas/pagination.schema";
+import { stockQuerySchema } from "./schemas/stock.schema";
 import { uuidSchema } from "./schemas/uuid.schema";
 
 const organizations = new Hono<AuthenticatedAppEnv>().basePath("/organizations");
@@ -220,6 +222,73 @@ organizations.get("/:organizationId/categories", async (c) => {
       limit: parsedQuery.data.limit,
       offset: parsedQuery.data.offset,
       nextOffset: hasMore ? parsedQuery.data.offset + parsedQuery.data.limit : null,
+      hasMore,
+    },
+  });
+});
+
+/**
+ * Lists stock levels for one organization when the current user is a member.
+ */
+organizations.get("/:organizationId/stock", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
+
+  const parsedQuery = stockQuerySchema.safeParse({
+    location_id: c.req.query("location_id"),
+    item_id: c.req.query("item_id"),
+    low_stock: c.req.query("low_stock"),
+  });
+  const parsedPagination = paginationQuerySchema.safeParse({
+    limit: c.req.query("limit"),
+    offset: c.req.query("offset"),
+  });
+
+  if (!parsedQuery.success) {
+    logErrorResponse(c, "Invalid query parameters");
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedQuery.error) },
+      400,
+    );
+  }
+
+  if (!parsedPagination.success) {
+    logErrorResponse(c, "Invalid query parameters");
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedPagination.error) },
+      400,
+    );
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const stock = await listActiveStockLevelsByOrganizationId(db, {
+    organizationId,
+    locationId: parsedQuery.data.location_id,
+    itemId: parsedQuery.data.item_id,
+    lowStock: parsedQuery.data.low_stock,
+    limit: parsedPagination.data.limit,
+    offset: parsedPagination.data.offset,
+  });
+  const hasMore = stock.length > parsedPagination.data.limit;
+  const stockLevels = hasMore ? stock.slice(0, parsedPagination.data.limit) : stock;
+
+  return c.json({
+    stock: stockLevels,
+    pagination: {
+      limit: parsedPagination.data.limit,
+      offset: parsedPagination.data.offset,
+      nextOffset: hasMore ? parsedPagination.data.offset + parsedPagination.data.limit : null,
       hasMore,
     },
   });

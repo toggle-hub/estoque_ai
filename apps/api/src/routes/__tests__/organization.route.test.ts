@@ -748,6 +748,450 @@ describe("organization routes", () => {
   );
 
   it(
+    "lists stock levels with item and location summaries for organization members",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+      const stockSeed = await cleanupPool?.query<{
+        main_location_id: string;
+        widget_id: string;
+        gadget_id: string;
+      }>(
+        `
+          WITH inserted_locations AS (
+            INSERT INTO locations (organization_id, name, is_active, deleted_at)
+            VALUES
+              ($1, $2, TRUE, NULL),
+              ($1, $3, FALSE, NOW())
+            RETURNING id, name
+          ),
+          inserted_items AS (
+            INSERT INTO items (
+              organization_id,
+              sku,
+              name,
+              unit_price,
+              reorder_point,
+              is_active,
+              deleted_at
+            )
+            VALUES
+              ($1, $4, $5, $6, $7, TRUE, NULL),
+              ($1, $8, $9, $10, $11, TRUE, NULL),
+              ($1, $12, $13, $14, $15, FALSE, NOW())
+            RETURNING id, name
+          )
+          SELECT
+            (SELECT id FROM inserted_locations WHERE name = $2) AS main_location_id,
+            (SELECT id FROM inserted_items WHERE name = $5) AS widget_id,
+            (SELECT id FROM inserted_items WHERE name = $9) AS gadget_id,
+            (SELECT id FROM inserted_items WHERE name = $13) AS deleted_item_id,
+            (SELECT id FROM inserted_locations WHERE name = $3) AS deleted_location_id
+        `,
+        [
+          organizationId,
+          "Main Warehouse",
+          "Archived Warehouse",
+          "W-1",
+          "Widget",
+          "10.00",
+          5,
+          "G-1",
+          "Gadget",
+          "20.00",
+          2,
+          "D-1",
+          "Deleted Item",
+          "30.00",
+          1,
+        ],
+      );
+      const seed = stockSeed?.rows[0];
+
+      if (!seed) {
+        throw new Error("Expected stock seed to be created");
+      }
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO stock_levels (organization_id, location_id, item_id, quantity)
+          VALUES
+            ($1, $2, $3, $4),
+            ($1, $2, $5, $6),
+            ($1, $2, (SELECT id FROM items WHERE name = $7), $8),
+            ($1, (SELECT id FROM locations WHERE name = $9), $3, $10)
+        `,
+        [
+          organizationId,
+          seed.main_location_id,
+          seed.widget_id,
+          4,
+          seed.gadget_id,
+          8,
+          "Deleted Item",
+          1,
+          "Archived Warehouse",
+          3,
+        ],
+      );
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(response.body.stock).toHaveLength(2);
+      expect(response.body.stock).toEqual([
+        expect.objectContaining({
+          organization_id: organizationId,
+          location_id: seed.main_location_id,
+          item_id: seed.gadget_id,
+          quantity: 8,
+          item: expect.objectContaining({
+            id: seed.gadget_id,
+            sku: "G-1",
+            name: "Gadget",
+            unit_price: "20.00",
+            reorder_point: 2,
+          }),
+          location: expect.objectContaining({
+            id: seed.main_location_id,
+            name: "Main Warehouse",
+          }),
+        }),
+        expect.objectContaining({
+          organization_id: organizationId,
+          location_id: seed.main_location_id,
+          item_id: seed.widget_id,
+          quantity: 4,
+          item: expect.objectContaining({
+            id: seed.widget_id,
+            sku: "W-1",
+            name: "Widget",
+            unit_price: "10.00",
+            reorder_point: 5,
+          }),
+          location: expect.objectContaining({
+            id: seed.main_location_id,
+            name: "Main Warehouse",
+          }),
+        }),
+      ]);
+      expect(response.body.pagination).toEqual({
+        limit: 50,
+        offset: 0,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "filters stock levels by location, item, and low-stock status",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+      const locationResponse = await cleanupPool?.query<{ id: string }>(
+        `
+          INSERT INTO locations (organization_id, name)
+          VALUES ($1, $2), ($1, $3)
+          RETURNING id
+        `,
+        [organizationId, "Main Warehouse", "Outlet Store"],
+      );
+      const itemResponse = await cleanupPool?.query<{ id: string }>(
+        `
+          INSERT INTO items (organization_id, sku, name, reorder_point)
+          VALUES ($1, $2, $3, $4), ($1, $5, $6, $7)
+          RETURNING id
+        `,
+        [organizationId, "W-1", "Widget", 5, "G-1", "Gadget", 2],
+      );
+      const mainLocationId = locationResponse?.rows[0]?.id;
+      const outletLocationId = locationResponse?.rows[1]?.id;
+      const widgetId = itemResponse?.rows[0]?.id;
+      const gadgetId = itemResponse?.rows[1]?.id;
+
+      if (!mainLocationId || !outletLocationId || !widgetId || !gadgetId) {
+        throw new Error("Expected stock filter seed to be created");
+      }
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO stock_levels (organization_id, location_id, item_id, quantity)
+          VALUES
+            ($1, $2, $3, $4),
+            ($1, $2, $5, $6),
+            ($1, $7, $3, $8)
+        `,
+        [organizationId, mainLocationId, widgetId, 4, gadgetId, 8, outletLocationId, 12],
+      );
+
+      const locationResponseBody = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?location_id=${mainLocationId}`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(locationResponseBody.body.stock).toHaveLength(2);
+      expect(locationResponseBody.body.stock).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ location_id: mainLocationId, item_id: widgetId }),
+          expect.objectContaining({ location_id: mainLocationId, item_id: gadgetId }),
+        ]),
+      );
+
+      const itemResponseBody = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?item_id=${widgetId}`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(itemResponseBody.body.stock).toHaveLength(2);
+      expect(itemResponseBody.body.stock).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ location_id: mainLocationId, item_id: widgetId }),
+          expect.objectContaining({ location_id: outletLocationId, item_id: widgetId }),
+        ]),
+      );
+
+      const lowStockResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?low_stock=true`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(lowStockResponse.body.stock).toEqual([
+        expect.objectContaining({
+          location_id: mainLocationId,
+          item_id: widgetId,
+          quantity: 4,
+        }),
+      ]);
+    },
+    testTimeout,
+  );
+
+  it(
+    "paginates stock levels for an organization",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+      const locationResponse = await cleanupPool?.query<{ id: string }>(
+        `
+          INSERT INTO locations (organization_id, name)
+          VALUES ($1, $2)
+          RETURNING id
+        `,
+        [organizationId, "Main Warehouse"],
+      );
+      const locationId = locationResponse?.rows[0]?.id;
+
+      if (!locationId) {
+        throw new Error("Expected stock pagination location to be created");
+      }
+
+      await cleanupPool?.query(
+        `
+          WITH inserted_items AS (
+            INSERT INTO items (organization_id, sku, name)
+            VALUES
+              ($1, $2, $3),
+              ($1, $4, $5),
+              ($1, $6, $7)
+            RETURNING id, name
+          )
+          INSERT INTO stock_levels (organization_id, location_id, item_id, quantity)
+          SELECT $1, $8, id, 1
+          FROM inserted_items
+        `,
+        [organizationId, "A-1", "Alpha", "B-1", "Beta", "G-1", "Gamma", locationId],
+      );
+
+      const firstPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?limit=2`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(firstPageResponse.body.stock).toEqual([
+        expect.objectContaining({ item: expect.objectContaining({ name: "Alpha" }) }),
+        expect.objectContaining({ item: expect.objectContaining({ name: "Beta" }) }),
+      ]);
+      expect(firstPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 0,
+        nextOffset: 2,
+        hasMore: true,
+      });
+
+      const secondPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?limit=2&offset=2`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(secondPageResponse.body.stock).toEqual([
+        expect.objectContaining({ item: expect.objectContaining({ name: "Gamma" }) }),
+      ]);
+      expect(secondPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 2,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects stock listing when the current user does not belong to the organization",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationResponse.body.organization.id}/stock`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Organization not found",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "returns an empty stock list for an organization without stock levels",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .get(`/api/organizations/${organizationResponse.body.organization.id}/stock`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(response.body).toEqual({
+        stock: [],
+        pagination: {
+          limit: 50,
+          offset: 0,
+          nextOffset: null,
+          hasMore: false,
+        },
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects stock listing with an invalid organization id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/organizations/not-a-uuid/stock")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid organizationId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects stock listing with invalid UUID query parameters",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const locationResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?location_id=not-a-uuid`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(locationResponse.body.error).toBe("Invalid query parameters");
+
+      const itemResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?item_id=not-a-uuid`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(itemResponse.body.error).toBe("Invalid query parameters");
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects stock listing with invalid low-stock query values",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const textResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?low_stock=notabool`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(textResponse.body.error).toBe("Invalid query parameters");
+
+      const numericResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?low_stock=123`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(numericResponse.body.error).toBe("Invalid query parameters");
+    },
+    testTimeout,
+  );
+
+  it(
     "gets a category for an organization when the user belongs to it",
     async () => {
       const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
