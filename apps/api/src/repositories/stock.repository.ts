@@ -143,7 +143,7 @@ export const getStockSummaryByOrganizationId = async (
     .select({
       item_count: sql<number>`coalesce(count(distinct ${itemsTable.id}), 0)::int`,
       total_quantity: sql<number>`coalesce(sum(${stockLevelsTable.quantity}), 0)::int`,
-      total_stock_value: sql<string>`coalesce(sum(${stockLevelsTable.quantity} * coalesce(${itemsTable.unit_price}, 0)), 0)::numeric(10, 2)`,
+      total_stock_value: sql<string>`coalesce(sum(${stockLevelsTable.quantity} * coalesce(${itemsTable.unit_price}, 0)), 0)::numeric(18, 2)`,
       low_stock_count: sql<number>`coalesce(sum(case when ${stockLevelsTable.quantity} <= ${itemsTable.reorder_point} then 1 else 0 end), 0)::int`,
       location_count: sql<number>`coalesce(count(distinct ${locationsTable.id}), 0)::int`,
     })
