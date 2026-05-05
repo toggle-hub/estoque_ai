@@ -17,6 +17,7 @@ import {
   listActiveOrganizationMembershipsByUserId,
 } from "../repositories/organization.repository";
 import {
+  getStockSummaryByOrganizationId,
   listActiveStockLevelsByOrganizationId,
   listLowStockLevelsByOrganizationId,
 } from "../repositories/stock.repository";
@@ -346,6 +347,30 @@ organizations.get("/:organizationId/stock/low", async (c) => {
       hasMore,
     },
   });
+});
+
+/**
+ * Returns aggregate stock metrics for one organization when the current user is a member.
+ */
+organizations.get("/:organizationId/stock/summary", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const summary = await getStockSummaryByOrganizationId(db, { organizationId });
+
+  return c.json({ summary });
 });
 
 /**

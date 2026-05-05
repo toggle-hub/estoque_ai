@@ -1,4 +1,4 @@
-import { and, eq, isNull, lte } from "drizzle-orm";
+import { and, eq, isNull, lte, sql } from "drizzle-orm";
 import type { db } from "../db";
 import { categoriesTable, itemsTable, locationsTable, stockLevelsTable } from "../db/schema";
 import type { PaginationInput } from "../routes/schemas/pagination.schema";
@@ -13,6 +13,10 @@ type StockFilterInput = {
 };
 
 type PaginatedStockFilterInput = StockFilterInput & PaginationInput;
+
+type StockSummaryInput = {
+  organizationId: string;
+};
 
 /**
  * Builds stock list filters that preserve organization and active row isolation.
@@ -123,6 +127,41 @@ export const listLowStockLevelsByOrganizationId = async (
     .orderBy(itemsTable.name, locationsTable.name, stockLevelsTable.id)
     .limit(input.limit + 1)
     .offset(input.offset);
+
+/**
+ * Returns aggregate stock metrics for one organization.
+ *
+ * @param database Database handle.
+ * @param input Organization scope.
+ * @returns Stock summary totals with BRL value as a decimal string.
+ */
+export const getStockSummaryByOrganizationId = async (
+  database: Database,
+  input: StockSummaryInput,
+) => {
+  const [summary] = await database
+    .select({
+      item_count: sql<number>`coalesce(count(distinct ${itemsTable.id}), 0)::int`,
+      total_quantity: sql<number>`coalesce(sum(${stockLevelsTable.quantity}), 0)::int`,
+      total_stock_value: sql<string>`coalesce(sum(${stockLevelsTable.quantity} * coalesce(${itemsTable.unit_price}, 0)), 0)::numeric(10, 2)`,
+      low_stock_count: sql<number>`coalesce(sum(case when ${stockLevelsTable.quantity} <= ${itemsTable.reorder_point} then 1 else 0 end), 0)::int`,
+      location_count: sql<number>`coalesce(count(distinct ${locationsTable.id}), 0)::int`,
+    })
+    .from(stockLevelsTable)
+    .innerJoin(itemsTable, eq(itemsTable.id, stockLevelsTable.item_id))
+    .innerJoin(locationsTable, eq(locationsTable.id, stockLevelsTable.location_id))
+    .where(and(...buildStockFilters({ organizationId: input.organizationId })));
+
+  return (
+    summary ?? {
+      item_count: 0,
+      total_quantity: 0,
+      total_stock_value: "0.00",
+      low_stock_count: 0,
+      location_count: 0,
+    }
+  );
+};
 
 /**
  * Lists active stock levels for one location with item summaries and categories when available.
