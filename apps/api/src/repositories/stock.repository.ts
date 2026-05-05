@@ -84,7 +84,7 @@ export const listActiveStockLevelsByOrganizationId = async (
     .innerJoin(itemsTable, eq(itemsTable.id, stockLevelsTable.item_id))
     .innerJoin(locationsTable, eq(locationsTable.id, stockLevelsTable.location_id))
     .where(and(...buildStockFilters(input)))
-    .orderBy(itemsTable.name, locationsTable.name)
+    .orderBy(itemsTable.name, locationsTable.name, stockLevelsTable.id)
     .limit(input.limit + 1)
     .offset(input.offset);
 
@@ -126,7 +126,7 @@ export const listLowStockLevelsByOrganizationId = async (
     .innerJoin(itemsTable, eq(itemsTable.id, stockLevelsTable.item_id))
     .innerJoin(locationsTable, eq(locationsTable.id, stockLevelsTable.location_id))
     .where(and(...buildStockFilters({ organizationId: input.organizationId, lowStock: true })))
-    .orderBy(itemsTable.name, locationsTable.name)
+    .orderBy(itemsTable.name, locationsTable.name, stockLevelsTable.id)
     .limit(input.limit + 1)
     .offset(input.offset);
 
@@ -186,4 +186,4 @@ export const listActiveStockLevelsByLocation = async (
         eq(stockLevelsTable.organization_id, input.organizationId),
       ),
     )
-    .orderBy(itemsTable.name);
+    .orderBy(itemsTable.name, stockLevelsTable.id);
