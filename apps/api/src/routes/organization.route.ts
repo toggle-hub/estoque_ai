@@ -244,13 +244,16 @@ organizations.get("/:organizationId/stock", async (c) => {
     item_id: c.req.query("item_id"),
     low_stock: c.req.query("low_stock"),
   });
+  const parsedPagination = paginationQuerySchema.safeParse({
+    limit: c.req.query("limit"),
+    offset: c.req.query("offset"),
+  });
 
-  if (!parsedQuery.success) {
+  if (!parsedQuery.success || !parsedPagination.success) {
     logErrorResponse(c, "Invalid query parameters");
-    return c.json(
-      { error: "Invalid query parameters", issues: z.treeifyError(parsedQuery.error) },
-      400,
-    );
+    const issues = z.treeifyError(parsedQuery.success ? parsedPagination.error : parsedQuery.error);
+
+    return c.json({ error: "Invalid query parameters", issues }, 400);
   }
 
   const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
@@ -265,9 +268,21 @@ organizations.get("/:organizationId/stock", async (c) => {
     locationId: parsedQuery.data.location_id,
     itemId: parsedQuery.data.item_id,
     lowStock: parsedQuery.data.low_stock,
+    limit: parsedPagination.data.limit,
+    offset: parsedPagination.data.offset,
   });
+  const hasMore = stock.length > parsedPagination.data.limit;
+  const stockLevels = hasMore ? stock.slice(0, parsedPagination.data.limit) : stock;
 
-  return c.json({ stock });
+  return c.json({
+    stock: stockLevels,
+    pagination: {
+      limit: parsedPagination.data.limit,
+      offset: parsedPagination.data.offset,
+      nextOffset: hasMore ? parsedPagination.data.offset + parsedPagination.data.limit : null,
+      hasMore,
+    },
+  });
 });
 
 /**

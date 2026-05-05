@@ -9,6 +9,8 @@ type StockFilterInput = {
   locationId?: string;
   itemId?: string;
   lowStock?: boolean;
+  limit: number;
+  offset: number;
 };
 
 /**
@@ -48,7 +50,7 @@ const buildStockFilters = (input: StockFilterInput) => {
  *
  * @param database Database handle.
  * @param input Organization scope and optional stock filters.
- * @returns Stock rows ordered by item and location names.
+ * @returns Stock rows ordered by item and location names plus one extra row when another page exists.
  */
 export const listActiveStockLevelsByOrganizationId = async (
   database: Database,
@@ -79,4 +81,6 @@ export const listActiveStockLevelsByOrganizationId = async (
     .innerJoin(itemsTable, eq(itemsTable.id, stockLevelsTable.item_id))
     .innerJoin(locationsTable, eq(locationsTable.id, stockLevelsTable.location_id))
     .where(and(...buildStockFilters(input)))
-    .orderBy(itemsTable.name, locationsTable.name);
+    .orderBy(itemsTable.name, locationsTable.name)
+    .limit(input.limit + 1)
+    .offset(input.offset);

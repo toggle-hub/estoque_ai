@@ -884,6 +884,12 @@ describe("organization routes", () => {
           }),
         }),
       ]);
+      expect(response.body.pagination).toEqual({
+        limit: 50,
+        offset: 0,
+        nextOffset: null,
+        hasMore: false,
+      });
     },
     testTimeout,
   );
@@ -979,6 +985,83 @@ describe("organization routes", () => {
   );
 
   it(
+    "paginates stock levels for an organization",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+      const locationResponse = await cleanupPool?.query<{ id: string }>(
+        `
+          INSERT INTO locations (organization_id, name)
+          VALUES ($1, $2)
+          RETURNING id
+        `,
+        [organizationId, "Main Warehouse"],
+      );
+      const locationId = locationResponse?.rows[0]?.id;
+
+      if (!locationId) {
+        throw new Error("Expected stock pagination location to be created");
+      }
+
+      await cleanupPool?.query(
+        `
+          WITH inserted_items AS (
+            INSERT INTO items (organization_id, sku, name)
+            VALUES
+              ($1, $2, $3),
+              ($1, $4, $5),
+              ($1, $6, $7)
+            RETURNING id, name
+          )
+          INSERT INTO stock_levels (organization_id, location_id, item_id, quantity)
+          SELECT $1, $8, id, 1
+          FROM inserted_items
+        `,
+        [organizationId, "A-1", "Alpha", "B-1", "Beta", "G-1", "Gamma", locationId],
+      );
+
+      const firstPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?limit=2`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(firstPageResponse.body.stock).toEqual([
+        expect.objectContaining({ item: expect.objectContaining({ name: "Alpha" }) }),
+        expect.objectContaining({ item: expect.objectContaining({ name: "Beta" }) }),
+      ]);
+      expect(firstPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 0,
+        nextOffset: 2,
+        hasMore: true,
+      });
+
+      const secondPageResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?limit=2&offset=2`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(200);
+
+      expect(secondPageResponse.body.stock).toEqual([
+        expect.objectContaining({ item: expect.objectContaining({ name: "Gamma" }) }),
+      ]);
+      expect(secondPageResponse.body.pagination).toEqual({
+        limit: 2,
+        offset: 2,
+        nextOffset: null,
+        hasMore: false,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects stock listing when the current user does not belong to the organization",
     async () => {
       const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
@@ -1020,7 +1103,90 @@ describe("organization routes", () => {
 
       expect(response.body).toEqual({
         stock: [],
+        pagination: {
+          limit: 50,
+          offset: 0,
+          nextOffset: null,
+          hasMore: false,
+        },
       });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects stock listing with an invalid organization id",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const response = await request(getAppServer())
+        .get("/api/organizations/not-a-uuid/stock")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(response.body).toEqual({
+        error: "Invalid organizationId",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects stock listing with invalid UUID query parameters",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const locationResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?location_id=not-a-uuid`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(locationResponse.body.error).toBe("Invalid query parameters");
+
+      const itemResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?item_id=not-a-uuid`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(itemResponse.body.error).toBe("Invalid query parameters");
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects stock listing with invalid low-stock query values",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const textResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?low_stock=notabool`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(textResponse.body.error).toBe("Invalid query parameters");
+
+      const numericResponse = await request(getAppServer())
+        .get(`/api/organizations/${organizationId}/stock?low_stock=123`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .expect(400);
+
+      expect(numericResponse.body.error).toBe("Invalid query parameters");
     },
     testTimeout,
   );
