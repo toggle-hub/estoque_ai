@@ -8,7 +8,13 @@ import { Pool } from "pg";
 import request from "supertest";
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { categoriesTable, itemsTable, locationsTable, stockLevelsTable } from "../../db/schema";
+import {
+  categoriesTable,
+  itemsTable,
+  locationsTable,
+  stockLevelsTable,
+  transactionsTable,
+} from "../../db/schema";
 
 config({ path: resolve(process.cwd(), ".env.test") });
 
@@ -134,7 +140,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await cleanupPool?.query(
-    "TRUNCATE TABLE stock_levels, items, categories, locations, user_organizations, organizations, users RESTART IDENTITY CASCADE",
+    "TRUNCATE TABLE transactions, stock_levels, items, categories, locations, user_organizations, organizations, users RESTART IDENTITY CASCADE",
   );
 }, testTimeout);
 
@@ -487,6 +493,263 @@ describe("location routes", () => {
 
       expect(response.body).toEqual({
         stock: [],
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "creates a receiving transaction and increases stock for managers",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: organizationId,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "manager"],
+      );
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+          quantity: 12,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .post(`/api/locations/${location.id}/transactions/receiving`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({
+          item_id: createItemResponse.body.item.id,
+          quantity: 8,
+          reference: "NF-000123",
+          notes: "Restock from supplier",
+        })
+        .expect(201);
+
+      expect(response.body.transaction).toMatchObject({
+        id: expect.any(String),
+        organization_id: organizationId,
+        location_id: location.id,
+        item_id: createItemResponse.body.item.id,
+        type: "RECEIVING",
+        quantity: 8,
+        previous_quantity: 12,
+        new_quantity: 20,
+        reference: "NF-000123",
+        notes: "Restock from supplier",
+        performed_by: graceResponse.body.user.id,
+      });
+      expect(response.body.stock_level).toMatchObject({
+        organization_id: organizationId,
+        location_id: location.id,
+        item_id: createItemResponse.body.item.id,
+        quantity: 20,
+      });
+
+      const [stockLevel] = await getDatabase()
+        .select()
+        .from(stockLevelsTable)
+        .where(eq(stockLevelsTable.item_id, createItemResponse.body.item.id));
+      expect(stockLevel.quantity).toBe(20);
+
+      const transactions = await getDatabase().select().from(transactionsTable);
+      expect(transactions).toHaveLength(1);
+      expect(transactions[0]).toMatchObject({
+        type: "RECEIVING",
+        previous_quantity: 12,
+        new_quantity: 20,
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects receiving transactions for viewers",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: organizationId,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "viewer"],
+      );
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${location.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+          quantity: 12,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .post(`/api/locations/${location.id}/transactions/receiving`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({
+          item_id: createItemResponse.body.item.id,
+          quantity: 8,
+        })
+        .expect(403);
+
+      expect(response.body).toEqual({
+        error: "Insufficient permissions",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects receiving transactions with invalid bodies",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const [location] = await getDatabase()
+        .insert(locationsTable)
+        .values({
+          organization_id: createResponse.body.organization.id,
+          name: "Main Warehouse",
+        })
+        .returning();
+
+      const response = await request(getAppServer())
+        .post(`/api/locations/${location.id}/transactions/receiving`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          item_id: "not-an-item",
+          quantity: 0,
+        })
+        .expect(400);
+
+      expect(response.body.error).toBe("Invalid request body");
+    },
+    testTimeout,
+  );
+
+  it(
+    "does not receive stock for items outside the target location",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const createResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = createResponse.body.organization.id;
+
+      const [location, otherLocation] = await getDatabase()
+        .insert(locationsTable)
+        .values([
+          {
+            organization_id: organizationId,
+            name: "Main Warehouse",
+          },
+          {
+            organization_id: organizationId,
+            name: "Secondary Store",
+          },
+        ])
+        .returning();
+
+      const createItemResponse = await request(getAppServer())
+        .post(`/api/locations/${otherLocation.id}/items`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          sku: "COMP-001",
+          name: "Industrial Sensor",
+          unit_price: 199.9,
+          quantity: 12,
+        })
+        .expect(201);
+
+      const response = await request(getAppServer())
+        .post(`/api/locations/${location.id}/transactions/receiving`)
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({
+          item_id: createItemResponse.body.item.id,
+          quantity: 8,
+        })
+        .expect(404);
+
+      expect(response.body).toEqual({
+        error: "Item not found",
+      });
+
+      const [stockLevel] = await getDatabase()
+        .select()
+        .from(stockLevelsTable)
+        .where(eq(stockLevelsTable.item_id, createItemResponse.body.item.id));
+      expect(stockLevel.quantity).toBe(12);
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects receiving transactions without authentication",
+    async () => {
+      const response = await request(getAppServer())
+        .post("/api/locations/00000000-0000-4000-8000-000000000001/transactions/receiving")
+        .send({
+          item_id: "00000000-0000-4000-8000-000000000002",
+          quantity: 1,
+        })
+        .expect(401);
+
+      expect(response.body).toEqual({
+        error: "Missing authentication token",
       });
     },
     testTimeout,
