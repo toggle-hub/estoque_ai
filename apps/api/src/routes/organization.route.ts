@@ -249,11 +249,20 @@ organizations.get("/:organizationId/stock", async (c) => {
     offset: c.req.query("offset"),
   });
 
-  if (!parsedQuery.success || !parsedPagination.success) {
+  if (!parsedQuery.success) {
     logErrorResponse(c, "Invalid query parameters");
-    const issues = z.treeifyError(parsedQuery.success ? parsedPagination.error : parsedQuery.error);
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedQuery.error) },
+      400,
+    );
+  }
 
-    return c.json({ error: "Invalid query parameters", issues }, 400);
+  if (!parsedPagination.success) {
+    logErrorResponse(c, "Invalid query parameters");
+    return c.json(
+      { error: "Invalid query parameters", issues: z.treeifyError(parsedPagination.error) },
+      400,
+    );
   }
 
   const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
