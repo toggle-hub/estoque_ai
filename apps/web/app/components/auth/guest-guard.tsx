@@ -34,7 +34,7 @@ export function GuestGuard({ children }: GuestGuardProps) {
     const currentPath = window.location.pathname
       ? `${window.location.pathname}${window.location.search}${window.location.hash}`
       : pathname;
-    const redirectPath = next ?? (currentPath === "/auth/login" ? "/dashboard" : currentPath);
+    const redirectPath = next ?? (pathname === "/auth/login" ? "/dashboard" : currentPath);
 
     router.replace(`/organizations/select?next=${encodeURIComponent(redirectPath)}`);
   }, [authQuery.data, pathname, router]);
