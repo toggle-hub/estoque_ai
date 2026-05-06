@@ -14,7 +14,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -105,11 +104,21 @@ export const Navbar = ({
     getLocationInventoryItem(selectedLocationId, selectedLocationName),
     ...workflowNavItems,
   ];
+  const brand = (
+    <Link href="/dashboard" className="inline-flex min-w-0 items-center gap-3">
+      <span className="relative block h-9 w-[38px] shrink-0" aria-hidden="true">
+        <span className="absolute top-px left-2 h-[21px] w-[21px] rotate-[30deg] skew-y-[-30deg] bg-purple-500" />
+        <span className="absolute top-3.5 left-0.5 h-[21px] w-[21px] rotate-[30deg] skew-y-[-30deg] bg-purple-300" />
+        <span className="absolute top-3.5 right-0.5 h-[21px] w-[21px] rotate-[30deg] skew-y-[-30deg] bg-purple-700" />
+      </span>
+      <span className="truncate text-lg leading-6 font-bold text-[#0f0f11]">estoque ai</span>
+    </Link>
+  );
 
   const navigation = (
     <>
       <div className="flex items-center gap-3 px-5 py-4">
-        <Image src="/logo.svg" alt="estoque ai logo" width={112} height={48} priority />
+        {brand}
       </div>
 
       <div className="mx-3 rounded-md border border-purple-200 bg-white px-3 py-3">
@@ -169,7 +178,7 @@ export const Navbar = ({
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-purple-200 bg-white px-4 md:hidden">
-        <Image src="/logo.svg" alt="estoque ai logo" width={104} height={44} priority />
+        {brand}
         <button
           aria-label={isMobileOpen ? "Close navigation" : "Open navigation"}
           className="inline-flex size-10 items-center justify-center rounded-md border border-purple-200 text-purple-700"

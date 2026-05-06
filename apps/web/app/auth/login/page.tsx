@@ -161,7 +161,7 @@ function LoginPage() {
             <span className="absolute top-3.5 left-0.5 h-[21px] w-[21px] rotate-[30deg] skew-y-[-30deg] bg-purple-300" />
             <span className="absolute top-3.5 right-0.5 h-[21px] w-[21px] rotate-[30deg] skew-y-[-30deg] bg-purple-700" />
           </span>
-          <span className="text-lg leading-6 font-bold text-[#0f0f11]">Inventory</span>
+          <span className="text-lg leading-6 font-bold text-[#0f0f11]">estoque ai</span>
         </div>
 
         <div className="mb-6">
