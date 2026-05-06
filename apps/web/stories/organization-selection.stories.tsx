@@ -80,3 +80,11 @@ export const CreateOrganizationError: Story = {
     selectedOrganizationId: organizations[0]?.id,
   },
 };
+
+export const CreateOrganizationCreating: Story = {
+  args: {
+    isCreating: true,
+    organizations,
+    selectedOrganizationId: organizations[0]?.id,
+  },
+};

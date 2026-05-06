@@ -67,6 +67,54 @@ export const NeedsLocationSelection: Story = {
   },
 };
 
+export const LoadingLocations: Story = {
+  args: {
+    currentPath: "/dashboard",
+    isLoadingLocations: true,
+    locations: [],
+    organization: {
+      name: "Ada Industries",
+      role: "manager",
+    },
+  },
+};
+
+export const ErrorLoadingLocations: Story = {
+  args: {
+    currentPath: "/dashboard",
+    hasLocationLoadError: true,
+    locations: [],
+    organization: {
+      name: "Ada Industries",
+      role: "manager",
+    },
+  },
+};
+
+export const WithInactiveLocation: Story = {
+  args: {
+    currentPath: "/dashboard/locations/00000000-0000-4000-8000-000000000001/inventory",
+    locations,
+    organization: {
+      name: "Ada Industries",
+      role: "manager",
+    },
+    selectedLocationId: locations[0]?.id,
+    selectedLocationName: locations[0]?.name,
+  },
+};
+
+export const NoLocations: Story = {
+  args: {
+    currentPath: "/dashboard",
+    locations: [],
+    organization: {
+      name: "Ada Industries",
+      role: "manager",
+    },
+  },
+};
+
 export const NoOrganizationSelected: Story = {
   args: {
     currentPath: "/dashboard/locations",

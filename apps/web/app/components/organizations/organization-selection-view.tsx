@@ -15,7 +15,7 @@ type OrganizationSelectionViewProps = {
   errorMessage?: string;
   isCreating?: boolean;
   isLoading?: boolean;
-  onCreate?: (input: { name: string }) => void;
+  onCreate?: (input: { name: string }) => Promise<void>;
   onRetry?: () => void;
   onSelect?: (organizationId: string) => void;
   organizations: Organization[];
@@ -47,14 +47,19 @@ export function OrganizationSelectionView({
    *
    * @param event Form submit event.
    */
-  const handleCreate = (event: FormEvent<HTMLFormElement>) => {
+  const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!organizationName.trim()) {
+    if (!onCreate || !organizationName.trim()) {
       return;
     }
 
-    onCreate?.({ name: organizationName.trim() });
+    try {
+      await onCreate({ name: organizationName.trim() });
+    } catch {
+      return;
+    }
+
     setOrganizationName("");
   };
 
@@ -175,12 +180,13 @@ export function OrganizationSelectionView({
                   <span className="sr-only">Organization name</span>
                   <input
                     className="h-10 w-full min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
+                    disabled={!onCreate}
                     onChange={(event) => setOrganizationName(event.target.value)}
                     placeholder="Organization name"
                     value={organizationName}
                   />
                 </label>
-                <Button disabled={isCreating || !organizationName.trim()} type="submit">
+                <Button disabled={!onCreate || isCreating || !organizationName.trim()} type="submit">
                   Create organization
                 </Button>
               </form>

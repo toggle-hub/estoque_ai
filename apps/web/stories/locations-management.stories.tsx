@@ -86,6 +86,22 @@ export const Empty: Story = {
   },
 };
 
+export const Creating: Story = {
+  args: {
+    isCreating: true,
+    locations,
+    organization,
+  },
+};
+
+export const CreateError: Story = {
+  args: {
+    createErrorMessage: "Unable to create location. Try again.",
+    locations,
+    organization,
+  },
+};
+
 export const ErrorState: Story = {
   args: {
     errorMessage: "The API did not respond.",

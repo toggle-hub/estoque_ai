@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LocationsManagementView, type LocationInventorySummary } from "../../components/locations/locations-management-view";
 import { Navbar } from "../../components/navbar";
 import {
@@ -89,6 +89,7 @@ export default function LocationsPage() {
   const { organizationsQuery, selectedOrganization } = useSelectedOrganization();
   const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
   const organizationId = selectedOrganization?.id;
+  const prevOrganizationId = useRef<string | undefined>(organizationId);
   const locationsQuery = useQuery({
     enabled: Boolean(organizationId),
     queryKey: ["organizations", organizationId, "locations"],
@@ -108,16 +109,36 @@ export default function LocationsPage() {
         name: input.name,
         organizationId: input.organization.id,
       }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "locations"] });
+    onSuccess: async (_location, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["organizations", variables.organization.id, "locations"],
+      });
     },
   });
   const summaries = useMemo(
     () => getLocationSummaries(stockQuery.data ?? []),
     [stockQuery.data],
   );
+  const hasOrganization = Boolean(organizationId);
+  const isLoadingLocations = hasOrganization ? locationsQuery.isPending : false;
+  const hasLocationLoadError = hasOrganization ? Boolean(locationsQuery.error) : false;
   const errorMessage =
-    organizationsQuery.error?.message ?? locationsQuery.error?.message ?? stockQuery.error?.message;
+    organizationsQuery.error?.message ??
+    (hasOrganization ? locationsQuery.error?.message : undefined) ??
+    (hasOrganization ? stockQuery.error?.message : undefined);
+
+  useEffect(() => {
+    if (prevOrganizationId.current === organizationId) {
+      return;
+    }
+
+    if (prevOrganizationId.current) {
+      clearSelectedLocation(prevOrganizationId.current);
+    }
+
+    setSelectedLocationState(null);
+    prevOrganizationId.current = organizationId;
+  }, [organizationId]);
 
   useEffect(() => {
     if (!organizationId || !locationsQuery.data) {
@@ -148,8 +169,8 @@ export default function LocationsPage() {
   return (
     <div className="min-h-screen bg-gray-50 md:flex">
       <Navbar
-        hasLocationLoadError={Boolean(locationsQuery.error)}
-        isLoadingLocations={locationsQuery.isPending}
+        hasLocationLoadError={hasLocationLoadError}
+        isLoadingLocations={isLoadingLocations}
         locations={locationsQuery.data ?? []}
         onSelectLocation={(location) => {
           if (!organizationId) {
@@ -171,12 +192,16 @@ export default function LocationsPage() {
           createErrorMessage={createLocationMutation.error?.message}
           errorMessage={errorMessage}
           isCreating={createLocationMutation.isPending}
-          isLoading={organizationsQuery.isPending || locationsQuery.isPending}
+          isLoading={organizationsQuery.isPending || isLoadingLocations}
           locations={locationsQuery.data ?? []}
           onCreate={
             selectedOrganization
-              ? (input) =>
-                  createLocationMutation.mutate({ ...input, organization: selectedOrganization })
+              ? async (input) => {
+                  await createLocationMutation.mutateAsync({
+                    ...input,
+                    organization: selectedOrganization,
+                  });
+                }
               : undefined
           }
           onRetry={() => {

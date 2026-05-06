@@ -91,7 +91,9 @@ function OrganizationSelectionPage() {
       isLoading={organizationsQuery.isPending}
       createErrorMessage={createOrganizationMutation.error?.message}
       isCreating={createOrganizationMutation.isPending}
-      onCreate={(input) => createOrganizationMutation.mutate(input)}
+      onCreate={async (input) => {
+        await createOrganizationMutation.mutateAsync(input);
+      }}
       onRetry={() => organizationsQuery.refetch()}
       onSelect={(organizationId) => {
         setSelectedOrganizationId(organizationId);

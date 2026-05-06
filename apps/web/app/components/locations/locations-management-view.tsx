@@ -30,7 +30,7 @@ type LocationsManagementViewProps = {
   isCreating?: boolean;
   isLoading?: boolean;
   locations: Location[];
-  onCreate?: (input: LocationCreateInput) => void;
+  onCreate?: (input: LocationCreateInput) => Promise<void>;
   onRetry?: () => void;
   onSelectLocation?: (location: Location) => void;
   organization?: Organization | null;
@@ -91,17 +91,22 @@ export function LocationsManagementView({
    *
    * @param event Form submit event.
    */
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!canCreate || !onCreate || !name.trim()) {
       return;
     }
 
-    onCreate({
-      address: address.trim() || undefined,
-      name: name.trim(),
-    });
+    try {
+      await onCreate({
+        address: address.trim() || undefined,
+        name: name.trim(),
+      });
+    } catch {
+      return;
+    }
+
     setName("");
     setAddress("");
   };
@@ -195,7 +200,7 @@ export function LocationsManagementView({
           </Card>
         ) : null}
 
-        {!hasLocations ? (
+        {!errorMessage && !hasLocations ? (
           <Card className="border-dashed">
             <CardHeader>
               <CardTitle>No locations yet</CardTitle>
@@ -267,7 +272,7 @@ export function LocationsManagementView({
                         {isSelectedForInventory ? "Selected for inventory" : "Select for inventory"}
                       </Button>
                       <Link
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-100"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-100 focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                         href={`/dashboard/locations/${location.id}/inventory`}
                         onClick={() => onSelectLocation?.(location)}
                       >

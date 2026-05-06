@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navbar } from "../components/navbar";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import {
@@ -67,6 +67,7 @@ const Dashboard = () => {
   });
   const selectedOrganization = useSelectedOrganization();
   const organizationId = selectedOrganization?.id;
+  const prevOrganizationId = useRef<string | undefined>(organizationId);
   const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
   const locationsQuery = useQuery({
     enabled: Boolean(organizationId),
@@ -74,7 +75,23 @@ const Dashboard = () => {
     queryFn: () => getOrganizationLocations(organizationId ?? ""),
     retry: false,
   });
+  const hasOrganization = Boolean(organizationId);
+  const isLoadingLocations = hasOrganization ? locationsQuery.isPending : false;
+  const hasLocationLoadError = hasOrganization ? Boolean(locationsQuery.error) : false;
   const userName = userQuery.data?.name ?? "User";
+
+  useEffect(() => {
+    if (prevOrganizationId.current === organizationId) {
+      return;
+    }
+
+    if (prevOrganizationId.current) {
+      clearSelectedLocation(prevOrganizationId.current);
+    }
+
+    setSelectedLocationState(null);
+    prevOrganizationId.current = organizationId;
+  }, [organizationId]);
 
   useEffect(() => {
     if (!organizationId || !locationsQuery.data) {
@@ -105,8 +122,8 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 md:flex">
       <Navbar
-        hasLocationLoadError={Boolean(locationsQuery.error)}
-        isLoadingLocations={locationsQuery.isPending}
+        hasLocationLoadError={hasLocationLoadError}
+        isLoadingLocations={isLoadingLocations}
         locations={locationsQuery.data ?? []}
         onSelectLocation={(location) => {
           if (!organizationId) {

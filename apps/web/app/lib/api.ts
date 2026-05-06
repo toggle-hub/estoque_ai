@@ -78,8 +78,14 @@ type LocationResponse = {
   location?: Location;
 };
 
+type PaginationResponse = {
+  hasMore: boolean;
+  nextOffset: number | null;
+};
+
 type OrganizationStockResponse = {
   error?: string;
+  pagination?: PaginationResponse;
   stock?: OrganizationStockLevel[];
 };
 
@@ -240,14 +246,36 @@ export const createOrganizationLocation = async (input: {
  * @returns Stock levels joined to item and location data.
  */
 export const getOrganizationStock = async (organizationId: string) => {
-  const response = await fetch(getApiUrl(`/api/organizations/${organizationId}/stock?limit=100`), {
-    credentials: "include",
-  });
-  const payload = (await response.json().catch(() => ({}))) as OrganizationStockResponse;
+  const limit = 100;
+  let offset = 0;
+  let hasMore = true;
+  const stock: OrganizationStockLevel[] = [];
 
-  if (!response.ok) {
-    throw new ApiError(payload.error ?? "Unable to load stock summary.", response.status);
+  while (hasMore) {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    const response = await fetch(
+      getApiUrl(`/api/organizations/${organizationId}/stock?${query.toString()}`),
+      {
+        credentials: "include",
+      },
+    );
+    const payload = (await response.json().catch(() => ({}))) as OrganizationStockResponse;
+
+    if (!response.ok) {
+      throw new ApiError(payload.error ?? "Unable to load stock summary.", response.status);
+    }
+
+    stock.push(...(payload.stock ?? []));
+
+    hasMore = Boolean(payload.pagination?.hasMore);
+
+    if (hasMore) {
+      offset = payload.pagination?.nextOffset ?? offset + limit;
+    }
   }
 
-  return payload.stock ?? [];
+  return stock;
 };
