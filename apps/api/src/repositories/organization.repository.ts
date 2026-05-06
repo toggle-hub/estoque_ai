@@ -118,6 +118,40 @@ export const createOrganizationWithAdminMembership = async (
 };
 
 /**
+ * Updates editable profile fields for one active organization.
+ *
+ * @param database Database handle.
+ * @param input Organization id and editable profile values.
+ * @returns Updated organization when found.
+ */
+export const updateOrganizationProfile = async (
+  database: Database,
+  input: {
+    cnpj?: null | string;
+    email?: null | string;
+    id: string;
+    name: string;
+    phone?: null | string;
+    plan_type?: null | string;
+  },
+) => {
+  const [organization] = await database
+    .update(organizationsTable)
+    .set({
+      cnpj: input.cnpj,
+      email: input.email,
+      name: input.name,
+      phone: input.phone,
+      plan_type: input.plan_type,
+      updated_at: new Date(),
+    })
+    .where(and(eq(organizationsTable.id, input.id), isNull(organizationsTable.deleted_at)))
+    .returning();
+
+  return organization;
+};
+
+/**
  * Creates a location owned by one organization.
  *
  * @param database Database handle.

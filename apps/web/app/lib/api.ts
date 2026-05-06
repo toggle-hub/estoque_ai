@@ -21,6 +21,14 @@ export type Organization = {
   role: string;
 };
 
+export type OrganizationProfileInput = {
+  cnpj?: null | string;
+  email?: null | string;
+  name: string;
+  phone?: null | string;
+  plan_type?: null | string;
+};
+
 export type Location = {
   id: string;
   organization_id: string;
@@ -176,6 +184,61 @@ export const createOrganization = async (input: { name: string }) => {
 
   if (!response.ok) {
     throw new ApiError(payload.error ?? "Unable to create organization.", response.status);
+  }
+
+  if (!payload.organization) {
+    throw new ApiError("Organization response did not include an organization.", response.status);
+  }
+
+  return payload.organization;
+};
+
+/**
+ * Reads one organization profile.
+ *
+ * @param organizationId Selected organization identifier.
+ * @returns Organization profile and current membership role.
+ */
+export const getOrganization = async (organizationId: string) => {
+  const response = await fetch(getApiUrl(`/api/organizations/${organizationId}`), {
+    credentials: "include",
+  });
+  const payload = (await response.json().catch(() => ({}))) as OrganizationResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Unable to load organization.", response.status);
+  }
+
+  if (!payload.organization) {
+    throw new ApiError("Organization response did not include an organization.", response.status);
+  }
+
+  return payload.organization;
+};
+
+/**
+ * Updates organization profile details.
+ *
+ * @param organizationId Selected organization identifier.
+ * @param input Editable profile fields.
+ * @returns Updated organization profile.
+ */
+export const updateOrganization = async (
+  organizationId: string,
+  input: OrganizationProfileInput,
+) => {
+  const response = await fetch(getApiUrl(`/api/organizations/${organizationId}`), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  const payload = (await response.json().catch(() => ({}))) as OrganizationResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Unable to update organization.", response.status);
   }
 
   if (!payload.organization) {
