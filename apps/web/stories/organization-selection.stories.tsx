@@ -72,3 +72,19 @@ export const ErrorState: Story = {
     organizations: [],
   },
 };
+
+export const CreateOrganizationError: Story = {
+  args: {
+    createErrorMessage: "Organization name is already in use.",
+    organizations,
+    selectedOrganizationId: organizations[0]?.id,
+  },
+};
+
+export const CreateOrganizationCreating: Story = {
+  args: {
+    isCreating: true,
+    organizations,
+    selectedOrganizationId: organizations[0]?.id,
+  },
+};

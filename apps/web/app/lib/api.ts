@@ -21,6 +21,38 @@ export type Organization = {
   role: string;
 };
 
+export type Location = {
+  id: string;
+  organization_id: string;
+  name: string;
+  address: string | null;
+  is_active: boolean | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
+export type OrganizationStockLevel = {
+  id: string;
+  organization_id: string;
+  location_id: string;
+  item_id: string;
+  quantity: number;
+  created_at: string;
+  updated_at: string;
+  item: {
+    id: string;
+    sku: string;
+    name: string;
+    unit_price: string | null;
+    reorder_point: number;
+  };
+  location: {
+    id: string;
+    name: string;
+  };
+};
+
 type CurrentUserResponse = {
   error?: string;
   user?: AuthenticatedUser;
@@ -29,6 +61,32 @@ type CurrentUserResponse = {
 type OrganizationsResponse = {
   error?: string;
   organizations?: Organization[];
+};
+
+type OrganizationResponse = {
+  error?: string;
+  organization?: Organization;
+};
+
+type LocationsResponse = {
+  error?: string;
+  locations?: Location[];
+};
+
+type LocationResponse = {
+  error?: string;
+  location?: Location;
+};
+
+type PaginationResponse = {
+  hasMore: boolean;
+  nextOffset: number | null;
+};
+
+type OrganizationStockResponse = {
+  error?: string;
+  pagination?: PaginationResponse;
+  stock?: OrganizationStockLevel[];
 };
 
 export class ApiError extends Error {
@@ -97,4 +155,127 @@ export const getOrganizations = async () => {
   }
 
   return payload.organizations ?? [];
+};
+
+/**
+ * Creates an organization for the authenticated user.
+ *
+ * @param input Organization creation fields.
+ * @returns Created organization membership.
+ */
+export const createOrganization = async (input: { name: string }) => {
+  const response = await fetch(getApiUrl("/api/organizations"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  const payload = (await response.json().catch(() => ({}))) as OrganizationResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Unable to create organization.", response.status);
+  }
+
+  if (!payload.organization) {
+    throw new ApiError("Organization response did not include an organization.", response.status);
+  }
+
+  return payload.organization;
+};
+
+/**
+ * Lists locations for one organization.
+ *
+ * @param organizationId Selected organization identifier.
+ * @returns Active and inactive locations owned by the organization.
+ */
+export const getOrganizationLocations = async (organizationId: string) => {
+  const response = await fetch(getApiUrl(`/api/organizations/${organizationId}/locations`), {
+    credentials: "include",
+  });
+  const payload = (await response.json().catch(() => ({}))) as LocationsResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Unable to load locations.", response.status);
+  }
+
+  return payload.locations ?? [];
+};
+
+/**
+ * Creates a location for one organization.
+ *
+ * @param input Organization id and location fields.
+ * @returns Created location.
+ */
+export const createOrganizationLocation = async (input: {
+  address?: string;
+  name: string;
+  organizationId: string;
+}) => {
+  const response = await fetch(getApiUrl(`/api/organizations/${input.organizationId}/locations`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({
+      address: input.address,
+      name: input.name,
+    }),
+  });
+  const payload = (await response.json().catch(() => ({}))) as LocationResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Unable to create location.", response.status);
+  }
+
+  if (!payload.location) {
+    throw new ApiError("Location response did not include a location.", response.status);
+  }
+
+  return payload.location;
+};
+
+/**
+ * Lists stock rows for organization-level summaries.
+ *
+ * @param organizationId Selected organization identifier.
+ * @returns Stock levels joined to item and location data.
+ */
+export const getOrganizationStock = async (organizationId: string) => {
+  const limit = 100;
+  let offset = 0;
+  let hasMore = true;
+  const stock: OrganizationStockLevel[] = [];
+
+  while (hasMore) {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    const response = await fetch(
+      getApiUrl(`/api/organizations/${organizationId}/stock?${query.toString()}`),
+      {
+        credentials: "include",
+      },
+    );
+    const payload = (await response.json().catch(() => ({}))) as OrganizationStockResponse;
+
+    if (!response.ok) {
+      throw new ApiError(payload.error ?? "Unable to load stock summary.", response.status);
+    }
+
+    stock.push(...(payload.stock ?? []));
+
+    hasMore = Boolean(payload.pagination?.hasMore);
+
+    if (hasMore) {
+      offset = payload.pagination?.nextOffset ?? offset + limit;
+    }
+  }
+
+  return stock;
 };
