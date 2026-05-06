@@ -27,12 +27,14 @@ const sizes = {
 export function Button({
   className,
   size = "default",
+  type = "button",
   variant = "default",
   ...props
 }: ButtonProps) {
   return (
     <button
       data-slot="button"
+      type={type}
       className={cn(
         "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:pointer-events-none disabled:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
         variants[variant],

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Navbar } from "../components/navbar";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { getCurrentUser, getOrganizations } from "../lib/api";
 import { getSelectedOrganizationId } from "../lib/organization-selection";
 
@@ -76,7 +76,6 @@ const Dashboard = () => {
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium">{userName}</span>
             <Avatar>
-              <AvatarImage src="https://i.pravatar.cc/40" alt={userName} />
               <AvatarFallback>{userName.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
           </div>
