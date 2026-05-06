@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Navbar } from "../components/navbar";
+import { Navbar, type NavbarOrganization } from "../components/navbar";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { getCurrentUser, getOrganizations } from "../lib/api";
 import { getSelectedOrganizationId } from "../lib/organization-selection";
@@ -19,7 +19,7 @@ const getGreeting = () => {
  *
  * @returns Selected organization payload when available.
  */
-const useSelectedOrganization = () => {
+const useSelectedOrganization = (): NavbarOrganization | undefined => {
   const organizationsQuery = useQuery({
     queryKey: ["organizations"],
     queryFn: getOrganizations,
@@ -47,14 +47,14 @@ const Dashboard = () => {
   const userName = userQuery.data?.name ?? "User";
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Navbar />
+    <div className="min-h-screen bg-gray-50 md:flex">
+      <Navbar organization={selectedOrganization} />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex min-w-0 flex-1 flex-col pt-16 md:pt-0">
         {/* Topbar */}
-        <header className="flex items-center justify-between px-6 py-4 bg-white border-b shadow-sm">
+        <header className="flex flex-col gap-4 border-b bg-white px-4 py-4 shadow-sm lg:flex-row lg:items-center lg:justify-between lg:px-6">
           {/* Greeting */}
-          <div>
+          <div className="min-w-0">
             <h1 className="text-lg font-semibold">
               {getGreeting()}, {userName}
             </h1>
@@ -64,7 +64,7 @@ const Dashboard = () => {
           </div>
 
           {/* Search */}
-          <div className="flex-1 max-w-md mx-6">
+          <div className="w-full max-w-md lg:flex-1">
             <input
               type="text"
               placeholder="Search..."
@@ -74,7 +74,7 @@ const Dashboard = () => {
 
           {/* Profile */}
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">{userName}</span>
+            <span className="min-w-0 truncate text-sm font-medium">{userName}</span>
             <Avatar>
               <AvatarFallback>{userName.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
