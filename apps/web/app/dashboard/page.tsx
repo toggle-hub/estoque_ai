@@ -85,10 +85,6 @@ const Dashboard = () => {
       return;
     }
 
-    if (prevOrganizationId.current) {
-      clearSelectedLocation(prevOrganizationId.current);
-    }
-
     setSelectedLocationState(null);
     prevOrganizationId.current = organizationId;
   }, [organizationId]);
