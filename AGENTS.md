@@ -39,7 +39,9 @@ All functions must be documented with JSDoc. Use `@param` tags for helpers and o
 
 ## Frontend Component Workflow
 
-Every new React component must include a Storybook story in `apps/web/stories`. Update an existing story when changing component variants, props, or important visual states.
+Every new React component and every new page must include a Storybook story in `apps/web/stories`. Update an existing story when changing component variants, page states, props, or important visual states.
+
+Use shadcn-style shared primitives from `apps/web/app/components/ui` for standardized UI before adding one-off component styling. Keep the web color scheme white and purple; use `apps/web/app/components/navbar.tsx` as the reference pattern, including Tailwind colors like `bg-purple-100` and `bg-purple-500`.
 
 2. Authentication
 JWT with refresh tokens. Store tokens in database or Lambda@Edge for validation. Three roles: Admin (full access), Manager (can edit), Viewer (read-only).

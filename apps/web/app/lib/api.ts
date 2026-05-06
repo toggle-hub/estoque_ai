@@ -9,9 +9,26 @@ export type AuthenticatedUser = {
   updated_at: string;
 };
 
+export type Organization = {
+  id: string;
+  name: string;
+  cnpj: string | null;
+  email: string | null;
+  phone: string | null;
+  plan_type: string | null;
+  created_at: string;
+  updated_at: string;
+  role: string;
+};
+
 type CurrentUserResponse = {
   error?: string;
   user?: AuthenticatedUser;
+};
+
+type OrganizationsResponse = {
+  error?: string;
+  organizations?: Organization[];
 };
 
 export class ApiError extends Error {
@@ -62,4 +79,22 @@ export const getCurrentUser = async () => {
   }
 
   return payload.user;
+};
+
+/**
+ * Lists organizations available to the authenticated user.
+ *
+ * @returns Organization memberships for the active session.
+ */
+export const getOrganizations = async () => {
+  const response = await fetch(getApiUrl("/api/organizations"), {
+    credentials: "include",
+  });
+  const payload = (await response.json().catch(() => ({}))) as OrganizationsResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Unable to load organizations.", response.status);
+  }
+
+  return payload.organizations ?? [];
 };

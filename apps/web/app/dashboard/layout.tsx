@@ -1,5 +1,6 @@
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { AuthGuard } from "../components/auth/auth-guard";
+import { OrganizationGuard } from "../components/organizations/organization-guard";
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -12,5 +13,9 @@ type DashboardLayoutProps = {
  * @returns Protected dashboard route tree.
  */
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  return <AuthGuard>{children}</AuthGuard>;
+  return (
+    <AuthGuard>
+      <OrganizationGuard>{children}</OrganizationGuard>
+    </AuthGuard>
+  );
 }

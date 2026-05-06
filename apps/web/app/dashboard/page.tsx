@@ -1,5 +1,10 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { Navbar } from "../components/navbar";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { Avatar, AvatarFallback } from "../components/ui/avatar";
+import { getCurrentUser, getOrganizations } from "../lib/api";
+import { getSelectedOrganizationId } from "../lib/organization-selection";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -9,11 +14,37 @@ const getGreeting = () => {
   return "Good evening";
 };
 
+/**
+ * Returns the organization selected for the current dashboard context.
+ *
+ * @returns Selected organization payload when available.
+ */
+const useSelectedOrganization = () => {
+  const organizationsQuery = useQuery({
+    queryKey: ["organizations"],
+    queryFn: getOrganizations,
+    retry: false,
+  });
+  const selectedOrganizationId = getSelectedOrganizationId();
+
+  return organizationsQuery.data?.find(
+    (organization) => organization.id === selectedOrganizationId,
+  );
+};
+
+/**
+ * Renders the authenticated dashboard shell for the selected organization.
+ *
+ * @returns Dashboard page.
+ */
 const Dashboard = () => {
-  const user = {
-    name: "Felipe",
-    avatar: "https://i.pravatar.cc/40",
-  };
+  const userQuery = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: getCurrentUser,
+    retry: false,
+  });
+  const selectedOrganization = useSelectedOrganization();
+  const userName = userQuery.data?.name ?? "User";
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -25,9 +56,11 @@ const Dashboard = () => {
           {/* Greeting */}
           <div>
             <h1 className="text-lg font-semibold">
-              {getGreeting()}, {user.name}
+              {getGreeting()}, {userName}
             </h1>
-            <p className="text-sm text-gray-500">Activity today</p>
+            <p className="text-sm text-gray-500">
+              {selectedOrganization ? selectedOrganization.name : "Select an organization"}
+            </p>
           </div>
 
           {/* Search */}
@@ -41,10 +74,9 @@ const Dashboard = () => {
 
           {/* Profile */}
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">{user.name}</span>
+            <span className="text-sm font-medium">{userName}</span>
             <Avatar>
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>FE</AvatarFallback>
+              <AvatarFallback>{userName.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
           </div>
         </header>

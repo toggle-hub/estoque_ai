@@ -10,7 +10,7 @@ export function Spinner({ className, ...props }: React.ComponentProps<"span">) {
     <span
       role="status"
       aria-label="Loading"
-      className={cn("inline-grid size-6 place-items-center text-[#006ec4]", className)}
+      className={cn("inline-grid size-6 place-items-center text-purple-500", className)}
       {...props}
     >
       <span className="grid size-full animate-spin place-items-center [animation-duration:1.1s]">
