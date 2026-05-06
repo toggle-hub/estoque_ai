@@ -21,6 +21,10 @@ export const getSelectedOrganizationId = () => {
  * @param organizationId Organization id selected by the user.
  */
 export const setSelectedOrganizationId = (organizationId: string) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
   window.localStorage.setItem(selectedOrganizationStorageKey, organizationId);
 };
 
@@ -28,5 +32,9 @@ export const setSelectedOrganizationId = (organizationId: string) => {
  * Removes the selected organization id from durable client storage.
  */
 export const clearSelectedOrganizationId = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
   window.localStorage.removeItem(selectedOrganizationStorageKey);
 };

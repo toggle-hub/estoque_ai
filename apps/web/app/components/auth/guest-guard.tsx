@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
 import { getCurrentUser } from "../../lib/api";
 import { Spinner } from "../ui/spinner";
@@ -17,6 +17,7 @@ type GuestGuardProps = {
  * @returns Guest content or a loading state.
  */
 export function GuestGuard({ children }: GuestGuardProps) {
+  const pathname = usePathname();
   const router = useRouter();
   const authQuery = useQuery({
     queryKey: ["auth", "me"],
@@ -29,8 +30,14 @@ export function GuestGuard({ children }: GuestGuardProps) {
       return;
     }
 
-    router.replace("/organizations/select?next=%2Fdashboard");
-  }, [authQuery.data, router]);
+    const next = new URLSearchParams(window.location.search).get("next");
+    const currentPath = window.location.pathname
+      ? `${window.location.pathname}${window.location.search}${window.location.hash}`
+      : pathname;
+    const redirectPath = next ?? (currentPath === "/auth/login" ? "/dashboard" : currentPath);
+
+    router.replace(`/organizations/select?next=${encodeURIComponent(redirectPath)}`);
+  }, [authQuery.data, pathname, router]);
 
   if (authQuery.isPending || authQuery.data) {
     return (
