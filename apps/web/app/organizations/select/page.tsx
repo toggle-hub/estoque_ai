@@ -1,11 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { AuthGuard } from "../../components/auth/auth-guard";
 import { OrganizationSelectionView } from "../../components/organizations/organization-selection-view";
-import { getOrganizations } from "../../lib/api";
+import { createOrganization, getOrganizations } from "../../lib/api";
 import {
   getSelectedOrganizationId,
   setSelectedOrganizationId,
@@ -46,13 +46,23 @@ export default function OrganizationSelectionRoute() {
  */
 function OrganizationSelectionPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const nextPath = getSafeNextPath(searchParams.get("next"));
+  const isSwitchMode = searchParams.get("mode") === "switch";
   const [selectedOrganizationId, setSelectedOrganizationIdState] = useState<string | null>(null);
   const organizationsQuery = useQuery({
     queryKey: ["organizations"],
     queryFn: getOrganizations,
     retry: false,
+  });
+  const createOrganizationMutation = useMutation({
+    mutationFn: createOrganization,
+    onSuccess: async (organization) => {
+      setSelectedOrganizationId(organization.id);
+      setSelectedOrganizationIdState(organization.id);
+      await queryClient.invalidateQueries({ queryKey: ["organizations"] });
+    },
   });
 
   useEffect(() => {
@@ -60,7 +70,7 @@ function OrganizationSelectionPage() {
   }, []);
 
   useEffect(() => {
-    if (organizationsQuery.data?.length !== 1) {
+    if (isSwitchMode || organizationsQuery.data?.length !== 1) {
       return;
     }
 
@@ -73,12 +83,15 @@ function OrganizationSelectionPage() {
     setSelectedOrganizationId(organizationId);
     setSelectedOrganizationIdState(organizationId);
     router.replace(nextPath);
-  }, [nextPath, organizationsQuery.data, router]);
+  }, [isSwitchMode, nextPath, organizationsQuery.data, router]);
 
   return (
     <OrganizationSelectionView
       errorMessage={organizationsQuery.error?.message}
       isLoading={organizationsQuery.isPending}
+      createErrorMessage={createOrganizationMutation.error?.message}
+      isCreating={createOrganizationMutation.isPending}
+      onCreate={(input) => createOrganizationMutation.mutate(input)}
       onRetry={() => organizationsQuery.refetch()}
       onSelect={(organizationId) => {
         setSelectedOrganizationId(organizationId);

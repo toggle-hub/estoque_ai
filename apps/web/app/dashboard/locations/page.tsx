@@ -1,17 +1,25 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LocationsManagementView, type LocationInventorySummary } from "../../components/locations/locations-management-view";
+import { Navbar } from "../../components/navbar";
 import {
   createOrganizationLocation,
   getOrganizationLocations,
   getOrganizations,
   getOrganizationStock,
+  type Location,
   type Organization,
   type OrganizationStockLevel,
 } from "../../lib/api";
-import { getSelectedOrganizationId } from "../../lib/organization-selection";
+import {
+  clearSelectedLocation,
+  getSelectedLocation,
+  getSelectedOrganizationId,
+  setSelectedLocation,
+  type SelectedLocation,
+} from "../../lib/organization-selection";
 
 /**
  * Returns the currently selected organization membership.
@@ -63,6 +71,15 @@ const getLocationSummaries = (stock: OrganizationStockLevel[]) =>
   }, {});
 
 /**
+ * Returns selectable active locations.
+ *
+ * @param locations Organization locations.
+ * @returns Active location rows.
+ */
+const getActiveLocations = (locations: Location[]) =>
+  locations.filter((location) => location.is_active !== false);
+
+/**
  * Renders the selected organization's locations management page.
  *
  * @returns Locations page.
@@ -70,6 +87,7 @@ const getLocationSummaries = (stock: OrganizationStockLevel[]) =>
 export default function LocationsPage() {
   const queryClient = useQueryClient();
   const { organizationsQuery, selectedOrganization } = useSelectedOrganization();
+  const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
   const organizationId = selectedOrganization?.id;
   const locationsQuery = useQuery({
     enabled: Boolean(organizationId),
@@ -101,25 +119,86 @@ export default function LocationsPage() {
   const errorMessage =
     organizationsQuery.error?.message ?? locationsQuery.error?.message ?? stockQuery.error?.message;
 
+  useEffect(() => {
+    if (!organizationId || !locationsQuery.data) {
+      return;
+    }
+
+    const activeLocations = getActiveLocations(locationsQuery.data);
+    const storedLocation = getSelectedLocation(organizationId);
+    const storedActiveLocation = activeLocations.find((location) => location.id === storedLocation?.id);
+
+    if (storedActiveLocation) {
+      setSelectedLocationState({ id: storedActiveLocation.id, name: storedActiveLocation.name });
+      return;
+    }
+
+    if (activeLocations.length === 1 && activeLocations[0]) {
+      const nextLocation = { id: activeLocations[0].id, name: activeLocations[0].name };
+
+      setSelectedLocation(organizationId, nextLocation);
+      setSelectedLocationState(nextLocation);
+      return;
+    }
+
+    clearSelectedLocation(organizationId);
+    setSelectedLocationState(null);
+  }, [locationsQuery.data, organizationId]);
+
   return (
-    <LocationsManagementView
-      createErrorMessage={createLocationMutation.error?.message}
-      errorMessage={errorMessage}
-      isCreating={createLocationMutation.isPending}
-      isLoading={organizationsQuery.isPending || locationsQuery.isPending}
-      locations={locationsQuery.data ?? []}
-      onCreate={
-        selectedOrganization
-          ? (input) => createLocationMutation.mutate({ ...input, organization: selectedOrganization })
-          : undefined
-      }
-      onRetry={() => {
-        organizationsQuery.refetch();
-        locationsQuery.refetch();
-        stockQuery.refetch();
-      }}
-      organization={selectedOrganization}
-      summaries={summaries}
-    />
+    <div className="min-h-screen bg-gray-50 md:flex">
+      <Navbar
+        hasLocationLoadError={Boolean(locationsQuery.error)}
+        isLoadingLocations={locationsQuery.isPending}
+        locations={locationsQuery.data ?? []}
+        onSelectLocation={(location) => {
+          if (!organizationId) {
+            return;
+          }
+
+          const nextLocation = { id: location.id, name: location.name };
+
+          setSelectedLocation(organizationId, nextLocation);
+          setSelectedLocationState(nextLocation);
+        }}
+        organization={selectedOrganization}
+        selectedLocationId={selectedLocation?.id}
+        selectedLocationName={selectedLocation?.name}
+      />
+
+      <div className="min-w-0 flex-1 pt-16 md:pt-0">
+        <LocationsManagementView
+          createErrorMessage={createLocationMutation.error?.message}
+          errorMessage={errorMessage}
+          isCreating={createLocationMutation.isPending}
+          isLoading={organizationsQuery.isPending || locationsQuery.isPending}
+          locations={locationsQuery.data ?? []}
+          onCreate={
+            selectedOrganization
+              ? (input) =>
+                  createLocationMutation.mutate({ ...input, organization: selectedOrganization })
+              : undefined
+          }
+          onRetry={() => {
+            organizationsQuery.refetch();
+            locationsQuery.refetch();
+            stockQuery.refetch();
+          }}
+          onSelectLocation={(location) => {
+            if (!organizationId) {
+              return;
+            }
+
+            const nextLocation = { id: location.id, name: location.name };
+
+            setSelectedLocation(organizationId, nextLocation);
+            setSelectedLocationState(nextLocation);
+          }}
+          organization={selectedOrganization}
+          selectedLocationId={selectedLocation?.id}
+          summaries={summaries}
+        />
+      </div>
+    </div>
   );
 }

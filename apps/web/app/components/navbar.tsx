@@ -2,6 +2,8 @@
 
 import {
   Building2,
+  Check,
+  ChevronDown,
   LayoutDashboard,
   Lock,
   MapPin,
@@ -17,6 +19,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import type { Location } from "../lib/api";
 import { cn } from "../lib/utils";
 
 export type NavbarOrganization = {
@@ -27,6 +30,10 @@ export type NavbarOrganization = {
 type NavbarProps = {
   currentPath?: string;
   defaultMobileOpen?: boolean;
+  hasLocationLoadError?: boolean;
+  isLoadingLocations?: boolean;
+  locations?: Location[];
+  onSelectLocation?: (location: Location) => void;
   organization?: NavbarOrganization | null;
   selectedLocationId?: string | null;
   selectedLocationName?: string | null;
@@ -36,14 +43,21 @@ type NavItem = {
   helper?: string;
   href: string;
   icon: LucideIcon;
+  isActive?: (currentPath: string) => boolean;
   label: string;
+  opensLocationSelector?: boolean;
   requiresActionRole?: boolean;
 };
 
 const actionRoles = new Set(["admin", "manager"]);
 
 const dashboardNavItem = { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" };
-const locationsNavItem = { icon: MapPin, label: "Locations", href: "/dashboard/locations" };
+const locationsNavItem = {
+  icon: MapPin,
+  isActive: (currentPath: string) => currentPath === "/dashboard/locations",
+  label: "Locations",
+  href: "/dashboard/locations",
+};
 const workflowNavItems: NavItem[] = [
   { icon: Tags, label: "Categories", href: "/dashboard/categories" },
   { icon: Users, label: "Customers", href: "/dashboard/customers" },
@@ -59,6 +73,7 @@ const workflowNavItems: NavItem[] = [
  * @returns Navigation metadata for location inventory.
  */
 const getLocationInventoryItem = (
+  hasSelectableLocations: boolean,
   selectedLocationId?: string | null,
   selectedLocationName?: string | null,
 ) => ({
@@ -68,6 +83,9 @@ const getLocationInventoryItem = (
     ? `/dashboard/locations/${selectedLocationId}/inventory`
     : "/dashboard/locations",
   helper: selectedLocationName ?? "Select location first",
+  isActive: (currentPath: string) =>
+    currentPath.startsWith("/dashboard/locations/") && currentPath.includes("/inventory"),
+  opensLocationSelector: !selectedLocationId && hasSelectableLocations,
 });
 
 /**
@@ -89,19 +107,26 @@ const isActivePath = (currentPath: string, href: string) =>
 export const Navbar = ({
   currentPath,
   defaultMobileOpen = false,
+  hasLocationLoadError = false,
+  isLoadingLocations = false,
+  locations = [],
+  onSelectLocation,
   organization,
   selectedLocationId,
   selectedLocationName,
 }: NavbarProps) => {
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(defaultMobileOpen);
+  const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
   const activePath = currentPath ?? pathname;
   const role = organization?.role?.toLowerCase() ?? "viewer";
   const canUseActionWorkflows = actionRoles.has(role);
+  const activeLocations = locations.filter((location) => location.is_active !== false);
+  const hasSelectableLocations = activeLocations.length > 0 && !hasLocationLoadError;
   const navItems: NavItem[] = [
     dashboardNavItem,
     locationsNavItem,
-    getLocationInventoryItem(selectedLocationId, selectedLocationName),
+    getLocationInventoryItem(hasSelectableLocations, selectedLocationId, selectedLocationName),
     ...workflowNavItems,
   ];
   const brand = (
@@ -132,17 +157,88 @@ export const Navbar = ({
           </div>
         </div>
         <Link
-          href="/organizations/select?next=%2Fdashboard"
+          href="/organizations/select?next=%2Fdashboard&mode=switch"
           className="mt-3 inline-flex h-8 w-full items-center justify-center rounded-md border border-purple-200 bg-purple-50 px-3 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100"
         >
           Switch organization
         </Link>
       </div>
 
+      <div className="mx-3 mt-3 rounded-md border border-purple-200 bg-white px-3 py-3">
+        <p className="m-0 text-xs font-semibold text-purple-700">Active location</p>
+        <button
+          aria-expanded={isLocationSelectorOpen}
+          className="mt-2 flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 text-left text-sm font-semibold text-[#16151c] transition-colors hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-70"
+          disabled={isLoadingLocations || hasLocationLoadError || !locations.length}
+          onClick={() => setIsLocationSelectorOpen((open) => !open)}
+          type="button"
+        >
+          <span className="truncate">
+            {isLoadingLocations
+              ? "Loading locations"
+              : selectedLocationName ?? (locations.length ? "Select location" : "No locations")}
+          </span>
+          <ChevronDown className="size-4 shrink-0 text-purple-600" />
+        </button>
+        {hasLocationLoadError ? (
+          <p className="m-0 mt-2 text-xs text-[#b42318]">Unable to load locations.</p>
+        ) : null}
+        {isLocationSelectorOpen ? (
+          <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-purple-100 bg-white p-1">
+            {locations.map((location) => {
+              const isInactive = location.is_active === false;
+              const isSelected = location.id === selectedLocationId;
+
+              return (
+                <button
+                  className={cn(
+                    "flex min-h-9 w-full min-w-0 items-center justify-between gap-2 rounded px-2 text-left text-sm transition-colors",
+                    isInactive
+                      ? "cursor-not-allowed text-gray-400"
+                      : "text-[#16151c] hover:bg-purple-50",
+                    isSelected && "bg-purple-100 text-purple-800",
+                  )}
+                  disabled={isInactive}
+                  key={location.id}
+                  onClick={() => {
+                    onSelectLocation?.(location);
+                    setIsLocationSelectorOpen(false);
+                  }}
+                  type="button"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{location.name}</span>
+                    {isInactive ? <span className="block text-xs">Inactive</span> : null}
+                  </span>
+                  {isSelected ? <Check className="size-4 shrink-0" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map(({ helper, href, icon: Icon, label, requiresActionRole }) => {
+        {navItems.map(({ helper, href, icon: Icon, isActive: isItemActive, label, opensLocationSelector, requiresActionRole }) => {
           const isLocked = Boolean(requiresActionRole && !canUseActionWorkflows);
-          const isActive = isActivePath(activePath, href);
+          const isActive = isItemActive ? isItemActive(activePath) : isActivePath(activePath, href);
+
+          if (opensLocationSelector) {
+            return (
+              <button
+                className="flex min-h-11 w-full items-center gap-3 rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-left text-[#16151c] transition-colors hover:border-l-purple-500 hover:bg-purple-500/10 hover:text-purple-600"
+                key={label}
+                onClick={() => setIsLocationSelectorOpen(true)}
+                type="button"
+              >
+                <Icon className="size-4 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{label}</span>
+                  {helper ? <span className="block truncate text-xs text-gray-500">{helper}</span> : null}
+                </span>
+              </button>
+            );
+          }
 
           return (
             <Link

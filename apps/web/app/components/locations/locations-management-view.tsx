@@ -32,7 +32,9 @@ type LocationsManagementViewProps = {
   locations: Location[];
   onCreate?: (input: LocationCreateInput) => void;
   onRetry?: () => void;
+  onSelectLocation?: (location: Location) => void;
   organization?: Organization | null;
+  selectedLocationId?: string | null;
   summaries?: Record<string, LocationInventorySummary>;
 };
 
@@ -73,7 +75,9 @@ export function LocationsManagementView({
   locations,
   onCreate,
   onRetry,
+  onSelectLocation,
   organization,
+  selectedLocationId,
   summaries = {},
 }: LocationsManagementViewProps) {
   const [name, setName] = useState("");
@@ -208,6 +212,7 @@ export function LocationsManagementView({
           <section className="grid gap-4 lg:grid-cols-2" aria-label="Organization locations">
             {locations.map((location) => {
               const summary = summaries[location.id];
+              const isSelectedForInventory = location.id === selectedLocationId;
 
               return (
                 <Card key={location.id}>
@@ -253,13 +258,23 @@ export function LocationsManagementView({
                         </dd>
                       </div>
                     </dl>
-                    <Link
-                      className="mt-4 inline-flex h-9 items-center gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-100"
-                      href={`/dashboard/locations/${location.id}/inventory`}
-                    >
-                      Open inventory
-                      <ArrowRight className="size-4" />
-                    </Link>
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                      <Button
+                        onClick={() => onSelectLocation?.(location)}
+                        type="button"
+                        variant={isSelectedForInventory ? "default" : "outline"}
+                      >
+                        {isSelectedForInventory ? "Selected for inventory" : "Select for inventory"}
+                      </Button>
+                      <Link
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-100"
+                        href={`/dashboard/locations/${location.id}/inventory`}
+                        onClick={() => onSelectLocation?.(location)}
+                      >
+                        Open inventory
+                        <ArrowRight className="size-4" />
+                      </Link>
+                    </div>
                   </CardContent>
                 </Card>
               );

@@ -1,10 +1,23 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Navbar, type NavbarOrganization } from "../components/navbar";
+import { useEffect, useState } from "react";
+import { Navbar } from "../components/navbar";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
-import { getCurrentUser, getOrganizations } from "../lib/api";
-import { getSelectedOrganizationId } from "../lib/organization-selection";
+import {
+  getCurrentUser,
+  getOrganizationLocations,
+  getOrganizations,
+  type Location,
+  type Organization,
+} from "../lib/api";
+import {
+  clearSelectedLocation,
+  getSelectedLocation,
+  getSelectedOrganizationId,
+  setSelectedLocation,
+  type SelectedLocation,
+} from "../lib/organization-selection";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -19,7 +32,7 @@ const getGreeting = () => {
  *
  * @returns Selected organization payload when available.
  */
-const useSelectedOrganization = (): NavbarOrganization | undefined => {
+const useSelectedOrganization = (): Organization | undefined => {
   const organizationsQuery = useQuery({
     queryKey: ["organizations"],
     queryFn: getOrganizations,
@@ -33,6 +46,15 @@ const useSelectedOrganization = (): NavbarOrganization | undefined => {
 };
 
 /**
+ * Returns selectable active locations.
+ *
+ * @param locations Organization locations.
+ * @returns Active location rows.
+ */
+const getActiveLocations = (locations: Location[]) =>
+  locations.filter((location) => location.is_active !== false);
+
+/**
  * Renders the authenticated dashboard shell for the selected organization.
  *
  * @returns Dashboard page.
@@ -44,11 +66,62 @@ const Dashboard = () => {
     retry: false,
   });
   const selectedOrganization = useSelectedOrganization();
+  const organizationId = selectedOrganization?.id;
+  const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
+  const locationsQuery = useQuery({
+    enabled: Boolean(organizationId),
+    queryKey: ["organizations", organizationId, "locations"],
+    queryFn: () => getOrganizationLocations(organizationId ?? ""),
+    retry: false,
+  });
   const userName = userQuery.data?.name ?? "User";
+
+  useEffect(() => {
+    if (!organizationId || !locationsQuery.data) {
+      return;
+    }
+
+    const activeLocations = getActiveLocations(locationsQuery.data);
+    const storedLocation = getSelectedLocation(organizationId);
+    const storedActiveLocation = activeLocations.find((location) => location.id === storedLocation?.id);
+
+    if (storedActiveLocation) {
+      setSelectedLocationState({ id: storedActiveLocation.id, name: storedActiveLocation.name });
+      return;
+    }
+
+    if (activeLocations.length === 1 && activeLocations[0]) {
+      const nextLocation = { id: activeLocations[0].id, name: activeLocations[0].name };
+
+      setSelectedLocation(organizationId, nextLocation);
+      setSelectedLocationState(nextLocation);
+      return;
+    }
+
+    clearSelectedLocation(organizationId);
+    setSelectedLocationState(null);
+  }, [locationsQuery.data, organizationId]);
 
   return (
     <div className="min-h-screen bg-gray-50 md:flex">
-      <Navbar organization={selectedOrganization} />
+      <Navbar
+        hasLocationLoadError={Boolean(locationsQuery.error)}
+        isLoadingLocations={locationsQuery.isPending}
+        locations={locationsQuery.data ?? []}
+        onSelectLocation={(location) => {
+          if (!organizationId) {
+            return;
+          }
+
+          const nextLocation = { id: location.id, name: location.name };
+
+          setSelectedLocation(organizationId, nextLocation);
+          setSelectedLocationState(nextLocation);
+        }}
+        organization={selectedOrganization}
+        selectedLocationId={selectedLocation?.id}
+        selectedLocationName={selectedLocation?.name}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col pt-16 md:pt-0">
         {/* Topbar */}

@@ -63,6 +63,11 @@ type OrganizationsResponse = {
   organizations?: Organization[];
 };
 
+type OrganizationResponse = {
+  error?: string;
+  organization?: Organization;
+};
+
 type LocationsResponse = {
   error?: string;
   locations?: Location[];
@@ -144,6 +149,34 @@ export const getOrganizations = async () => {
   }
 
   return payload.organizations ?? [];
+};
+
+/**
+ * Creates an organization for the authenticated user.
+ *
+ * @param input Organization creation fields.
+ * @returns Created organization membership.
+ */
+export const createOrganization = async (input: { name: string }) => {
+  const response = await fetch(getApiUrl("/api/organizations"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  const payload = (await response.json().catch(() => ({}))) as OrganizationResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Unable to create organization.", response.status);
+  }
+
+  if (!payload.organization) {
+    throw new ApiError("Organization response did not include an organization.", response.status);
+  }
+
+  return payload.organization;
 };
 
 /**

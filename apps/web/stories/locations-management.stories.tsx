@@ -67,6 +67,7 @@ export const Loaded: Story = {
         totalValue: 2910,
       },
     },
+    selectedLocationId: locations[0]?.id,
   },
 };
 

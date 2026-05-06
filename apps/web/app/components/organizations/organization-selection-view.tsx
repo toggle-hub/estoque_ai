@@ -1,6 +1,8 @@
 "use client";
 
 import { AlertCircle, Building2, Check, RefreshCw } from "lucide-react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import type { Organization } from "../../lib/api";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
@@ -9,8 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Spinner } from "../ui/spinner";
 
 type OrganizationSelectionViewProps = {
+  createErrorMessage?: string;
   errorMessage?: string;
+  isCreating?: boolean;
   isLoading?: boolean;
+  onCreate?: (input: { name: string }) => void;
   onRetry?: () => void;
   onSelect?: (organizationId: string) => void;
   organizations: Organization[];
@@ -24,14 +29,34 @@ type OrganizationSelectionViewProps = {
  * @returns Organization selection UI.
  */
 export function OrganizationSelectionView({
+  createErrorMessage,
   errorMessage,
+  isCreating = false,
   isLoading = false,
+  onCreate,
   onRetry,
   onSelect,
   organizations,
   selectedOrganizationId,
 }: OrganizationSelectionViewProps) {
+  const [organizationName, setOrganizationName] = useState("");
   const hasOrganizations = organizations.length > 0;
+
+  /**
+   * Submits a new organization for the current user.
+   *
+   * @param event Form submit event.
+   */
+  const handleCreate = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!organizationName.trim()) {
+      return;
+    }
+
+    onCreate?.({ name: organizationName.trim() });
+    setOrganizationName("");
+  };
 
   return (
     <main className="min-h-svh bg-white text-[#16151c]">
@@ -136,6 +161,36 @@ export function OrganizationSelectionView({
               );
             })}
           </div>
+        ) : null}
+
+        {!isLoading && !errorMessage ? (
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Create organization</CardTitle>
+              <CardDescription>Start a new company workspace and switch to it later.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleCreate}>
+                <label className="min-w-0 flex-1">
+                  <span className="sr-only">Organization name</span>
+                  <input
+                    className="h-10 w-full min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
+                    onChange={(event) => setOrganizationName(event.target.value)}
+                    placeholder="Organization name"
+                    value={organizationName}
+                  />
+                </label>
+                <Button disabled={isCreating || !organizationName.trim()} type="submit">
+                  Create organization
+                </Button>
+              </form>
+              {createErrorMessage ? (
+                <p className="m-0 mt-3 text-sm text-[#b42318]" role="alert">
+                  {createErrorMessage}
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
         ) : null}
       </section>
     </main>
