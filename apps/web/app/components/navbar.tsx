@@ -20,7 +20,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { cn } from "../lib/utils";
 
-type NavbarOrganization = {
+export type NavbarOrganization = {
   name: string;
   role?: string | null;
 };
@@ -147,6 +147,7 @@ export const Navbar = ({
               href={isLocked ? activePath : href}
               key={label}
               onClick={() => setIsMobileOpen(false)}
+              tabIndex={isLocked ? -1 : undefined}
             >
               <Icon className="size-4 shrink-0" />
               <span className="min-w-0 flex-1">

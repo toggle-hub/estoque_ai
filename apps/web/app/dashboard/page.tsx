@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Navbar } from "../components/navbar";
+import { Navbar, type NavbarOrganization } from "../components/navbar";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { getCurrentUser, getOrganizations } from "../lib/api";
 import { getSelectedOrganizationId } from "../lib/organization-selection";
@@ -19,7 +19,7 @@ const getGreeting = () => {
  *
  * @returns Selected organization payload when available.
  */
-const useSelectedOrganization = () => {
+const useSelectedOrganization = (): NavbarOrganization | undefined => {
   const organizationsQuery = useQuery({
     queryKey: ["organizations"],
     queryFn: getOrganizations,
