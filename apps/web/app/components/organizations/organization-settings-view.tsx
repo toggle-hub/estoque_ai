@@ -2,7 +2,7 @@
 
 import { AlertCircle, CheckCircle2, ClipboardCheck, RotateCw, Save } from "lucide-react";
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Organization, OrganizationProfileInput } from "../../lib/api";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
@@ -84,6 +84,7 @@ export function OrganizationSettingsView({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [planType, setPlanType] = useState("");
+  const previousOrganizationIdRef = useRef<string | null>(null);
   const role = organization?.role?.toLowerCase() ?? "viewer";
   const canEdit = writeRoles.has(role);
   const completionItems = useMemo(() => getCompletionItems(organization), [organization]);
@@ -91,6 +92,13 @@ export function OrganizationSettingsView({
   const isProfileIncomplete = Boolean(organization) && missingItems.length > 0;
 
   useEffect(() => {
+    const organizationId = organization?.id ?? null;
+
+    if (previousOrganizationIdRef.current === organizationId) {
+      return;
+    }
+
+    previousOrganizationIdRef.current = organizationId;
     setName(organization?.name ?? "");
     setCnpj(organization?.cnpj ?? "");
     setEmail(organization?.email ?? "");
