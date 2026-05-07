@@ -110,13 +110,17 @@ export function OrganizationSettingsView({
       return;
     }
 
-    await onSave({
-      cnpj: getNullableValue(cnpj),
-      email: getNullableValue(email),
-      name: name.trim(),
-      phone: getNullableValue(phone),
-      plan_type: getNullableValue(planType),
-    });
+    try {
+      await onSave({
+        cnpj: getNullableValue(cnpj),
+        email: getNullableValue(email),
+        name: name.trim(),
+        phone: getNullableValue(phone),
+        plan_type: getNullableValue(planType),
+      });
+    } catch (error) {
+      console.error("Failed to save organization settings.", error);
+    }
   };
 
   if (isLoading) {
