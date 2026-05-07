@@ -16,7 +16,7 @@ type CompletionItem = {
   primary?: boolean;
 };
 
-type OrganizationSettingsViewProps = {
+export type OrganizationSettingsViewProps = {
   errorMessage?: string;
   isLoading?: boolean;
   isSaving?: boolean;
