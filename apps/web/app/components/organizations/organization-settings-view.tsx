@@ -121,14 +121,14 @@ export function OrganizationSettingsView({
 
   if (isLoading) {
     return (
-      <main className="grid min-h-[calc(100svh-4rem)] place-items-center bg-gray-50 p-6 md:min-h-screen">
+      <main className="grid min-h-[calc(100svh-4rem)] place-items-center bg-white p-6 md:min-h-screen">
         <Spinner />
       </main>
     );
   }
 
   return (
-    <main className="min-h-[calc(100svh-4rem)] bg-gray-50 p-4 text-[#16151c] md:min-h-screen md:p-6">
+    <main className="min-h-[calc(100svh-4rem)] bg-white p-4 text-[#16151c] md:min-h-screen md:p-6">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <header className="flex flex-col gap-4 border-b border-purple-100 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
@@ -201,7 +201,7 @@ export function OrganizationSettingsView({
                 <label className="flex min-w-0 flex-col gap-1.5">
                   <span className="text-xs font-semibold text-purple-700">Name</span>
                   <input
-                    className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-gray-50"
+                    className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                     disabled={!canEdit || isSaving}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Ada Industries"
@@ -213,7 +213,7 @@ export function OrganizationSettingsView({
                   <label className="flex min-w-0 flex-col gap-1.5">
                     <span className="text-xs font-semibold text-purple-700">CNPJ</span>
                     <input
-                      className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-gray-50"
+                      className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                       disabled={!canEdit || isSaving}
                       onChange={(event) => setCnpj(event.target.value)}
                       placeholder="12.345.678/0001-90"
@@ -224,7 +224,7 @@ export function OrganizationSettingsView({
                   <label className="flex min-w-0 flex-col gap-1.5">
                     <span className="text-xs font-semibold text-purple-700">Email</span>
                     <input
-                      className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-gray-50"
+                      className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                       disabled={!canEdit || isSaving}
                       onChange={(event) => setEmail(event.target.value)}
                       placeholder="ops@company.com"
@@ -238,7 +238,7 @@ export function OrganizationSettingsView({
                   <label className="flex min-w-0 flex-col gap-1.5">
                     <span className="text-xs font-semibold text-purple-700">Phone</span>
                     <input
-                      className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-gray-50"
+                      className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                       disabled={!canEdit || isSaving}
                       onChange={(event) => setPhone(event.target.value)}
                       placeholder="+55 11 99999-0000"
@@ -249,7 +249,7 @@ export function OrganizationSettingsView({
                   <label className="flex min-w-0 flex-col gap-1.5">
                     <span className="text-xs font-semibold text-purple-700">Plan type</span>
                     <input
-                      className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-gray-50"
+                      className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                       disabled={!canEdit || isSaving}
                       onChange={(event) => setPlanType(event.target.value)}
                       placeholder="essencial"
@@ -300,7 +300,7 @@ export function OrganizationSettingsView({
                       {item.isComplete ? (
                         <CheckCircle2 className="size-4 shrink-0 text-purple-600" />
                       ) : (
-                        <ClipboardCheck className="size-4 shrink-0 text-gray-400" />
+                        <ClipboardCheck className="size-4 shrink-0 text-purple-300" />
                       )}
                       <span className="truncate">{item.label}</span>
                     </span>

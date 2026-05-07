@@ -59,6 +59,7 @@ export const Saving: Story = {
 export const ErrorState: Story = {
   args: {
     errorMessage: "The API did not respond.",
+    onSave: async () => undefined,
     organization: completeOrganization,
   },
 };
