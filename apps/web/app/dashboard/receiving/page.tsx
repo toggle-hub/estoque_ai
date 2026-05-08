@@ -50,10 +50,10 @@ const useSelectedOrganization = () => {
 };
 
 /**
- * Returns selectable active locations.
+ * Returns selectable active locations for getActiveLocations.
  *
- * @param locations Organization locations.
- * @returns Active location rows.
+ * @param locations Location[] rows to filter by the is_active property.
+ * @returns Location[] rows where is_active is not strictly false.
  */
 const getActiveLocations = (locations: Location[]) =>
   locations.filter((location) => location.is_active !== false);
@@ -110,21 +110,11 @@ export default function ReceivingPage() {
     () => getActiveLocations(locationsQuery.data ?? []),
     [locationsQuery.data],
   );
-  const activeLocationIds = useMemo(
-    () => activeLocations.map((location) => location.id).join(","),
-    [activeLocations],
-  );
-  const itemsQueryKey = [
-    "organizations",
-    organizationId,
-    "receiving-items",
-    activeLocationIds,
-    activeLocations,
-  ] as const;
+  const itemsQueryKey = ["organizations", organizationId, "receiving-items", activeLocations] as const;
   const itemsQuery = useQuery({
     enabled: Boolean(organizationId) && Boolean(locationsQuery.data),
     queryKey: itemsQueryKey,
-    queryFn: ({ queryKey }) => getItemsByLocation(queryKey[4]),
+    queryFn: ({ queryKey }) => getItemsByLocation(queryKey[3]),
     retry: false,
   });
   const receiveMutation = useMutation({

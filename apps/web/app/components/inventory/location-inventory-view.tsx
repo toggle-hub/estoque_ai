@@ -424,7 +424,10 @@ export function LocationInventoryView({
                         {canCreate && location ? (
                           <Link
                             className="inline-flex min-h-8 items-center justify-center rounded-md border border-purple-200 bg-purple-50 px-2 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100"
-                            href={`/dashboard/receiving?locationId=${location.id}&itemId=${item.id}`}
+                            href={`/dashboard/receiving?${new URLSearchParams({
+                              itemId: item.id,
+                              locationId: location.id,
+                            }).toString()}`}
                           >
                             Receive
                           </Link>
