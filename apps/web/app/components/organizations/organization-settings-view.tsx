@@ -217,6 +217,7 @@ export function OrganizationSettingsView({
                     disabled={!canEdit || isSaving}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Ada Industries"
+                    required
                     value={name}
                   />
                 </label>
