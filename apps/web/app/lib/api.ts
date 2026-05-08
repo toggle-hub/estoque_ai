@@ -61,6 +61,20 @@ export type OrganizationStockLevel = {
   };
 };
 
+export type Category = {
+  id: string;
+  organization_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  deleted_at: string | null;
+};
+
+export type CategoryInput = {
+  description?: string;
+  name: string;
+};
+
 type CurrentUserResponse = {
   error?: string;
   user?: AuthenticatedUser;
@@ -95,6 +109,17 @@ type OrganizationStockResponse = {
   error?: string;
   pagination?: PaginationResponse;
   stock?: OrganizationStockLevel[];
+};
+
+type CategoriesResponse = {
+  categories?: Category[];
+  error?: string;
+  pagination?: PaginationResponse;
+};
+
+type CategoryResponse = {
+  category?: Category;
+  error?: string;
 };
 
 export class ApiError extends Error {
@@ -341,4 +366,76 @@ export const getOrganizationStock = async (organizationId: string) => {
   }
 
   return stock;
+};
+
+/**
+ * Lists all active categories for one organization.
+ *
+ * @param organizationId Selected organization identifier.
+ * @returns Categories ordered by name.
+ */
+export const getOrganizationCategories = async (organizationId: string) => {
+  const limit = 100;
+  let offset = 0;
+  let hasMore = true;
+  const categories: Category[] = [];
+
+  while (hasMore) {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    const response = await fetch(
+      getApiUrl(`/api/organizations/${organizationId}/categories?${query.toString()}`),
+      {
+        credentials: "include",
+      },
+    );
+    const payload = (await response.json().catch(() => ({}))) as CategoriesResponse;
+
+    if (!response.ok) {
+      throw new ApiError(payload.error ?? "Unable to load categories.", response.status);
+    }
+
+    categories.push(...(payload.categories ?? []));
+    hasMore = Boolean(payload.pagination?.hasMore);
+
+    if (hasMore) {
+      offset = payload.pagination?.nextOffset ?? offset + limit;
+    }
+  }
+
+  return categories;
+};
+
+/**
+ * Creates a category for one organization.
+ *
+ * @param organizationId Selected organization identifier.
+ * @param input Category creation fields.
+ * @returns Created category.
+ */
+export const createOrganizationCategory = async (
+  organizationId: string,
+  input: CategoryInput,
+) => {
+  const response = await fetch(getApiUrl(`/api/organizations/${organizationId}/categories`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  const payload = (await response.json().catch(() => ({}))) as CategoryResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Unable to create category.", response.status);
+  }
+
+  if (!payload.category) {
+    throw new ApiError("Category response did not include a category.", response.status);
+  }
+
+  return payload.category;
 };
