@@ -6,13 +6,14 @@ import {
   ChevronDown,
   LayoutDashboard,
   Lock,
+  type LucideIcon,
   MapPin,
   Menu,
   PackageCheck,
   ReceiptText,
+  Settings,
   Tags,
   Truck,
-  type LucideIcon,
   Users,
   X,
 } from "lucide-react";
@@ -57,6 +58,11 @@ const locationsNavItem = {
   isActive: (currentPath: string) => currentPath === "/dashboard/locations",
   label: "Locations",
   href: "/dashboard/locations",
+};
+const organizationSettingsNavItem = {
+  icon: Settings,
+  label: "Organization Settings",
+  href: "/dashboard/settings/organization",
 };
 const workflowNavItems: NavItem[] = [
   { icon: Tags, label: "Categories", href: "/dashboard/categories" },
@@ -127,6 +133,7 @@ export const Navbar = ({
     dashboardNavItem,
     locationsNavItem,
     getLocationInventoryItem(hasSelectableLocations, selectedLocationId, selectedLocationName),
+    organizationSettingsNavItem,
     ...workflowNavItems,
   ];
   const brand = (
@@ -142,9 +149,7 @@ export const Navbar = ({
 
   const navigation = (
     <>
-      <div className="flex items-center gap-3 px-5 py-4">
-        {brand}
-      </div>
+      <div className="flex items-center gap-3 px-5 py-4">{brand}</div>
 
       <div className="mx-3 rounded-md border border-purple-200 bg-white px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
@@ -176,7 +181,7 @@ export const Navbar = ({
           <span className="truncate">
             {isLoadingLocations
               ? "Loading locations"
-              : selectedLocationName ?? (locations.length ? "Select location" : "No locations")}
+              : (selectedLocationName ?? (locations.length ? "Select location" : "No locations"))}
           </span>
           <ChevronDown className="size-4 shrink-0 text-purple-600" />
         </button>
@@ -219,50 +224,67 @@ export const Navbar = ({
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map(({ helper, href, icon: Icon, isActive: isItemActive, label, opensLocationSelector, requiresActionRole }) => {
-          const isLocked = Boolean(requiresActionRole && !canUseActionWorkflows);
-          const isActive = isItemActive ? isItemActive(activePath) : isActivePath(activePath, href);
+        {navItems.map(
+          ({
+            helper,
+            href,
+            icon: Icon,
+            isActive: isItemActive,
+            label,
+            opensLocationSelector,
+            requiresActionRole,
+          }) => {
+            const isLocked = Boolean(requiresActionRole && !canUseActionWorkflows);
+            const isActive = isItemActive
+              ? isItemActive(activePath)
+              : isActivePath(activePath, href);
 
-          if (opensLocationSelector) {
+            if (opensLocationSelector) {
+              return (
+                <button
+                  className="flex min-h-11 w-full items-center gap-3 rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-left text-[#16151c] transition-colors hover:border-l-purple-500 hover:bg-purple-500/10 hover:text-purple-600"
+                  key={label}
+                  onClick={() => setIsLocationSelectorOpen(true)}
+                  type="button"
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{label}</span>
+                    {helper ? (
+                      <span className="block truncate text-xs text-gray-500">{helper}</span>
+                    ) : null}
+                  </span>
+                </button>
+              );
+            }
+
             return (
-              <button
-                className="flex min-h-11 w-full items-center gap-3 rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-left text-[#16151c] transition-colors hover:border-l-purple-500 hover:bg-purple-500/10 hover:text-purple-600"
+              <Link
+                aria-disabled={isLocked}
+                className={cn(
+                  "flex min-h-11 items-center gap-3 rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-[#16151c] transition-colors",
+                  "hover:border-l-purple-500 hover:bg-purple-500/10 hover:text-purple-600",
+                  isActive && "border-l-purple-500 bg-white text-purple-700 shadow-sm",
+                  isLocked &&
+                    "pointer-events-none text-gray-400 hover:border-l-transparent hover:bg-transparent",
+                )}
+                href={isLocked ? activePath : href}
                 key={label}
-                onClick={() => setIsLocationSelectorOpen(true)}
-                type="button"
+                onClick={() => setIsMobileOpen(false)}
+                tabIndex={isLocked ? -1 : undefined}
               >
                 <Icon className="size-4 shrink-0" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{label}</span>
-                  {helper ? <span className="block truncate text-xs text-gray-500">{helper}</span> : null}
+                  {helper ? (
+                    <span className="block truncate text-xs text-gray-500">{helper}</span>
+                  ) : null}
                 </span>
-              </button>
+                {isLocked ? <Lock className="size-3.5 shrink-0" aria-label="Restricted" /> : null}
+              </Link>
             );
-          }
-
-          return (
-            <Link
-              aria-disabled={isLocked}
-              className={cn(
-                "flex min-h-11 items-center gap-3 rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-[#16151c] transition-colors",
-                "hover:border-l-purple-500 hover:bg-purple-500/10 hover:text-purple-600",
-                isActive && "border-l-purple-500 bg-white text-purple-700 shadow-sm",
-                isLocked && "pointer-events-none text-gray-400 hover:border-l-transparent hover:bg-transparent",
-              )}
-              href={isLocked ? activePath : href}
-              key={label}
-              onClick={() => setIsMobileOpen(false)}
-              tabIndex={isLocked ? -1 : undefined}
-            >
-              <Icon className="size-4 shrink-0" />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">{label}</span>
-                {helper ? <span className="block truncate text-xs text-gray-500">{helper}</span> : null}
-              </span>
-              {isLocked ? <Lock className="size-3.5 shrink-0" aria-label="Restricted" /> : null}
-            </Link>
-          );
-        })}
+          },
+        )}
       </nav>
 
       <div className="border-t border-purple-200 px-5 py-3 text-xs text-gray-500">

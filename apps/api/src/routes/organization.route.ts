@@ -15,6 +15,7 @@ import {
   createOrganizationWithAdminMembership,
   findActiveOrganizationMembership,
   listActiveOrganizationMembershipsByUserId,
+  updateOrganizationProfile,
 } from "../repositories/organization.repository";
 import {
   getStockSummaryByOrganizationId,
@@ -25,7 +26,7 @@ import { serializeOrganization } from "../serializers/organization.serializer";
 import { sanitizeUser } from "../serializers/user.serializer";
 import { categorySchema } from "./schemas/category.schema";
 import { locationSchema } from "./schemas/location.schema";
-import { organizationSchema } from "./schemas/organization.schema";
+import { organizationSchema, organizationUpdateSchema } from "./schemas/organization.schema";
 import { paginationQuerySchema } from "./schemas/pagination.schema";
 import { stockQuerySchema } from "./schemas/stock.schema";
 import { uuidSchema } from "./schemas/uuid.schema";
@@ -125,6 +126,76 @@ organizations.get("/:organizationId", async (c) => {
   return c.json({
     organization: serializeOrganization(membership.organization, membership.role),
   });
+});
+
+/**
+ * Updates organization profile fields when the current user can manage it.
+ */
+organizations.patch("/:organizationId", async (c) => {
+  const user = getAuthenticatedUser(c);
+  const organizationId = c.req.param("organizationId");
+
+  if (!uuidSchema.safeParse(organizationId).success) {
+    logErrorResponse(c, "Invalid organizationId");
+    return c.json({ error: "Invalid organizationId" }, 400);
+  }
+
+  const payload = await c.req.json().catch(() => null);
+  const parsed = organizationUpdateSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    logErrorResponse(c, "Invalid request body");
+    return c.json({ error: "Invalid request body", issues: z.treeifyError(parsed.error) }, 400);
+  }
+
+  const membership = await findActiveOrganizationMembership(db, user.id, organizationId);
+
+  if (!membership) {
+    logErrorResponse(c, "Organization not found");
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  if (!["admin", "manager"].includes(membership.role)) {
+    logErrorResponse(c, "Insufficient permissions");
+    return c.json({ error: "Insufficient permissions" }, 403);
+  }
+
+  try {
+    const organization = await updateOrganizationProfile(db, {
+      ...parsed.data,
+      id: organizationId,
+    });
+
+    if (!organization) {
+      logErrorResponse(c, "Organization not found");
+      return c.json({ error: "Organization not found" }, 404);
+    }
+
+    return c.json({
+      organization: serializeOrganization(organization, membership.role),
+    });
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) {
+      const databaseError = getDatabaseError(error);
+      const logger = c.get("logger");
+
+      logger.error(
+        {
+          error: {
+            code: databaseError?.code,
+            constraint: databaseError?.constraint,
+            cnpj: parsed.data.cnpj,
+            userId: user.id,
+          },
+        },
+        "Organization update failed due to duplicate CNPJ",
+      );
+      logErrorResponse(c, "Organization CNPJ already in use");
+      return c.json({ error: "CNPJ already in use" }, 409);
+    }
+
+    throw error;
+  }
 });
 
 /**

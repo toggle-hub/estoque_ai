@@ -301,6 +301,126 @@ describe("organization routes", () => {
   );
 
   it(
+    "updates organization profile fields when the user is an admin",
+    async () => {
+      const registerResponse = await registerUser("ada@example.com", "Ada Lovelace");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      const response = await request(getAppServer())
+        .patch(`/api/organizations/${organizationId}`)
+        .set("Cookie", getAuthCookie(registerResponse))
+        .send({
+          name: "Ada Operations",
+          cnpj: "12.345.678/0001-90",
+          email: "ops@ada.example.com",
+          phone: "+55 11 99999-0000",
+          plan_type: "profissional",
+        })
+        .expect(200);
+
+      expect(response.body.organization).toMatchObject({
+        id: organizationId,
+        name: "Ada Operations",
+        cnpj: "12.345.678/0001-90",
+        email: "ops@ada.example.com",
+        phone: "+55 11 99999-0000",
+        plan_type: "profissional",
+        role: "admin",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "updates organization profile fields when the user is a manager",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "manager"],
+      );
+
+      const response = await request(getAppServer())
+        .patch(`/api/organizations/${organizationId}`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({
+          name: "Ada Manager Profile",
+          cnpj: "",
+          email: "",
+          phone: "",
+          plan_type: "",
+        })
+        .expect(200);
+
+      expect(response.body.organization).toMatchObject({
+        id: organizationId,
+        name: "Ada Manager Profile",
+        cnpj: null,
+        email: null,
+        phone: null,
+        plan_type: null,
+        role: "manager",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
+    "rejects organization profile updates when the current user is a viewer",
+    async () => {
+      const adaResponse = await registerUser("ada@example.com", "Ada Lovelace");
+      const graceResponse = await registerUser("grace@example.com", "Grace Hopper");
+
+      const organizationResponse = await request(getAppServer())
+        .post("/api/organizations")
+        .set("Cookie", getAuthCookie(adaResponse))
+        .send({ name: "Ada Industries" })
+        .expect(201);
+
+      const organizationId = organizationResponse.body.organization.id;
+
+      await cleanupPool?.query(
+        `
+          INSERT INTO user_organizations (user_id, organization_id, role)
+          VALUES ($1, $2, $3)
+        `,
+        [graceResponse.body.user.id, organizationId, "viewer"],
+      );
+
+      const response = await request(getAppServer())
+        .patch(`/api/organizations/${organizationId}`)
+        .set("Cookie", getAuthCookie(graceResponse))
+        .send({ name: "Viewer Update" })
+        .expect(403);
+
+      expect(response.body).toEqual({
+        error: "Insufficient permissions",
+      });
+    },
+    testTimeout,
+  );
+
+  it(
     "rejects organization routes without authentication",
     async () => {
       const listResponse = await request(getAppServer()).get("/api/organizations").expect(401);
