@@ -118,16 +118,11 @@ export default function LocationInventoryPage() {
     retry: false,
   });
   const createItemMutation = useMutation({
-    mutationFn: (input: LocationItemInput & { locationId: string }) =>
-      createLocationItem(input.locationId, {
-        category_id: input.category_id,
-        description: input.description,
-        name: input.name,
-        quantity: input.quantity,
-        reorder_point: input.reorder_point,
-        sku: input.sku,
-        unit_price: input.unit_price,
-      }),
+    mutationFn: (input: LocationItemInput & { locationId: string }) => {
+      const { locationId, ...payload } = input;
+
+      return createLocationItem(locationId, payload);
+    },
     onSuccess: async (_item, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["locations", variables.locationId, "items"] }),

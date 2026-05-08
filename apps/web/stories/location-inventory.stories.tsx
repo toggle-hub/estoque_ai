@@ -167,6 +167,7 @@ export const RoleRestricted: Story = {
     categories,
     items,
     location,
+    onCreate: async () => undefined,
     organization: {
       ...organization,
       role: "viewer",

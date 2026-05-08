@@ -501,9 +501,12 @@ export const getLocationItems = async (locationId: string) => {
       limit: String(limit),
       offset: String(offset),
     });
-    const response = await fetch(getApiUrl(`/api/locations/${locationId}/items?${query}`), {
-      credentials: "include",
-    });
+    const response = await fetch(
+      getApiUrl(`/api/locations/${locationId}/items?${query.toString()}`),
+      {
+        credentials: "include",
+      },
+    );
     const payload = (await response.json().catch(() => ({}))) as LocationItemsResponse;
 
     if (!response.ok) {
