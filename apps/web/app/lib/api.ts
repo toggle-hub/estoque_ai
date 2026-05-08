@@ -102,6 +102,39 @@ export type LocationItemInput = {
   unit_price: number;
 };
 
+export type ReceivingTransactionInput = {
+  item_id: string;
+  notes?: string;
+  quantity: number;
+  reference?: string;
+};
+
+export type ReceivingTransactionResult = {
+  transaction: {
+    id: string;
+    organization_id: string;
+    location_id: string | null;
+    item_id: string | null;
+    type: string;
+    quantity: number;
+    previous_quantity: number;
+    new_quantity: number;
+    reference: string | null;
+    notes: string | null;
+    performed_by: string | null;
+    created_at: string;
+  };
+  stock_level: {
+    id: string;
+    organization_id: string;
+    location_id: string;
+    item_id: string;
+    quantity: number;
+    created_at: string;
+    updated_at: string;
+  };
+};
+
 type CurrentUserResponse = {
   error?: string;
   user?: AuthenticatedUser;
@@ -158,6 +191,12 @@ type LocationItemsResponse = {
 type LocationItemResponse = {
   error?: string;
   item?: LocationItem;
+};
+
+type ReceivingTransactionResponse = {
+  error?: string;
+  stock_level?: ReceivingTransactionResult["stock_level"];
+  transaction?: ReceivingTransactionResult["transaction"];
 };
 
 export class ApiError extends Error {
@@ -557,4 +596,39 @@ export const createLocationItem = async (locationId: string, input: LocationItem
   }
 
   return payload.item;
+};
+
+/**
+ * Receives stock into an existing location item.
+ *
+ * @param locationId Selected location identifier.
+ * @param input Receiving transaction fields.
+ * @returns Created transaction and updated stock level.
+ */
+export const createReceivingTransaction = async (
+  locationId: string,
+  input: ReceivingTransactionInput,
+) => {
+  const response = await fetch(getApiUrl(`/api/locations/${locationId}/transactions/receiving`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  const payload = (await response.json().catch(() => ({}))) as ReceivingTransactionResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Unable to receive stock.", response.status);
+  }
+
+  if (!payload.transaction || !payload.stock_level) {
+    throw new ApiError("Receiving response did not include transaction details.", response.status);
+  }
+
+  return {
+    stock_level: payload.stock_level,
+    transaction: payload.transaction,
+  };
 };
