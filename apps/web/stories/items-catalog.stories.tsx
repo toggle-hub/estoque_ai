@@ -116,6 +116,7 @@ export const ErrorState: Story = {
   args: {
     errorMessage: "The API did not respond.",
     items: [],
+    onRetry: () => undefined,
     organization,
   },
 };

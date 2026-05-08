@@ -60,11 +60,17 @@ const formatPrice = (value: string | null) => {
     return "Not set";
   }
 
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return "Invalid price";
+  }
+
   return new Intl.NumberFormat("pt-BR", {
     currency: "BRL",
     maximumFractionDigits: 2,
     style: "currency",
-  }).format(Number(value));
+  }).format(numericValue);
 };
 
 /**

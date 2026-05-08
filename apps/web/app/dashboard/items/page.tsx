@@ -141,10 +141,21 @@ export default function ItemsPage() {
     () => activeLocations.map((location) => location.id).join(","),
     [activeLocations],
   );
+  const catalogQueryKey = [
+    "organizations",
+    organizationId,
+    "items-catalog",
+    activeLocationIds,
+    activeLocations,
+  ] as const;
   const catalogQuery = useQuery({
     enabled: Boolean(organizationId) && Boolean(locationsQuery.data),
-    queryKey: ["organizations", organizationId, "items-catalog", activeLocationIds],
-    queryFn: async () => getCatalogItems(await getItemsByLocation(activeLocations)),
+    queryKey: catalogQueryKey,
+    queryFn: async ({ queryKey }) => {
+      const queryActiveLocations = queryKey[4];
+
+      return getCatalogItems(await getItemsByLocation(queryActiveLocations));
+    },
     retry: false,
   });
   const hasOrganization = Boolean(organizationId);
