@@ -65,13 +65,25 @@ export default function CategoriesPage() {
   const categoriesQuery = useQuery({
     enabled: Boolean(organizationId),
     queryKey: ["organizations", organizationId, "categories"],
-    queryFn: () => getOrganizationCategories(organizationId ?? ""),
+    queryFn: () => {
+      if (!organizationId) {
+        throw new Error("Organization is required to load categories.");
+      }
+
+      return getOrganizationCategories(organizationId);
+    },
     retry: false,
   });
   const locationsQuery = useQuery({
     enabled: Boolean(organizationId),
     queryKey: ["organizations", organizationId, "locations"],
-    queryFn: () => getOrganizationLocations(organizationId ?? ""),
+    queryFn: () => {
+      if (!organizationId) {
+        throw new Error("Organization is required to load locations.");
+      }
+
+      return getOrganizationLocations(organizationId);
+    },
     retry: false,
   });
   const createCategoryMutation = useMutation({
@@ -173,8 +185,11 @@ export default function CategoriesPage() {
           }
           onRetry={() => {
             organizationsQuery.refetch();
-            categoriesQuery.refetch();
-            locationsQuery.refetch();
+
+            if (organizationId) {
+              categoriesQuery.refetch();
+              locationsQuery.refetch();
+            }
           }}
           organization={selectedOrganization}
         />

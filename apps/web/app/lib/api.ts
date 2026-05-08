@@ -401,7 +401,13 @@ export const getOrganizationCategories = async (organizationId: string) => {
     hasMore = Boolean(payload.pagination?.hasMore);
 
     if (hasMore) {
-      offset = payload.pagination?.nextOffset ?? offset + limit;
+      const nextOffset = payload.pagination?.nextOffset ?? offset + limit;
+
+      if (nextOffset <= offset) {
+        throw new ApiError("Category pagination did not advance.", response.status);
+      }
+
+      offset = nextOffset;
     }
   }
 

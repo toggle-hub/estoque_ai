@@ -121,7 +121,7 @@ export function CategoriesManagementView({
           </Alert>
         ) : null}
 
-        {!canCreate ? (
+        {organization && !canCreate ? (
           <Alert>
             <AlertTitle>Viewer access</AlertTitle>
             <AlertDescription>

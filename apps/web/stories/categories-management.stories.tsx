@@ -33,6 +33,16 @@ const categories: Category[] = [
   },
 ];
 
+const manyCategories: Category[] = Array.from({ length: 48 }, (_, index) => ({
+  id: `10000000-0000-4000-8000-${String(index + 100).padStart(12, "0")}`,
+  organization_id: organization.id,
+  name: `Category ${String(index + 1).padStart(2, "0")}`,
+  description:
+    index % 3 === 0 ? "A longer taxonomy description used to verify card wrapping." : null,
+  created_at: `2026-01-${String((index % 28) + 1).padStart(2, "0")}T00:00:00.000Z`,
+  deleted_at: null,
+}));
+
 const meta = {
   title: "Pages/Categories Management",
   component: CategoriesManagementView,
@@ -65,6 +75,14 @@ export const Loading: Story = {
 export const Empty: Story = {
   args: {
     categories: [],
+    onCreate: async () => undefined,
+    organization,
+  },
+};
+
+export const ManyCategories: Story = {
+  args: {
+    categories: manyCategories,
     onCreate: async () => undefined,
     organization,
   },
