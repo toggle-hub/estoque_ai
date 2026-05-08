@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle, Filter, Plus, RotateCw, Search } from "lucide-react";
+import Link from "next/link";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 import type { Category, Location, LocationItem, LocationItemInput, Organization } from "../../lib/api";
@@ -385,6 +386,7 @@ export function LocationInventoryView({
                   <th className="px-3 py-3 text-right">Unit price</th>
                   <th className="px-3 py-3 text-right">Reorder</th>
                   <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3">Receiving</th>
                 </tr>
               </thead>
               <tbody>
@@ -417,6 +419,21 @@ export function LocationInventoryView({
                         <Badge variant={lowStock ? "outline" : "secondary"}>
                           {lowStock ? "Low stock" : "Healthy"}
                         </Badge>
+                      </td>
+                      <td className="px-3 py-3">
+                        {canCreate && location ? (
+                          <Link
+                            className="inline-flex min-h-8 items-center justify-center rounded-md border border-purple-200 bg-purple-50 px-2 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100"
+                            href={`/dashboard/receiving?${new URLSearchParams({
+                              itemId: item.id,
+                              locationId: location.id,
+                            }).toString()}`}
+                          >
+                            Receive
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-[#5c6670]">Read-only</span>
+                        )}
                       </td>
                     </tr>
                   );
