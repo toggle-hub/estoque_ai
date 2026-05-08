@@ -75,6 +75,33 @@ export type CategoryInput = {
   name: string;
 };
 
+export type LocationItem = {
+  id: string;
+  organization_id: string;
+  category_id: string | null;
+  sku: string;
+  name: string;
+  description: string | null;
+  unit_price: string | null;
+  reorder_point: number;
+  is_active: boolean | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  category: Category | null;
+  quantity: number;
+};
+
+export type LocationItemInput = {
+  category_id?: string;
+  description?: string;
+  name: string;
+  quantity?: number;
+  reorder_point?: number;
+  sku: string;
+  unit_price: number;
+};
+
 type CurrentUserResponse = {
   error?: string;
   user?: AuthenticatedUser;
@@ -120,6 +147,17 @@ type CategoriesResponse = {
 type CategoryResponse = {
   category?: Category;
   error?: string;
+};
+
+type LocationItemsResponse = {
+  error?: string;
+  items?: LocationItem[];
+  pagination?: PaginationResponse;
+};
+
+type LocationItemResponse = {
+  error?: string;
+  item?: LocationItem;
 };
 
 export class ApiError extends Error {
@@ -444,4 +482,79 @@ export const createOrganizationCategory = async (
   }
 
   return payload.category;
+};
+
+/**
+ * Lists all active items linked to one location.
+ *
+ * @param locationId Selected location identifier.
+ * @returns Location items ordered by name.
+ */
+export const getLocationItems = async (locationId: string) => {
+  const limit = 100;
+  let offset = 0;
+  let hasMore = true;
+  const items: LocationItem[] = [];
+
+  while (hasMore) {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    const response = await fetch(
+      getApiUrl(`/api/locations/${locationId}/items?${query.toString()}`),
+      {
+        credentials: "include",
+      },
+    );
+    const payload = (await response.json().catch(() => ({}))) as LocationItemsResponse;
+
+    if (!response.ok) {
+      throw new ApiError(payload.error ?? "Unable to load location items.", response.status);
+    }
+
+    items.push(...(payload.items ?? []));
+    hasMore = Boolean(payload.pagination?.hasMore);
+
+    if (hasMore) {
+      const nextOffset = payload.pagination?.nextOffset ?? offset + limit;
+
+      if (nextOffset <= offset) {
+        throw new ApiError("Location item pagination did not advance.", response.status);
+      }
+
+      offset = nextOffset;
+    }
+  }
+
+  return items;
+};
+
+/**
+ * Creates an item linked to one location.
+ *
+ * @param locationId Selected location identifier.
+ * @param input Item creation fields.
+ * @returns Created location item.
+ */
+export const createLocationItem = async (locationId: string, input: LocationItemInput) => {
+  const response = await fetch(getApiUrl(`/api/locations/${locationId}/items`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  const payload = (await response.json().catch(() => ({}))) as LocationItemResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Unable to create item.", response.status);
+  }
+
+  if (!payload.item) {
+    throw new ApiError("Item response did not include an item.", response.status);
+  }
+
+  return payload.item;
 };
