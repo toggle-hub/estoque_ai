@@ -9,6 +9,7 @@ import {
   type LucideIcon,
   MapPin,
   Menu,
+  Package,
   PackageCheck,
   ReceiptText,
   Settings,
@@ -65,6 +66,7 @@ const organizationSettingsNavItem = {
   href: "/dashboard/settings/organization",
 };
 const workflowNavItems: NavItem[] = [
+  { icon: Package, label: "Items", href: "/dashboard/items" },
   { icon: Tags, label: "Categories", href: "/dashboard/categories" },
   { icon: Users, label: "Customers", href: "/dashboard/customers" },
   { icon: Truck, label: "Receiving", href: "/dashboard/receiving", requiresActionRole: true },
