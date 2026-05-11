@@ -4,7 +4,7 @@ import type { Organization } from "../app/lib/api";
 
 const organization: Organization = {
   id: "00000000-0000-4000-8000-000000000001",
-  name: "Ada Industries",
+  name: "Indústrias Ada",
   cnpj: "12.345.678/0001-90",
   email: "ops@ada.example",
   phone: null,
@@ -18,9 +18,9 @@ const items: CatalogItem[] = [
   {
     id: "30000000-0000-4000-8000-000000000001",
     sku: "SCN-100",
-    name: "Wireless Scanner",
-    categoryName: "Electronics",
-    description: "Handheld scanner used at receiving stations.",
+    name: "Leitor sem fio",
+    categoryName: "Eletrônicos",
+    description: "Leitor portátil usado nas estações de recebimento.",
     unitPrice: "899.90",
     reorderPoint: 4,
     totalQuantity: 15,
@@ -28,13 +28,13 @@ const items: CatalogItem[] = [
       {
         inventoryHref: "/dashboard/locations/10000000-0000-4000-8000-000000000001/inventory",
         locationId: "10000000-0000-4000-8000-000000000001",
-        locationName: "Main Warehouse",
+        locationName: "Depósito principal",
         quantity: 12,
       },
       {
         inventoryHref: "/dashboard/locations/10000000-0000-4000-8000-000000000002/inventory",
         locationId: "10000000-0000-4000-8000-000000000002",
-        locationName: "Secondary Store",
+        locationName: "Loja secundária",
         quantity: 3,
       },
     ],
@@ -42,8 +42,8 @@ const items: CatalogItem[] = [
   {
     id: "30000000-0000-4000-8000-000000000002",
     sku: "LBL-010",
-    name: "Thermal Labels",
-    categoryName: "Supplies",
+    name: "Etiquetas térmicas",
+    categoryName: "Suprimentos",
     description: null,
     unitPrice: "39.50",
     reorderPoint: 20,
@@ -52,7 +52,7 @@ const items: CatalogItem[] = [
       {
         inventoryHref: "/dashboard/locations/10000000-0000-4000-8000-000000000001/inventory",
         locationId: "10000000-0000-4000-8000-000000000001",
-        locationName: "Main Warehouse",
+        locationName: "Depósito principal",
         quantity: 18,
       },
     ],
@@ -60,9 +60,9 @@ const items: CatalogItem[] = [
   {
     id: "30000000-0000-4000-8000-000000000003",
     sku: "BOX-020",
-    name: "Shipping Box",
+    name: "Caixa de envio",
     categoryName: null,
-    description: "Uncategorized packaging item.",
+    description: "Item de embalagem sem categoria.",
     unitPrice: "4.20",
     reorderPoint: 10,
     totalQuantity: 44,
@@ -70,7 +70,7 @@ const items: CatalogItem[] = [
       {
         inventoryHref: "/dashboard/locations/10000000-0000-4000-8000-000000000001/inventory",
         locationId: "10000000-0000-4000-8000-000000000001",
-        locationName: "Main Warehouse",
+        locationName: "Depósito principal",
         quantity: 44,
       },
     ],
@@ -78,7 +78,7 @@ const items: CatalogItem[] = [
 ];
 
 const meta = {
-  title: "Pages/Items Catalog",
+  title: "Páginas/Catálogo de itens",
   component: ItemsCatalogView,
   parameters: {
     layout: "fullscreen",
@@ -114,7 +114,7 @@ export const Empty: Story = {
 
 export const ErrorState: Story = {
   args: {
-    errorMessage: "The API did not respond.",
+    errorMessage: "A API não respondeu.",
     items: [],
     onRetry: () => undefined,
     organization,

@@ -110,26 +110,26 @@ export function TransactionsHistoryView({
         <header className="flex flex-col gap-4 border-b border-purple-100 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="m-0 text-sm font-medium text-purple-600">
-              {organization?.name ?? "Selected organization"}
+              {organization?.name ?? "Organização selecionada"}
             </p>
-            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Transactions</h1>
+            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Transações</h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">
-              Review immutable inventory movement history for reconciliation and audit.
+              Revise o histórico imutável de movimentações de estoque para conciliação e auditoria.
             </p>
           </div>
-          <Badge variant="outline">Read-only audit trail</Badge>
+          <Badge variant="outline">Trilha de auditoria somente leitura</Badge>
         </header>
 
         {!organization ? (
           <Alert variant="destructive">
-            <AlertTitle>No organization selected</AlertTitle>
-            <AlertDescription>Select an organization before reviewing transactions.</AlertDescription>
+            <AlertTitle>Nenhuma organização selecionada</AlertTitle>
+            <AlertDescription>Selecione uma organização antes de revisar transações.</AlertDescription>
           </Alert>
         ) : null}
 
         {errorMessage ? (
           <Alert variant="destructive">
-            <AlertTitle>Unable to load transactions</AlertTitle>
+            <AlertTitle>Não foi possível carregar as transações</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
@@ -143,7 +143,7 @@ export function TransactionsHistoryView({
             <input
               className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="SKU, item, reference, or notes"
+              placeholder="SKU, item, referência ou observações"
               value={query}
             />
           </label>
@@ -157,7 +157,7 @@ export function TransactionsHistoryView({
               onChange={(event) => setLocationId(event.target.value)}
               value={locationId}
             >
-              <option value="all">All locations</option>
+              <option value="all">Todos os locais</option>
               {locations.map((location) => (
                 <option key={location.id} value={location.id}>
                   {location.name}
@@ -166,13 +166,13 @@ export function TransactionsHistoryView({
             </select>
           </label>
           <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs font-semibold text-purple-700">Type</span>
+            <span className="text-xs font-semibold text-purple-700">Tipo</span>
             <select
               className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
               onChange={(event) => setType(event.target.value)}
               value={type}
             >
-              <option value="all">All types</option>
+              <option value="all">Todos os tipos</option>
               {transactionTypes.map((transactionType) => (
                 <option key={transactionType} value={transactionType}>
                   {transactionType}
@@ -193,7 +193,7 @@ export function TransactionsHistoryView({
             />
           </label>
           <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs font-semibold text-purple-700">To</span>
+            <span className="text-xs font-semibold text-purple-700">Até</span>
             <input
               className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
               onChange={(event) => setDateTo(event.target.value)}
@@ -206,9 +206,9 @@ export function TransactionsHistoryView({
         {!errorMessage && !transactions.length ? (
           <Card className="border-dashed">
             <CardHeader>
-              <CardTitle>No transactions yet</CardTitle>
+              <CardTitle>Nenhuma transação ainda</CardTitle>
               <CardDescription>
-                Inventory movements will appear here after stock operations are recorded.
+                Movimentações de estoque aparecerão aqui após o registro das operações.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -217,8 +217,8 @@ export function TransactionsHistoryView({
         {!errorMessage && transactions.length > 0 && !filteredTransactions.length ? (
           <Card className="border-dashed">
             <CardHeader>
-              <CardTitle>No matching transactions</CardTitle>
-              <CardDescription>Adjust filters to widen the audit trail.</CardDescription>
+              <CardTitle>Nenhuma transação encontrada</CardTitle>
+              <CardDescription>Ajuste os filtros para ampliar a trilha de auditoria.</CardDescription>
             </CardHeader>
           </Card>
         ) : null}
@@ -228,16 +228,16 @@ export function TransactionsHistoryView({
             <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
               <thead className="bg-purple-50 text-xs font-semibold text-purple-700">
                 <tr>
-                  <th className="px-3 py-3">Timestamp</th>
-                  <th className="px-3 py-3">Type</th>
+                  <th className="px-3 py-3">Data e hora</th>
+                  <th className="px-3 py-3">Tipo</th>
                   <th className="px-3 py-3">Item</th>
-                  <th className="px-3 py-3">Location</th>
-                  <th className="px-3 py-3 text-right">Qty</th>
-                  <th className="px-3 py-3 text-right">Previous</th>
-                  <th className="px-3 py-3 text-right">New</th>
-                  <th className="px-3 py-3">Reference</th>
-                  <th className="px-3 py-3">Notes</th>
-                  <th className="px-3 py-3">Performed by</th>
+                  <th className="px-3 py-3">Local</th>
+                  <th className="px-3 py-3 text-right">Qtd.</th>
+                  <th className="px-3 py-3 text-right">Anterior</th>
+                  <th className="px-3 py-3 text-right">Nova</th>
+                  <th className="px-3 py-3">Referência</th>
+                  <th className="px-3 py-3">Observações</th>
+                  <th className="px-3 py-3">Realizada por</th>
                 </tr>
               </thead>
               <tbody>
@@ -250,19 +250,19 @@ export function TransactionsHistoryView({
                       <Badge variant="secondary">{transaction.type}</Badge>
                     </td>
                     <td className="px-3 py-3">
-                      <div className="font-semibold">{transaction.item?.name ?? "Unknown item"}</div>
+                      <div className="font-semibold">{transaction.item?.name ?? "Item desconhecido"}</div>
                       <div className="mt-1 font-mono text-xs text-[#5c6670]">
-                        {transaction.item?.sku ?? "No SKU"}
+                        {transaction.item?.sku ?? "Sem SKU"}
                       </div>
                     </td>
-                    <td className="px-3 py-3">{transaction.location?.name ?? "Unknown location"}</td>
+                    <td className="px-3 py-3">{transaction.location?.name ?? "Local desconhecido"}</td>
                     <td className="px-3 py-3 text-right font-semibold">{transaction.quantity}</td>
                     <td className="px-3 py-3 text-right">{transaction.previousQuantity}</td>
                     <td className="px-3 py-3 text-right">{transaction.newQuantity}</td>
                     <td className="px-3 py-3">{transaction.reference ?? "-"}</td>
                     <td className="px-3 py-3">{transaction.notes ?? "-"}</td>
                     <td className="px-3 py-3 font-mono text-xs">
-                      {transaction.performedBy ?? "Unknown"}
+                      {transaction.performedBy ?? "Desconhecido"}
                     </td>
                   </tr>
                 ))}
@@ -280,8 +280,8 @@ export function TransactionsHistoryView({
 
         {!errorMessage && transactions.length ? (
           <div className="text-sm text-purple-700">
-            Showing {filteredTransactions.length} of {transactions.length}{" "}
-            {transactions.length === 1 ? "transaction" : "transactions"}
+            Mostrando {filteredTransactions.length} de {transactions.length}{" "}
+            {transactions.length === 1 ? "transação" : "transações"}
           </div>
         ) : null}
       </div>

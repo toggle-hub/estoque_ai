@@ -59,13 +59,13 @@ const formatCurrency = (value: number) =>
  * @param location Location record.
  * @returns Address or fallback copy.
  */
-const getLocationAddress = (location: Location) => location.address ?? "No address set";
+const getLocationAddress = (location: Location) => location.address ?? "Sem endereço";
 
 /**
  * Renders the role-aware locations management experience.
  *
  * @param props View props.
- * @returns Locations management UI.
+ * @returns Locais management UI.
  */
 export function LocationsManagementView({
   createErrorMessage,
@@ -125,37 +125,37 @@ export function LocationsManagementView({
         <header className="flex flex-col gap-4 border-b border-purple-100 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="m-0 text-sm font-medium text-purple-600">
-              {organization?.name ?? "Selected organization"}
+              {organization?.name ?? "Organização selecionada"}
             </p>
-            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Locations</h1>
+            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Locais</h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">
-              Manage warehouses and stores before opening location-scoped inventory.
+              Gerencie depósitos e lojas antes de abrir o estoque por local.
             </p>
           </div>
           <Badge variant={canCreate ? "secondary" : "outline"}>
-            {canCreate ? "Can create locations" : "Read-only access"}
+            {canCreate ? "Pode criar locais" : "Acesso somente leitura"}
           </Badge>
         </header>
 
         {!organization ? (
           <Alert variant="destructive">
-            <AlertTitle>No organization selected</AlertTitle>
-            <AlertDescription>Select an organization before managing locations.</AlertDescription>
+            <AlertTitle>Nenhuma organização selecionada</AlertTitle>
+            <AlertDescription>Selecione uma organização antes de gerenciar locais.</AlertDescription>
           </Alert>
         ) : null}
 
         {errorMessage ? (
           <Alert variant="destructive">
-            <AlertTitle>Unable to load locations</AlertTitle>
+            <AlertTitle>Não foi possível carregar os locais</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
 
         {!canCreate ? (
           <Alert>
-            <AlertTitle>Viewer access</AlertTitle>
+            <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
-              Viewers can review locations and open inventory, but cannot create or edit locations.
+              Visualizadores podem revisar locais e abrir o estoque, mas não podem criar ou editar locais.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -163,22 +163,22 @@ export function LocationsManagementView({
         {canCreate ? (
           <Card>
             <CardHeader>
-              <CardTitle>Create location</CardTitle>
-              <CardDescription>Add a warehouse, store, or stock room for this organization.</CardDescription>
+              <CardTitle>Criar local</CardTitle>
+              <CardDescription>Adicione um depósito, loja ou sala de estoque para esta organização.</CardDescription>
             </CardHeader>
             <CardContent>
               <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto]" onSubmit={handleSubmit}>
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Name</span>
+                  <span className="text-xs font-semibold text-purple-700">Nome</span>
                   <input
                     className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     onChange={(event) => setName(event.target.value)}
-                    placeholder="Main Warehouse"
+                    placeholder="Depósito principal"
                     value={name}
                   />
                 </label>
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Address</span>
+                  <span className="text-xs font-semibold text-purple-700">Endereço</span>
                   <input
                     className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     onChange={(event) => setAddress(event.target.value)}
@@ -188,7 +188,7 @@ export function LocationsManagementView({
                 </label>
                 <Button className="self-end" disabled={isCreating || !name.trim()} type="submit">
                   {isCreating ? <RotateCw className="animate-spin" /> : <Plus />}
-                  Add location
+                  Adicionar local
                 </Button>
               </form>
               {createErrorMessage ? (
@@ -203,18 +203,18 @@ export function LocationsManagementView({
         {!errorMessage && !hasLocations ? (
           <Card className="border-dashed">
             <CardHeader>
-              <CardTitle>No locations yet</CardTitle>
+              <CardTitle>Nenhum local ainda</CardTitle>
               <CardDescription>
                 {canCreate
-                  ? "Create the first location to start location-scoped inventory work."
-                  : "No locations are available for this organization yet."}
+                  ? "Crie o primeiro local para iniciar operações de estoque por local."
+                  : "Nenhum local está disponível para esta organização ainda."}
               </CardDescription>
             </CardHeader>
           </Card>
         ) : null}
 
         {hasLocations ? (
-          <section className="grid gap-4 lg:grid-cols-2" aria-label="Organization locations">
+          <section className="grid gap-4 lg:grid-cols-2" aria-label="Locais da organização">
             {locations.map((location) => {
               const summary = summaries[location.id];
               const isSelectedForInventory = location.id === selectedLocationId;
@@ -231,22 +231,22 @@ export function LocationsManagementView({
                         </CardDescription>
                       </div>
                       <Badge variant={location.is_active === false ? "outline" : "secondary"}>
-                        {location.is_active === false ? "Inactive" : "Active"}
+                        {location.is_active === false ? "Inativo" : "Ativo"}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                       <div>
-                        <dt className="text-xs font-medium text-gray-500">Items</dt>
+                        <dt className="text-xs font-medium text-gray-500">Itens</dt>
                         <dd className="m-0 mt-1 font-semibold">{summary?.itemCount ?? 0}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs font-medium text-gray-500">Quantity</dt>
+                        <dt className="text-xs font-medium text-gray-500">Quantidade</dt>
                         <dd className="m-0 mt-1 font-semibold">{summary?.totalQuantity ?? 0}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs font-medium text-gray-500">Low stock</dt>
+                        <dt className="text-xs font-medium text-gray-500">Estoque baixo</dt>
                         <dd
                           className={cn(
                             "m-0 mt-1 font-semibold",
@@ -257,7 +257,7 @@ export function LocationsManagementView({
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-xs font-medium text-gray-500">Value</dt>
+                        <dt className="text-xs font-medium text-gray-500">Valor</dt>
                         <dd className="m-0 mt-1 font-semibold">
                           {formatCurrency(summary?.totalValue ?? 0)}
                         </dd>
@@ -269,14 +269,14 @@ export function LocationsManagementView({
                         type="button"
                         variant={isSelectedForInventory ? "default" : "outline"}
                       >
-                        {isSelectedForInventory ? "Selected for inventory" : "Select for inventory"}
+                        {isSelectedForInventory ? "Selecionado para estoque" : "Selecionar para estoque"}
                       </Button>
                       <Link
                         className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-100 focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                         href={`/dashboard/locations/${location.id}/inventory`}
                         onClick={() => onSelectLocation?.(location)}
                       >
-                        Open inventory
+                        Abrir estoque
                         <ArrowRight className="size-4" />
                       </Link>
                     </div>

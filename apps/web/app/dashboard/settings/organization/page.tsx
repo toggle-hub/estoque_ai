@@ -80,7 +80,7 @@ export default function OrganizationSettingsPage() {
     mutationFn: (input: { organization: Organization; profile: OrganizationProfileInput }) =>
       updateOrganization(input.organization.id, input.profile),
     onSuccess: async (_organization, variables) => {
-      setSaveSuccessMessage("Organization profile saved.");
+      setSaveSuccessMessage("Perfil da organização salvo.");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["organizations"] }),
         queryClient.invalidateQueries({ queryKey: ["organizations", variables.organization.id] }),

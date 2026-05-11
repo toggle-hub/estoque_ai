@@ -14,12 +14,12 @@ const loginSchema = z.object({
   email: z
     .string()
     .trim()
-    .min(1, "Email is required.")
-    .pipe(z.email("Enter a valid email address.")),
+    .min(1, "Email é obrigatório.")
+    .pipe(z.email("Informe um email válido.")),
   password: z
     .string()
-    .min(1, "Password is required.")
-    .min(8, "Password must be at least 8 characters."),
+    .min(1, "Senha é obrigatória.")
+    .min(8, "A senha deve ter pelo menos 8 caracteres."),
   remember: z.boolean(),
 });
 
@@ -64,11 +64,11 @@ const login = async ({ email, password, remember }: LoginPayload) => {
   const payload = (await response.json().catch(() => ({}))) as LoginResponsePayload;
 
   if (!response.ok) {
-    throw new LoginError(payload.error ?? "Login failed. Check your email and password.");
+    throw new LoginError(payload.error ?? "Falha ao entrar. Verifique seu email e sua senha.");
   }
 
   if (!payload.user) {
-    throw new LoginError("Login response did not include an authenticated user.");
+    throw new LoginError("A resposta de login não incluiu um usuário autenticado.");
   }
 
   return {
@@ -117,7 +117,7 @@ function LoginPage() {
     mutationFn: login,
     onSuccess: async (payload) => {
       if (!payload.user) {
-        throw new LoginError("Login response did not include an authenticated user.");
+        throw new LoginError("A resposta de login não incluiu um usuário autenticado.");
       }
 
       queryClient.setQueryData(["auth", "me"], payload.user);
@@ -169,9 +169,9 @@ function LoginPage() {
             id="login-title"
             className="m-0 mb-[5px] text-[30px] leading-10 font-semibold tracking-normal max-[520px]:text-[26px] max-[520px]:leading-[34px]"
           >
-            Welcome
+            Bem-vindo
           </h1>
-          <p className="m-0 text-base leading-6 font-light text-[#a2a1a8]">Please login here</p>
+          <p className="m-0 text-base leading-6 font-light text-[#a2a1a8]">Entre para continuar</p>
         </div>
 
         <form
@@ -180,7 +180,7 @@ function LoginPage() {
           onSubmit={handleSubmit((values) => loginMutation.mutate(values))}
         >
           <label className={emailFieldClassName}>
-            <span className="text-[11px] leading-4 font-light text-purple-500">Email Address</span>
+            <span className="text-[11px] leading-4 font-light text-purple-500">Email</span>
             <input
               className="w-full min-w-0 border-0 bg-transparent p-0 text-base leading-6 font-light text-[#16151c] outline-0"
               type="text"
@@ -192,7 +192,7 @@ function LoginPage() {
           </label>
 
           <label className={passwordFieldClassName}>
-            <span className="text-[11px] leading-4 font-light text-purple-500">Password</span>
+            <span className="text-[11px] leading-4 font-light text-purple-500">Senha</span>
             <span className="relative block h-6">
               <input
                 className="h-6 w-full min-w-0 border-0 bg-transparent p-0 pr-8 text-base leading-6 font-light text-[#16151c] outline-0"
@@ -204,7 +204,7 @@ function LoginPage() {
               <button
                 className="absolute top-1/2 right-0 grid h-6 w-6 -translate-y-1/2 cursor-pointer place-items-center border-0 bg-transparent p-0 text-[#16151c] leading-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 [&>svg]:block [&>svg]:h-6 [&>svg]:w-6"
                 type="button"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 onClick={() => setShowPassword((current) => !current)}
               >
                 {showPassword ? (
@@ -226,14 +226,14 @@ function LoginPage() {
               <span className={rememberIconClassName}>
                 {remember ? <Check size={17} strokeWidth={3} /> : null}
               </span>
-              <span>Remember Me</span>
+              <span>Lembrar de mim</span>
             </label>
 
             <a
               className="text-sm leading-[22px] font-light whitespace-nowrap text-purple-500 no-underline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
               href="/forgot-password"
             >
-              Forgot Password?
+              Esqueceu a senha?
             </a>
           </div>
 
@@ -248,7 +248,7 @@ function LoginPage() {
             type="submit"
             disabled={loginMutation.isPending}
           >
-            {loginMutation.isPending ? "Logging in..." : "Login"}
+            {loginMutation.isPending ? "Entrando..." : "Entrar"}
           </button>
         </form>
       </section>

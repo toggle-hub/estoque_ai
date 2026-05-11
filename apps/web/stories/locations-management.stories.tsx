@@ -4,7 +4,7 @@ import type { Location, Organization } from "../app/lib/api";
 
 const organization: Organization = {
   id: "00000000-0000-4000-8000-000000000001",
-  name: "Ada Industries",
+  name: "Indústrias Ada",
   cnpj: "12.345.678/0001-90",
   email: "ops@ada.example",
   phone: null,
@@ -18,7 +18,7 @@ const locations: Location[] = [
   {
     id: "10000000-0000-4000-8000-000000000001",
     organization_id: organization.id,
-    name: "Main Warehouse",
+    name: "Depósito principal",
     address: "Rua A, 100",
     is_active: true,
     created_at: "2026-01-01T00:00:00.000Z",
@@ -28,7 +28,7 @@ const locations: Location[] = [
   {
     id: "10000000-0000-4000-8000-000000000002",
     organization_id: organization.id,
-    name: "Secondary Store",
+    name: "Loja secundária",
     address: "Rua B, 200",
     is_active: false,
     created_at: "2026-01-01T00:00:00.000Z",
@@ -38,7 +38,7 @@ const locations: Location[] = [
 ];
 
 const meta = {
-  title: "Pages/Locations Management",
+  title: "Páginas/Gerenciamento de locais",
   component: LocationsManagementView,
   parameters: {
     layout: "fullscreen",
@@ -96,7 +96,7 @@ export const Creating: Story = {
 
 export const CreateError: Story = {
   args: {
-    createErrorMessage: "Unable to create location. Try again.",
+    createErrorMessage: "Não foi possível criar o local. Tente novamente.",
     locations,
     organization,
   },
@@ -104,7 +104,7 @@ export const CreateError: Story = {
 
 export const ErrorState: Story = {
   args: {
-    errorMessage: "The API did not respond.",
+    errorMessage: "A API não respondeu.",
     locations: [],
     organization,
   },

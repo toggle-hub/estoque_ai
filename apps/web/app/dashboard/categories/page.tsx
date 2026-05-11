@@ -67,7 +67,7 @@ export default function CategoriesPage() {
     queryKey: ["organizations", organizationId, "categories"],
     queryFn: () => {
       if (!organizationId) {
-        throw new Error("Organization is required to load categories.");
+        throw new Error("A organização é obrigatória para carregar categorias.");
       }
 
       return getOrganizationCategories(organizationId);
@@ -79,7 +79,7 @@ export default function CategoriesPage() {
     queryKey: ["organizations", organizationId, "locations"],
     queryFn: () => {
       if (!organizationId) {
-        throw new Error("Organization is required to load locations.");
+        throw new Error("A organização é obrigatória para carregar locais.");
       }
 
       return getOrganizationLocations(organizationId);

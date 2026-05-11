@@ -99,7 +99,7 @@ export default function ReceivingPage() {
     queryKey: ["organizations", organizationId, "locations"],
     queryFn: () => {
       if (!organizationId) {
-        throw new Error("Organization is required to load locations.");
+        throw new Error("A organização é obrigatória para carregar locais.");
       }
 
       return getOrganizationLocations(organizationId);

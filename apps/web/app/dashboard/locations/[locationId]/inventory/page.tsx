@@ -80,7 +80,7 @@ export default function LocationInventoryPage() {
     queryKey: ["organizations", organizationId, "locations"],
     queryFn: () => {
       if (!organizationId) {
-        throw new Error("Organization is required to load locations.");
+        throw new Error("A organização é obrigatória para carregar locais.");
       }
 
       return getOrganizationLocations(organizationId);
@@ -98,7 +98,7 @@ export default function LocationInventoryPage() {
     queryKey: ["locations", locationId, "items"],
     queryFn: () => {
       if (!locationId) {
-        throw new Error("Location is required to load items.");
+        throw new Error("O local é obrigatório para carregar itens.");
       }
 
       return getLocationItems(locationId);
@@ -110,7 +110,7 @@ export default function LocationInventoryPage() {
     queryKey: ["organizations", organizationId, "categories"],
     queryFn: () => {
       if (!organizationId) {
-        throw new Error("Organization is required to load categories.");
+        throw new Error("A organização é obrigatória para carregar categorias.");
       }
 
       return getOrganizationCategories(organizationId);

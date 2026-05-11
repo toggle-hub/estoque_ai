@@ -59,7 +59,7 @@ export default function TransactionsPage() {
     queryKey: ["organizations", organizationId, "locations"],
     queryFn: () => {
       if (!organizationId) {
-        throw new Error("Organization is required to load locations.");
+        throw new Error("A organização é obrigatória para carregar locais.");
       }
 
       return getOrganizationLocations(organizationId);
@@ -77,7 +77,7 @@ export default function TransactionsPage() {
     organizationsQuery.error?.message ??
     (hasOrganization ? locationsQuery.error?.message : undefined) ??
     (hasOrganization
-      ? "Transaction history is unavailable until the transaction list endpoint is implemented."
+      ? "O histórico de transações ficará indisponível até que o endpoint de listagem de transações seja implementado."
       : undefined);
 
   useEffect(() => {

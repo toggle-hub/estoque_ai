@@ -5,7 +5,7 @@ import type { Organization } from "../app/lib/api";
 const organizations: Organization[] = [
   {
     id: "00000000-0000-4000-8000-000000000001",
-    name: "Ada Industries",
+    name: "Indústrias Ada",
     cnpj: "12.345.678/0001-90",
     email: "ops@ada.example",
     phone: null,
@@ -16,7 +16,7 @@ const organizations: Organization[] = [
   },
   {
     id: "00000000-0000-4000-8000-000000000002",
-    name: "Grace Supply",
+    name: "Suprimentos Grace",
     cnpj: null,
     email: "inventory@grace.example",
     phone: null,
@@ -28,7 +28,7 @@ const organizations: Organization[] = [
 ];
 
 const meta = {
-  title: "Pages/Organization Selection",
+  title: "Páginas/Seleção de organização",
   component: OrganizationSelectionView,
   parameters: {
     layout: "fullscreen",
@@ -68,14 +68,14 @@ export const Empty: Story = {
 
 export const ErrorState: Story = {
   args: {
-    errorMessage: "The API did not respond.",
+    errorMessage: "A API não respondeu.",
     organizations: [],
   },
 };
 
 export const CreateOrganizationError: Story = {
   args: {
-    createErrorMessage: "Organization name is already in use.",
+    createErrorMessage: "O nome da organização já está em uso.",
     organizations,
     selectedOrganizationId: organizations[0]?.id,
   },
