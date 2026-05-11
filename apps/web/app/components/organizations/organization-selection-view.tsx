@@ -152,7 +152,7 @@ export function OrganizationSelectionView({
                       </span>
                     </span>
                     <Button
-                      aria-label={`Selecionar `}
+                      aria-label={`Selecionar ${organization.name}`}
                       aria-pressed={isSelected}
                       size="icon"
                       type="button"

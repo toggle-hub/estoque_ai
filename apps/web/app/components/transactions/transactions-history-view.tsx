@@ -7,6 +7,10 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Field } from "../ui/field";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Select, SelectItem } from "../ui/select";
 import { Spinner } from "../ui/spinner";
 
 export type InventoryTransaction = {
@@ -50,6 +54,22 @@ const formatTimestamp = (value: string) =>
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
+
+const transactionTypeLabels: Record<string, string> = {
+  ADJUSTMENT: "Ajuste",
+  RECEIVING: "Recebimento",
+  SALE: "Venda",
+  TRANSFER: "Transferência",
+};
+
+/**
+ * Returns localized copy for a transaction type.
+ *
+ * @param transactionType Transaction type value from the API.
+ * @returns Localized transaction type label.
+ */
+const getTransactionTypeLabel = (transactionType: string) =>
+  transactionTypeLabels[transactionType] ?? transactionType;
 
 /**
  * Renders a read-only inventory transaction audit trail.
@@ -135,75 +155,75 @@ export function TransactionsHistoryView({
         ) : null}
 
         <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_180px_160px_160px]">
-          <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700">
+          <Field>
+            <Label htmlFor="transaction-search">
               <Search className="size-3.5" />
-              Search
-            </span>
-            <input
-              className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
+              Busca
+            </Label>
+            <Input
+              id="transaction-search"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="SKU, item, referência ou observações"
               value={query}
             />
-          </label>
-          <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700">
+          </Field>
+          <Field>
+            <Label htmlFor="transaction-location">
               <Filter className="size-3.5" />
-              Location
-            </span>
-            <select
-              className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
+              Local
+            </Label>
+            <Select
+              id="transaction-location"
               onChange={(event) => setLocationId(event.target.value)}
               value={locationId}
             >
-              <option value="all">Todos os locais</option>
+              <SelectItem value="all">Todos os locais</SelectItem>
               {locations.map((location) => (
-                <option key={location.id} value={location.id}>
+                <SelectItem key={location.id} value={location.id}>
                   {location.name}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-          </label>
-          <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs font-semibold text-purple-700">Tipo</span>
-            <select
-              className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
+            </Select>
+          </Field>
+          <Field>
+            <Label htmlFor="transaction-type">Tipo</Label>
+            <Select
+              id="transaction-type"
               onChange={(event) => setType(event.target.value)}
               value={type}
             >
-              <option value="all">Todos os tipos</option>
+              <SelectItem value="all">Todos os tipos</SelectItem>
               {transactionTypes.map((transactionType) => (
-                <option key={transactionType} value={transactionType}>
-                  {transactionType}
-                </option>
+                <SelectItem key={transactionType} value={transactionType}>
+                  {getTransactionTypeLabel(transactionType)}
+                </SelectItem>
               ))}
-            </select>
-          </label>
-          <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700">
+            </Select>
+          </Field>
+          <Field>
+            <Label htmlFor="transaction-date-from">
               <CalendarDays className="size-3.5" />
-              From
-            </span>
-            <input
-              className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
+              De
+            </Label>
+            <Input
+              id="transaction-date-from"
               onChange={(event) => setDateFrom(event.target.value)}
               type="date"
               value={dateFrom}
             />
-          </label>
-          <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs font-semibold text-purple-700">Até</span>
-            <input
-              className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
+          </Field>
+          <Field>
+            <Label htmlFor="transaction-date-to">Até</Label>
+            <Input
+              id="transaction-date-to"
               onChange={(event) => setDateTo(event.target.value)}
               type="date"
               value={dateTo}
             />
-          </label>
+          </Field>
         </section>
 
-        {!errorMessage && !transactions.length ? (
+        {organization && !errorMessage && !transactions.length ? (
           <Card className="border-dashed">
             <CardHeader>
               <CardTitle>Nenhuma transação ainda</CardTitle>
@@ -214,7 +234,7 @@ export function TransactionsHistoryView({
           </Card>
         ) : null}
 
-        {!errorMessage && transactions.length > 0 && !filteredTransactions.length ? (
+        {organization && !errorMessage && transactions.length > 0 && !filteredTransactions.length ? (
           <Card className="border-dashed">
             <CardHeader>
               <CardTitle>Nenhuma transação encontrada</CardTitle>
@@ -247,7 +267,7 @@ export function TransactionsHistoryView({
                       {formatTimestamp(transaction.createdAt)}
                     </td>
                     <td className="px-3 py-3">
-                      <Badge variant="secondary">{transaction.type}</Badge>
+                      <Badge variant="secondary">{getTransactionTypeLabel(transaction.type)}</Badge>
                     </td>
                     <td className="px-3 py-3">
                       <div className="font-semibold">{transaction.item?.name ?? "Item desconhecido"}</div>

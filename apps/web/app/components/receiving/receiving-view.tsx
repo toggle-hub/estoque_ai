@@ -193,7 +193,7 @@ export function ReceivingView({
             <div className="pl-6">
               <AlertTitle>Estoque recebido</AlertTitle>
               <AlertDescription>
-                Quantidade alterada de {successResult.transaction.previous_quantity} to{" "}
+                Quantidade alterada de {successResult.transaction.previous_quantity} para{" "}
                 {successResult.transaction.new_quantity}.
               </AlertDescription>
             </div>
@@ -257,7 +257,7 @@ export function ReceivingView({
                     value={itemId}
                   >
                     <option value="">
-                      {selectedLocation ? "Selecionar item" : "Selecionar local first"}
+                      {selectedLocation ? "Selecionar item" : "Selecionar local primeiro"}
                     </option>
                     {filteredItems.map((item) => (
                       <option key={item.id} value={item.id}>
@@ -340,7 +340,7 @@ export function ReceivingView({
         {errorMessage && onRetry ? (
           <Button className="w-fit" onClick={onRetry} type="button" variant="outline">
             <AlertCircle />
-            Retry
+            Tentar novamente
           </Button>
         ) : null}
       </div>

@@ -4,7 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navbar } from "../../components/navbar";
 import { TransactionsHistoryView } from "../../components/transactions/transactions-history-view";
-import { getOrganizationLocations, getOrganizations, type Location } from "../../lib/api";
+import {
+  getOrganizationLocations,
+  getOrganizations,
+  type Location,
+  type Organization,
+} from "../../lib/api";
 import {
   clearSelectedLocation,
   getSelectedLocation,
@@ -44,6 +49,61 @@ const useSelectedOrganization = () => {
 const getActiveLocations = (locations: Location[]) =>
   locations.filter((location) => location.is_active !== false);
 
+type TransactionsPageViewProps = {
+  activeLocations: Location[];
+  errorMessage?: string;
+  hasLocationLoadError: boolean;
+  isLoading: boolean;
+  isLoadingLocations: boolean;
+  onRetry: () => void;
+  onSelectLocation: (location: Location) => void;
+  organization?: Organization;
+  selectedLocation?: SelectedLocation | null;
+};
+
+/**
+ * Renders composed transaction history page content.
+ *
+ * @param props Page view props.
+ * @returns Transactions page shell with navigation and history content.
+ */
+export function TransactionsPageView({
+  activeLocations,
+  errorMessage,
+  hasLocationLoadError,
+  isLoading,
+  isLoadingLocations,
+  onRetry,
+  onSelectLocation,
+  organization,
+  selectedLocation,
+}: TransactionsPageViewProps) {
+  return (
+    <div className="min-h-screen bg-white md:flex">
+      <Navbar
+        hasLocationLoadError={hasLocationLoadError}
+        isLoadingLocations={isLoadingLocations}
+        locations={activeLocations}
+        onSelectLocation={onSelectLocation}
+        organization={organization}
+        selectedLocationId={selectedLocation?.id}
+        selectedLocationName={selectedLocation?.name}
+      />
+
+      <div className="min-w-0 flex-1 pt-16 md:pt-0">
+        <TransactionsHistoryView
+          errorMessage={errorMessage}
+          isLoading={isLoading}
+          locations={activeLocations}
+          onRetry={onRetry}
+          organization={organization}
+          transactions={[]}
+        />
+      </div>
+    </div>
+  );
+}
+
 /**
  * Renders the transaction history page.
  *
@@ -75,10 +135,7 @@ export default function TransactionsPage() {
   );
   const errorMessage =
     organizationsQuery.error?.message ??
-    (hasOrganization ? locationsQuery.error?.message : undefined) ??
-    (hasOrganization
-      ? "O histórico de transações ficará indisponível até que o endpoint de listagem de transações seja implementado."
-      : undefined);
+    (hasOrganization ? locationsQuery.error?.message : undefined);
 
   useEffect(() => {
     if (prevOrganizationId.current === organizationId) {
@@ -117,42 +174,31 @@ export default function TransactionsPage() {
   }, [activeLocations, locationsQuery.data, organizationId]);
 
   return (
-    <div className="min-h-screen bg-white md:flex">
-      <Navbar
-        hasLocationLoadError={hasLocationLoadError}
-        isLoadingLocations={isLoadingLocations}
-        locations={activeLocations}
-        onSelectLocation={(location) => {
-          if (!organizationId) {
-            return;
-          }
+    <TransactionsPageView
+      activeLocations={activeLocations}
+      errorMessage={errorMessage}
+      hasLocationLoadError={hasLocationLoadError}
+      isLoading={organizationsQuery.isPending || isLoadingLocations}
+      isLoadingLocations={isLoadingLocations}
+      onRetry={() => {
+        organizationsQuery.refetch();
 
-          const nextLocation = { id: location.id, name: location.name };
+        if (organizationId) {
+          locationsQuery.refetch();
+        }
+      }}
+      onSelectLocation={(location) => {
+        if (!organizationId) {
+          return;
+        }
 
-          setSelectedLocation(organizationId, nextLocation);
-          setSelectedLocationState(nextLocation);
-        }}
-        organization={selectedOrganization}
-        selectedLocationId={selectedLocation?.id}
-        selectedLocationName={selectedLocation?.name}
-      />
+        const nextLocation = { id: location.id, name: location.name };
 
-      <div className="min-w-0 flex-1 pt-16 md:pt-0">
-        <TransactionsHistoryView
-          errorMessage={errorMessage}
-          isLoading={organizationsQuery.isPending || isLoadingLocations}
-          locations={activeLocations}
-          onRetry={() => {
-            organizationsQuery.refetch();
-
-            if (organizationId) {
-              locationsQuery.refetch();
-            }
-          }}
-          organization={selectedOrganization}
-          transactions={[]}
-        />
-      </div>
-    </div>
+        setSelectedLocation(organizationId, nextLocation);
+        setSelectedLocationState(nextLocation);
+      }}
+      organization={selectedOrganization}
+      selectedLocation={selectedLocation}
+    />
   );
 }

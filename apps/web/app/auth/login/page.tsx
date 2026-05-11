@@ -116,10 +116,6 @@ function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: async (payload) => {
-      if (!payload.user) {
-        throw new LoginError("A resposta de login não incluiu um usuário autenticado.");
-      }
-
       queryClient.setQueryData(["auth", "me"], payload.user);
       await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
       const next = new URLSearchParams(window.location.search).get("next");

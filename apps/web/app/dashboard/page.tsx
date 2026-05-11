@@ -19,6 +19,11 @@ import {
   type SelectedLocation,
 } from "../lib/organization-selection";
 
+/**
+ * Returns a localized greeting for the current time of day.
+ *
+ * @returns "Bom dia", "Boa tarde", or "Boa noite" based on the current hour.
+ */
 const getGreeting = () => {
   const hour = new Date().getHours();
 

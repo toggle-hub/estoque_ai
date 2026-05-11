@@ -120,7 +120,7 @@ export const Empty: Story = {
   },
 };
 
-export const FilteredNoResults: Story = {
+export const LoadedDuplicate: Story = {
   args: {
     locations,
     organization,

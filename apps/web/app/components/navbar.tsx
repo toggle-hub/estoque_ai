@@ -311,7 +311,7 @@ export const Navbar = ({
 
       {isMobileOpen ? (
         <button
-          aria-label="Fechar navegação overlay"
+          aria-label="Fechar menu de navegação"
           className="fixed inset-0 z-40 bg-black/20 md:hidden"
           onClick={() => setIsMobileOpen(false)}
           type="button"
