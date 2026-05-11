@@ -60,6 +60,13 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
 });
 
+const activityDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  month: "short",
+});
+
 const activityLabels = {
   RECEIVING: {
     icon: ArrowDownLeft,
@@ -100,12 +107,7 @@ const formatCurrency = (value: number) => currencyFormatter.format(value);
  * @returns Localized date and time string.
  */
 const formatActivityDate = (value: string) =>
-  new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short",
-  }).format(new Date(value));
+  activityDateFormatter.format(new Date(value));
 
 /**
  * Builds the metric card configuration shown in the overview grid.
