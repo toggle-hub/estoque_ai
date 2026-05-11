@@ -67,7 +67,7 @@ const getCompletionItems = (organization?: Organization | null): CompletionItem[
  * Renders the organization profile settings page content.
  *
  * @param props View props.
- * @returns Configurações da organização UI.
+ * @returns Organization settings UI.
  */
 export function OrganizationSettingsView({
   errorMessage,

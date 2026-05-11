@@ -86,7 +86,7 @@ const hasLowStock = (item: CatalogItem) =>
  * Renders organization-wide item catalog browsing.
  *
  * @param props View props.
- * @returns Catálogo de itens UI.
+ * @returns Items catalog UI.
  */
 export function ItemsCatalogView({
   errorMessage,
