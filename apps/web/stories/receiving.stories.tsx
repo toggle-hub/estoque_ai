@@ -7,7 +7,7 @@ import type { Location, Organization, ReceivingTransactionResult } from "../app/
 
 const organization: Organization = {
   id: "00000000-0000-4000-8000-000000000001",
-  name: "Ada Industries",
+  name: "Indústrias Ada",
   cnpj: "12.345.678/0001-90",
   email: "ops@ada.example",
   phone: null,
@@ -21,7 +21,7 @@ const locations: Location[] = [
   {
     id: "10000000-0000-4000-8000-000000000001",
     organization_id: organization.id,
-    name: "Main Warehouse",
+    name: "Depósito principal",
     address: "Rua A, 100",
     is_active: true,
     created_at: "2026-01-01T00:00:00.000Z",
@@ -31,7 +31,7 @@ const locations: Location[] = [
   {
     id: "10000000-0000-4000-8000-000000000002",
     organization_id: organization.id,
-    name: "Secondary Store",
+    name: "Loja secundária",
     address: "Rua B, 200",
     is_active: true,
     created_at: "2026-01-01T00:00:00.000Z",
@@ -47,8 +47,8 @@ const items: ReceivingItem[] = [
     location_id: locations[0]?.id ?? "",
     category_id: null,
     sku: "SCN-100",
-    name: "Wireless Scanner",
-    description: "Handheld scanner used at receiving stations.",
+    name: "Leitor sem fio",
+    description: "Leitor portátil usado nas estações de recebimento.",
     unit_price: "899.90",
     reorder_point: 4,
     is_active: true,
@@ -64,7 +64,7 @@ const items: ReceivingItem[] = [
     location_id: locations[1]?.id ?? "",
     category_id: null,
     sku: "LBL-010",
-    name: "Thermal Labels",
+    name: "Etiquetas térmicas",
     description: null,
     unit_price: "39.50",
     reorder_point: 20,
@@ -88,7 +88,7 @@ const successResult: ReceivingTransactionResult = {
     previous_quantity: 12,
     new_quantity: 20,
     reference: "NF-000123",
-    notes: "Supplier delivery",
+    notes: "Entrega do fornecedor",
     performed_by: "50000000-0000-4000-8000-000000000001",
     created_at: "2026-01-03T00:00:00.000Z",
   },
@@ -141,7 +141,7 @@ export const ValidationError: Story = {
     locations,
     onReceive: async () => undefined,
     organization,
-    submitErrorMessage: "Quantity must be a positive whole number.",
+    submitErrorMessage: "A quantidade deve ser um número inteiro positivo.",
   },
 };
 

@@ -50,7 +50,7 @@ const getSearchText = (item: LocationItem) =>
  * Renders stock receiving workflow.
  *
  * @param props View props.
- * @returns Receiving workflow UI.
+ * @returns Recebimento workflow UI.
  */
 export function ReceivingView({
   errorMessage,
@@ -120,12 +120,12 @@ export function ReceivingView({
     }
 
     if (!locationId || !itemId) {
-      setValidationError("Choose a location and item before receiving stock.");
+      setValidationError("Escolha um local e um item antes de receber estoque.");
       return;
     }
 
     if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
-      setValidationError("Quantity must be a positive whole number.");
+      setValidationError("A quantidade deve ser um número inteiro positivo.");
       return;
     }
 
@@ -152,37 +152,37 @@ export function ReceivingView({
         <header className="flex flex-col gap-4 border-b border-purple-100 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="m-0 text-sm font-medium text-purple-600">
-              {organization?.name ?? "Selected organization"}
+              {organization?.name ?? "Organização selecionada"}
             </p>
-            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Receiving</h1>
+            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Recebimento</h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">
-              Add inbound stock to an existing location item and record the transaction.
+              Adicione estoque de entrada a um item existente do local e registre a transação.
             </p>
           </div>
           <Badge variant={canReceive ? "secondary" : "outline"}>
-            {canReceive ? "Can receive stock" : "Read-only access"}
+            {canReceive ? "Pode receber estoque" : "Acesso somente leitura"}
           </Badge>
         </header>
 
         {!organization ? (
           <Alert variant="destructive">
-            <AlertTitle>No organization selected</AlertTitle>
-            <AlertDescription>Select an organization before receiving stock.</AlertDescription>
+            <AlertTitle>Nenhuma organização selecionada</AlertTitle>
+            <AlertDescription>Selecione uma organização antes de receber estoque.</AlertDescription>
           </Alert>
         ) : null}
 
         {organization && !canReceive ? (
           <Alert variant="destructive">
-            <AlertTitle>Receiving unavailable</AlertTitle>
+            <AlertTitle>Recebimento indisponível</AlertTitle>
             <AlertDescription>
-              Viewers can review inventory, but cannot create receiving transactions.
+              Visualizadores podem revisar o estoque, mas não podem criar transações de recebimento.
             </AlertDescription>
           </Alert>
         ) : null}
 
         {errorMessage ? (
           <Alert variant="destructive">
-            <AlertTitle>Unable to load receiving data</AlertTitle>
+            <AlertTitle>Não foi possível carregar os dados de recebimento</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
@@ -191,9 +191,9 @@ export function ReceivingView({
           <Alert>
             <CheckCircle2 className="absolute top-4 left-4 size-4 text-purple-500" />
             <div className="pl-6">
-              <AlertTitle>Stock received</AlertTitle>
+              <AlertTitle>Estoque recebido</AlertTitle>
               <AlertDescription>
-                Quantity moved from {successResult.transaction.previous_quantity} to{" "}
+                Quantidade alterada de {successResult.transaction.previous_quantity} to{" "}
                 {successResult.transaction.new_quantity}.
               </AlertDescription>
             </div>
@@ -203,16 +203,16 @@ export function ReceivingView({
         {canReceive ? (
           <Card>
             <CardHeader>
-              <CardTitle>Receive stock</CardTitle>
+              <CardTitle>Receber estoque</CardTitle>
               <CardDescription>
-                Choose a location item, enter quantity, and submit one receiving movement.
+                Escolha um item do local, informe a quantidade e envie um movimento de recebimento.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form className="grid gap-4" onSubmit={handleSubmit}>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Location</span>
+                    <span className="text-xs font-semibold text-purple-700">Local</span>
                     <select
                       className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:bg-purple-50"
                       disabled={isSubmitting}
@@ -223,7 +223,7 @@ export function ReceivingView({
                       required
                       value={locationId}
                     >
-                      <option value="">Select location</option>
+                      <option value="">Selecionar local</option>
                       {locations.map((location) => (
                         <option key={location.id} value={location.id}>
                           {location.name}
@@ -235,13 +235,13 @@ export function ReceivingView({
                   <label className="flex min-w-0 flex-col gap-1.5">
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700">
                       <Search className="size-3.5" />
-                      Search item
+                      Buscar item
                     </span>
                     <input
                       className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:bg-purple-50"
                       disabled={isSubmitting || !locationId}
                       onChange={(event) => setQuery(event.target.value)}
-                      placeholder="SKU, name, or category"
+                      placeholder="SKU, nome ou categoria"
                       value={query}
                     />
                   </label>
@@ -257,11 +257,11 @@ export function ReceivingView({
                     value={itemId}
                   >
                     <option value="">
-                      {selectedLocation ? "Select item" : "Select location first"}
+                      {selectedLocation ? "Selecionar item" : "Selecionar local first"}
                     </option>
                     {filteredItems.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.sku} - {item.name} ({item.quantity} on hand)
+                        {item.sku} - {item.name} ({item.quantity} em estoque)
                       </option>
                     ))}
                   </select>
@@ -271,14 +271,14 @@ export function ReceivingView({
                   <div className="rounded-md border border-purple-100 bg-purple-50 px-3 py-2 text-sm">
                     <span className="font-semibold">{selectedItem.name}</span>
                     <span className="ml-2 text-purple-700">
-                      Current quantity: {selectedItem.quantity}
+                      Quantidade atual: {selectedItem.quantity}
                     </span>
                   </div>
                 ) : null}
 
                 <div className="grid gap-4 lg:grid-cols-3">
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Quantity</span>
+                    <span className="text-xs font-semibold text-purple-700">Quantidade</span>
                     <input
                       className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:bg-purple-50"
                       disabled={isSubmitting}
@@ -291,7 +291,7 @@ export function ReceivingView({
                     />
                   </label>
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Reference</span>
+                    <span className="text-xs font-semibold text-purple-700">Referência</span>
                     <input
                       className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:bg-purple-50"
                       disabled={isSubmitting}
@@ -301,12 +301,12 @@ export function ReceivingView({
                     />
                   </label>
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Notes</span>
+                    <span className="text-xs font-semibold text-purple-700">Observações</span>
                     <input
                       className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:bg-purple-50"
                       disabled={isSubmitting}
                       onChange={(event) => setNotes(event.target.value)}
-                      placeholder="Supplier delivery"
+                      placeholder="Entrega do fornecedor"
                       value={notes}
                     />
                   </label>
@@ -330,7 +330,7 @@ export function ReceivingView({
                   type="submit"
                 >
                   {isSubmitting ? <RotateCw className="animate-spin" /> : <PackagePlus />}
-                  Receive stock
+                  Receber estoque
                 </Button>
               </form>
             </CardContent>

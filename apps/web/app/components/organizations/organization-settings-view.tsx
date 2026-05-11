@@ -51,15 +51,15 @@ const getCompletionItems = (organization?: Organization | null): CompletionItem[
   },
   {
     isComplete: Boolean(organization?.email),
-    label: "Company email",
+    label: "Email da empresa",
   },
   {
     isComplete: Boolean(organization?.phone),
-    label: "Phone",
+    label: "Telefone",
   },
   {
     isComplete: Boolean(organization?.plan_type),
-    label: "Plan type",
+    label: "Tipo de plano",
   },
 ];
 
@@ -67,7 +67,7 @@ const getCompletionItems = (organization?: Organization | null): CompletionItem[
  * Renders the organization profile settings page content.
  *
  * @param props View props.
- * @returns Organization settings UI.
+ * @returns Configurações da organização UI.
  */
 export function OrganizationSettingsView({
   errorMessage,
@@ -82,7 +82,7 @@ export function OrganizationSettingsView({
   const [name, setName] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setTelefone] = useState("");
   const [planType, setPlanType] = useState("");
   const previousOrganizationIdRef = useRef<string | null>(null);
   const role = organization?.role?.toLowerCase() ?? "viewer";
@@ -102,7 +102,7 @@ export function OrganizationSettingsView({
     setName(organization?.name ?? "");
     setCnpj(organization?.cnpj ?? "");
     setEmail(organization?.email ?? "");
-    setPhone(organization?.phone ?? "");
+    setTelefone(organization?.phone ?? "");
     setPlanType(organization?.plan_type ?? "");
   }, [organization]);
 
@@ -127,7 +127,7 @@ export function OrganizationSettingsView({
         plan_type: getNullableValue(planType),
       });
     } catch (error) {
-      console.error("Failed to save organization settings.", error);
+      console.error("Falha ao salvar as configurações da organização.", error);
     }
   };
 
@@ -145,30 +145,30 @@ export function OrganizationSettingsView({
         <header className="flex flex-col gap-4 border-b border-purple-100 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="m-0 text-sm font-medium text-purple-600">
-              {organization?.name ?? "Selected organization"}
+              {organization?.name ?? "Organização selecionada"}
             </p>
             <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">
-              Organization settings
+              Configurações da organização
             </h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">
-              Complete company profile details used across inventory workflows.
+              Complete os dados da empresa usados nos fluxos de estoque.
             </p>
           </div>
           <Badge variant={canEdit ? "secondary" : "outline"}>
-            {canEdit ? "Can edit profile" : "Read-only access"}
+            {canEdit ? "Pode editar perfil" : "Acesso somente leitura"}
           </Badge>
         </header>
 
         {!organization ? (
           <Alert variant="destructive">
-            <AlertTitle>No organization selected</AlertTitle>
-            <AlertDescription>Select an organization before editing settings.</AlertDescription>
+            <AlertTitle>Nenhuma organização selecionada</AlertTitle>
+            <AlertDescription>Selecione uma organização antes de editar as configurações.</AlertDescription>
           </Alert>
         ) : null}
 
         {errorMessage ? (
           <Alert variant="destructive">
-            <AlertTitle>Unable to load organization</AlertTitle>
+            <AlertTitle>Não foi possível carregar a organização</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
             {onRetry ? (
               <Button className="mt-3" onClick={onRetry} variant="outline">
@@ -182,10 +182,9 @@ export function OrganizationSettingsView({
           <Alert>
             <AlertCircle className="absolute top-4 left-4 size-4 text-purple-500" />
             <div className="pl-6">
-              <AlertTitle>Complete company profile</AlertTitle>
+              <AlertTitle>Complete o perfil da empresa</AlertTitle>
               <AlertDescription>
-                CNPJ is the main company identifier. Add it when available; missing fields do not
-                block inventory work.
+                CNPJ é o principal identificador da empresa. Adicione quando disponível; campos ausentes não bloqueiam o trabalho de estoque.
               </AlertDescription>
             </div>
           </Alert>
@@ -193,9 +192,9 @@ export function OrganizationSettingsView({
 
         {!canEdit ? (
           <Alert>
-            <AlertTitle>Viewer access</AlertTitle>
+            <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
-              Viewers can review company profile details, but cannot edit organization settings.
+              Visualizadores podem revisar os dados da empresa, mas não podem editar configurações da organização.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -203,15 +202,15 @@ export function OrganizationSettingsView({
         <section className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
           <Card>
             <CardHeader>
-              <CardTitle>Company profile</CardTitle>
+              <CardTitle>Perfil da empresa</CardTitle>
               <CardDescription>
-                Keep legal and contact details current for this organization.
+                Mantenha os dados legais e de contato atualizados para esta organização.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form className="grid gap-4" onSubmit={handleSubmit}>
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Name</span>
+                  <span className="text-xs font-semibold text-purple-700">Nome</span>
                   <input
                     className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                     disabled={!canEdit || isSaving}
@@ -249,18 +248,18 @@ export function OrganizationSettingsView({
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Phone</span>
+                    <span className="text-xs font-semibold text-purple-700">Telefone</span>
                     <input
                       className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                       disabled={!canEdit || isSaving}
-                      onChange={(event) => setPhone(event.target.value)}
+                      onChange={(event) => setTelefone(event.target.value)}
                       placeholder="+55 11 99999-0000"
                       value={phone}
                     />
                   </label>
 
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Plan type</span>
+                    <span className="text-xs font-semibold text-purple-700">Tipo de plano</span>
                     <input
                       className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                       disabled={!canEdit || isSaving}
@@ -290,7 +289,7 @@ export function OrganizationSettingsView({
                     type="submit"
                   >
                     {isSaving ? <RotateCw className="animate-spin" /> : <Save />}
-                    Save changes
+                    Salvar alterações
                   </Button>
                 ) : null}
               </form>
@@ -299,8 +298,8 @@ export function OrganizationSettingsView({
 
           <Card>
             <CardHeader>
-              <CardTitle>Profile checklist</CardTitle>
-              <CardDescription>Complete the core organization profile over time.</CardDescription>
+              <CardTitle>Checklist do perfil</CardTitle>
+              <CardDescription>Complete o perfil principal da organização ao longo do tempo.</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="m-0 grid list-none gap-3 p-0">
@@ -318,7 +317,7 @@ export function OrganizationSettingsView({
                       <span className="truncate">{item.label}</span>
                     </span>
                     <Badge variant={item.isComplete ? "secondary" : "outline"}>
-                      {item.isComplete ? "Done" : item.primary ? "Primary" : "Missing"}
+                      {item.isComplete ? "Concluído" : item.primary ? "Principal" : "Pendente"}
                     </Badge>
                   </li>
                 ))}

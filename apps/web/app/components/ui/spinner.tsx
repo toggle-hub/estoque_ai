@@ -9,7 +9,7 @@ export function Spinner({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
       role="status"
-      aria-label="Loading"
+      aria-label="Carregando"
       className={cn("inline-grid size-6 place-items-center text-purple-500", className)}
       {...props}
     >

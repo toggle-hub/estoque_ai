@@ -6,7 +6,7 @@ const locations: Location[] = [
   {
     id: "00000000-0000-4000-8000-000000000001",
     organization_id: "00000000-0000-4000-8000-000000000010",
-    name: "Sao Paulo Warehouse",
+    name: "Depósito São Paulo",
     address: "Rua A, 100",
     is_active: true,
     created_at: "2026-01-01T00:00:00.000Z",
@@ -16,7 +16,7 @@ const locations: Location[] = [
   {
     id: "00000000-0000-4000-8000-000000000002",
     organization_id: "00000000-0000-4000-8000-000000000010",
-    name: "Inactive Store",
+    name: "Loja inativa",
     address: "Rua B, 200",
     is_active: false,
     created_at: "2026-01-01T00:00:00.000Z",
@@ -26,7 +26,7 @@ const locations: Location[] = [
 ];
 
 const meta = {
-  title: "Components/Navbar",
+  title: "Componentes/Navbar",
   component: Navbar,
   parameters: {
     layout: "fullscreen",
@@ -47,11 +47,11 @@ export const SelectedOrganization: Story = {
   args: {
     currentPath: "/dashboard/transactions",
     organization: {
-      name: "Ada Industries",
+      name: "Indústrias Ada",
       role: "admin",
     },
     selectedLocationId: "00000000-0000-4000-8000-000000000001",
-    selectedLocationName: "Sao Paulo Warehouse",
+    selectedLocationName: "Depósito São Paulo",
     locations,
   },
 };
@@ -61,7 +61,7 @@ export const NeedsLocationSelection: Story = {
     currentPath: "/dashboard",
     locations,
     organization: {
-      name: "Ada Industries",
+      name: "Indústrias Ada",
       role: "manager",
     },
   },
@@ -73,7 +73,7 @@ export const LoadingLocations: Story = {
     isLoadingLocations: true,
     locations: [],
     organization: {
-      name: "Ada Industries",
+      name: "Indústrias Ada",
       role: "manager",
     },
   },
@@ -85,7 +85,7 @@ export const ErrorLoadingLocations: Story = {
     hasLocationLoadError: true,
     locations: [],
     organization: {
-      name: "Ada Industries",
+      name: "Indústrias Ada",
       role: "manager",
     },
   },
@@ -96,7 +96,7 @@ export const WithInactiveLocation: Story = {
     currentPath: "/dashboard/locations/00000000-0000-4000-8000-000000000001/inventory",
     locations,
     organization: {
-      name: "Ada Industries",
+      name: "Indústrias Ada",
       role: "manager",
     },
     selectedLocationId: locations[0]?.id,
@@ -109,7 +109,7 @@ export const NoLocations: Story = {
     currentPath: "/dashboard",
     locations: [],
     organization: {
-      name: "Ada Industries",
+      name: "Indústrias Ada",
       role: "manager",
     },
   },
@@ -126,7 +126,7 @@ export const ViewerNavigation: Story = {
   args: {
     currentPath: "/dashboard/categories",
     organization: {
-      name: "Grace Supply",
+      name: "Suprimentos Grace",
       role: "viewer",
     },
   },
@@ -137,7 +137,7 @@ export const MobileNavigation: Story = {
     currentPath: "/dashboard/locations",
     defaultMobileOpen: true,
     organization: {
-      name: "Grace Supply",
+      name: "Suprimentos Grace",
       role: "manager",
     },
   },

@@ -22,9 +22,9 @@ import {
 const getGreeting = () => {
   const hour = new Date().getHours();
 
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  if (hour < 12) return "Bom dia";
+  if (hour < 18) return "Boa tarde";
+  return "Boa noite";
 };
 
 /**
@@ -82,7 +82,7 @@ const Dashboard = () => {
     () => getActiveLocations(locationsQuery.data ?? []),
     [locationsQuery.data],
   );
-  const userName = userQuery.data?.name ?? "User";
+  const userName = userQuery.data?.name ?? "Usuário";
 
   useEffect(() => {
     if (prevOrganizationId.current === organizationId) {
@@ -148,7 +148,7 @@ const Dashboard = () => {
               {getGreeting()}, {userName}
             </h1>
             <p className="text-sm text-gray-500">
-              {selectedOrganization ? selectedOrganization.name : "Select an organization"}
+              {selectedOrganization ? selectedOrganization.name : "Selecione uma organização"}
             </p>
           </div>
 
@@ -156,7 +156,7 @@ const Dashboard = () => {
           <div className="w-full max-w-md lg:flex-1">
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Buscar..."
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>

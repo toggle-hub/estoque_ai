@@ -4,7 +4,7 @@ import type { Category, Location, LocationItem, Organization } from "../app/lib/
 
 const organization: Organization = {
   id: "00000000-0000-4000-8000-000000000001",
-  name: "Ada Industries",
+  name: "Indústrias Ada",
   cnpj: "12.345.678/0001-90",
   email: "ops@ada.example",
   phone: null,
@@ -17,7 +17,7 @@ const organization: Organization = {
 const location: Location = {
   id: "10000000-0000-4000-8000-000000000001",
   organization_id: organization.id,
-  name: "Main Warehouse",
+  name: "Depósito principal",
   address: "Rua A, 100",
   is_active: true,
   created_at: "2026-01-01T00:00:00.000Z",
@@ -29,15 +29,15 @@ const categories: Category[] = [
   {
     id: "20000000-0000-4000-8000-000000000010",
     organization_id: organization.id,
-    name: "Electronics",
-    description: "Devices and accessories.",
+    name: "Eletrônicos",
+    description: "Dispositivos e acessórios.",
     created_at: "2026-01-01T00:00:00.000Z",
     deleted_at: null,
   },
   {
     id: "20000000-0000-4000-8000-000000000011",
     organization_id: organization.id,
-    name: "Supplies",
+    name: "Suprimentos",
     description: null,
     created_at: "2026-01-01T00:00:00.000Z",
     deleted_at: null,
@@ -50,8 +50,8 @@ const items: LocationItem[] = [
     organization_id: organization.id,
     category_id: categories[0]?.id ?? null,
     sku: "SCN-100",
-    name: "Wireless Scanner",
-    description: "Handheld scanner used at receiving stations.",
+    name: "Leitor sem fio",
+    description: "Leitor portátil usado nas estações de recebimento.",
     unit_price: "899.90",
     reorder_point: 4,
     is_active: true,
@@ -66,7 +66,7 @@ const items: LocationItem[] = [
     organization_id: organization.id,
     category_id: categories[1]?.id ?? null,
     sku: "LBL-010",
-    name: "Thermal Labels",
+    name: "Etiquetas térmicas",
     description: null,
     unit_price: "39.50",
     reorder_point: 20,
@@ -82,8 +82,8 @@ const items: LocationItem[] = [
     organization_id: organization.id,
     category_id: null,
     sku: "BOX-020",
-    name: "Shipping Box",
-    description: "Uncategorized packaging item.",
+    name: "Caixa de envio",
+    description: "Item de embalagem sem categoria.",
     unit_price: "4.20",
     reorder_point: 10,
     is_active: true,
@@ -96,7 +96,7 @@ const items: LocationItem[] = [
 ];
 
 const meta = {
-  title: "Pages/Location Inventory",
+  title: "Páginas/Estoque do local",
   component: LocationInventoryView,
   parameters: {
     layout: "fullscreen",
@@ -141,7 +141,7 @@ export const Empty: Story = {
 export const ErrorState: Story = {
   args: {
     categories,
-    errorMessage: "The API did not respond.",
+    errorMessage: "A API não respondeu.",
     items: [],
     location,
     onCreate: async () => undefined,

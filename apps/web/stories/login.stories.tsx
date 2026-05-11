@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import LoginRoute from "../app/auth/login/page";
 
 const meta = {
-  title: "Pages/Login",
+  title: "Páginas/Login",
   component: LoginRoute,
   parameters: {
     layout: "fullscreen",

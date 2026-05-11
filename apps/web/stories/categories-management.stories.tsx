@@ -4,7 +4,7 @@ import type { Category, Organization } from "../app/lib/api";
 
 const organization: Organization = {
   id: "00000000-0000-4000-8000-000000000001",
-  name: "Ada Industries",
+  name: "Indústrias Ada",
   cnpj: "12.345.678/0001-90",
   email: "ops@ada.example",
   phone: null,
@@ -18,15 +18,15 @@ const categories: Category[] = [
   {
     id: "10000000-0000-4000-8000-000000000010",
     organization_id: organization.id,
-    name: "Electronics",
-    description: "Devices, accessories, and replacement parts.",
+    name: "Eletrônicos",
+    description: "Dispositivos, acessórios e peças de reposição.",
     created_at: "2026-01-01T00:00:00.000Z",
     deleted_at: null,
   },
   {
     id: "10000000-0000-4000-8000-000000000011",
     organization_id: organization.id,
-    name: "Supplies",
+    name: "Suprimentos",
     description: null,
     created_at: "2026-01-02T00:00:00.000Z",
     deleted_at: null,
@@ -38,13 +38,13 @@ const manyCategories: Category[] = Array.from({ length: 48 }, (_, index) => ({
   organization_id: organization.id,
   name: `Category ${String(index + 1).padStart(2, "0")}`,
   description:
-    index % 3 === 0 ? "A longer taxonomy description used to verify card wrapping." : null,
+    index % 3 === 0 ? "Uma descrição de taxonomia mais longa usada para validar quebra de linha no cartão." : null,
   created_at: `2026-01-${String((index % 28) + 1).padStart(2, "0")}T00:00:00.000Z`,
   deleted_at: null,
 }));
 
 const meta = {
-  title: "Pages/Categories Management",
+  title: "Páginas/Gerenciamento de categorias",
   component: CategoriesManagementView,
   parameters: {
     layout: "fullscreen",
@@ -100,7 +100,7 @@ export const Creating: Story = {
 export const ErrorState: Story = {
   args: {
     categories: [],
-    errorMessage: "The API did not respond.",
+    errorMessage: "A API não respondeu.",
     onCreate: async () => undefined,
     organization,
   },
