@@ -294,7 +294,7 @@ export function TransactionsHistoryView({
         {errorMessage && onRetry ? (
           <Button className="w-fit" onClick={onRetry} type="button" variant="outline">
             <AlertCircle />
-            Retry
+            Tentar novamente
           </Button>
         ) : null}
 

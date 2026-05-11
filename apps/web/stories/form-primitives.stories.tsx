@@ -15,24 +15,38 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+/**
+ * Renders the text input field story.
+ *
+ * @returns Text field story element.
+ */
+const renderTextField = () => (
+  <Field className="w-80">
+    <Label htmlFor="storybook-product-search">Busca</Label>
+    <Input id="storybook-product-search" placeholder="SKU, item ou referência" />
+  </Field>
+);
+
+/**
+ * Renders the select field story.
+ *
+ * @returns Select field story element.
+ */
+const renderSelectField = () => (
+  <Field className="w-80">
+    <Label htmlFor="storybook-location-select">Local</Label>
+    <Select id="storybook-location-select" defaultValue="main">
+      <SelectItem value="all">Todos os locais</SelectItem>
+      <SelectItem value="main">Depósito principal</SelectItem>
+      <SelectItem value="store">Loja secundária</SelectItem>
+    </Select>
+  </Field>
+);
+
 export const TextField: Story = {
-  render: () => (
-    <Field className="w-80">
-      <Label htmlFor="storybook-product-search">Busca</Label>
-      <Input id="storybook-product-search" placeholder="SKU, item ou referência" />
-    </Field>
-  ),
+  render: renderTextField,
 };
 
 export const SelectField: Story = {
-  render: () => (
-    <Field className="w-80">
-      <Label htmlFor="storybook-location-select">Local</Label>
-      <Select id="storybook-location-select" defaultValue="main">
-        <SelectItem value="all">Todos os locais</SelectItem>
-        <SelectItem value="main">Depósito principal</SelectItem>
-        <SelectItem value="store">Loja secundária</SelectItem>
-      </Select>
-    </Field>
-  ),
+  render: renderSelectField,
 };

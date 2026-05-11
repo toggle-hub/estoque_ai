@@ -152,7 +152,7 @@ export function ReceivingView({
         <header className="flex flex-col gap-4 border-b border-purple-100 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="m-0 text-sm font-medium text-purple-600">
-              {organization?.name ?? "Organização selecionada"}
+              {organization?.name ?? "Nenhuma organização selecionada"}
             </p>
             <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Recebimento</h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">

@@ -43,7 +43,7 @@ const selectedLocation = {
 };
 
 const meta = {
-  title: "Páginas/Transactions Page",
+  title: "Páginas/Página de Transações",
   component: TransactionsPageView,
   parameters: {
     layout: "fullscreen",
