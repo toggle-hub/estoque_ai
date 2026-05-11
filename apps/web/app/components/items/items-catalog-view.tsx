@@ -200,7 +200,7 @@ export function ItemsCatalogView({
           <label className="flex min-w-0 flex-col gap-1.5">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700">
               <Search className="size-3.5" />
-              Search
+              Buscar
             </span>
             <input
               className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
@@ -212,7 +212,7 @@ export function ItemsCatalogView({
           <label className="flex min-w-0 flex-col gap-1.5">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700">
               <Filter className="size-3.5" />
-              Category
+              Categoria
             </span>
             <select
               className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
@@ -335,7 +335,7 @@ export function ItemsCatalogView({
         {errorMessage && onRetry ? (
           <Button className="w-fit" onClick={onRetry} type="button" variant="outline">
             <AlertCircle />
-            Retry
+            Tentar novamente
           </Button>
         ) : null}
 

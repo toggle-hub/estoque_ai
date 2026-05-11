@@ -172,7 +172,7 @@ export function OrganizationSettingsView({
             <AlertDescription>{errorMessage}</AlertDescription>
             {onRetry ? (
               <Button className="mt-3" onClick={onRetry} variant="outline">
-                Retry
+                Tentar novamente
               </Button>
             ) : null}
           </Alert>
