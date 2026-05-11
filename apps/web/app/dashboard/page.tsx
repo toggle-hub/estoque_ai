@@ -2,14 +2,20 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  DashboardOverviewView,
+  type DashboardOverviewMetrics,
+} from "../components/dashboard/dashboard-overview-view";
 import { Navbar } from "../components/navbar";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import {
   getCurrentUser,
   getOrganizationLocations,
+  getOrganizationStock,
   getOrganizations,
   type Location,
   type Organization,
+  type OrganizationStockLevel,
 } from "../lib/api";
 import {
   clearSelectedLocation,
@@ -60,6 +66,43 @@ const getActiveLocations = (locations: Location[]) =>
   locations.filter((location) => location.is_active !== false);
 
 /**
+ * Aggregates organization stock rows into dashboard metrics.
+ *
+ * @param stock Organization stock rows.
+ * @returns Overview metrics for the dashboard.
+ */
+export const getDashboardOverviewMetrics = (
+  stock: OrganizationStockLevel[],
+): DashboardOverviewMetrics => {
+  const skuIds = new Set<string>();
+  const lowStockItemIds = new Set<string>();
+  let totalStockUnits = 0;
+  let inventoryValue = 0;
+
+  for (const stockLevel of stock) {
+    skuIds.add(stockLevel.item_id);
+    totalStockUnits += stockLevel.quantity;
+
+    const unitPrice = Number(stockLevel.item.unit_price ?? 0);
+
+    if (Number.isFinite(unitPrice)) {
+      inventoryValue += stockLevel.quantity * unitPrice;
+    }
+
+    if (stockLevel.quantity <= stockLevel.item.reorder_point) {
+      lowStockItemIds.add(stockLevel.item_id);
+    }
+  }
+
+  return {
+    inventoryValue,
+    lowStockItems: lowStockItemIds.size,
+    totalSkus: skuIds.size,
+    totalStockUnits,
+  };
+};
+
+/**
  * Renders the authenticated dashboard shell for the selected organization.
  *
  * @returns Dashboard page.
@@ -80,6 +123,18 @@ const Dashboard = () => {
     queryFn: () => getOrganizationLocations(organizationId ?? ""),
     retry: false,
   });
+  const stockQuery = useQuery({
+    enabled: Boolean(organizationId),
+    queryKey: ["organizations", organizationId, "stock-overview"],
+    queryFn: () => {
+      if (!organizationId) {
+        throw new Error("A organização é obrigatória para carregar o painel.");
+      }
+
+      return getOrganizationStock(organizationId);
+    },
+    retry: false,
+  });
   const hasOrganization = Boolean(organizationId);
   const isLoadingLocations = hasOrganization ? locationsQuery.isPending : false;
   const hasLocationLoadError = hasOrganization ? Boolean(locationsQuery.error) : false;
@@ -87,7 +142,15 @@ const Dashboard = () => {
     () => getActiveLocations(locationsQuery.data ?? []),
     [locationsQuery.data],
   );
+  const metrics = useMemo(
+    () => getDashboardOverviewMetrics(stockQuery.data ?? []),
+    [stockQuery.data],
+  );
   const userName = userQuery.data?.name ?? "Usuário";
+  const errorMessage =
+    userQuery.error?.message ??
+    (hasOrganization ? locationsQuery.error?.message : undefined) ??
+    (hasOrganization ? stockQuery.error?.message : undefined);
 
   useEffect(() => {
     if (prevOrganizationId.current === organizationId) {
@@ -175,7 +238,25 @@ const Dashboard = () => {
           </div>
         </header>
 
-        <main className="p-6">{/* content */}</main>
+        <DashboardOverviewView
+          activities={[]}
+          errorMessage={errorMessage}
+          isLoading={
+            userQuery.isPending ||
+            (hasOrganization ? locationsQuery.isPending : false) ||
+            (hasOrganization ? stockQuery.isPending : false)
+          }
+          metrics={metrics}
+          onRetry={() => {
+            userQuery.refetch();
+
+            if (organizationId) {
+              locationsQuery.refetch();
+              stockQuery.refetch();
+            }
+          }}
+          organization={selectedOrganization}
+        />
       </div>
     </div>
   );
