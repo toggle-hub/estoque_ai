@@ -71,12 +71,12 @@ const activityLabels = {
   RECEIVING: {
     icon: ArrowDownLeft,
     label: "Recebimento",
-    quantityClassName: "text-[#067647]",
+    quantityClassName: "text-purple-600",
   },
   SALE: {
     icon: ArrowUpRight,
     label: "Venda",
-    quantityClassName: "text-[#b42318]",
+    quantityClassName: "text-purple-700",
   },
 } satisfies Record<DashboardActivity["type"], {
   icon: typeof ArrowDownLeft;
@@ -236,7 +236,7 @@ export function DashboardOverviewView({
               <Card
                 className={cn(
                   "min-h-36",
-                  metric.tone === "warning" ? "border-[#fedf89] bg-[#fffcf5]" : undefined,
+                  metric.tone === "warning" ? "border-purple-200 bg-purple-50" : undefined,
                 )}
                 key={metric.title}
               >
@@ -248,7 +248,7 @@ export function DashboardOverviewView({
                   <span
                     className={cn(
                       "grid size-10 shrink-0 place-items-center rounded-md bg-purple-100 text-purple-700",
-                      metric.tone === "warning" ? "bg-[#fef0c7] text-[#b54708]" : undefined,
+                      metric.tone === "warning" ? "bg-purple-500 text-white" : undefined,
                     )}
                   >
                     <Icon className="size-5" />
