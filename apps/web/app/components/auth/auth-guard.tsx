@@ -48,7 +48,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   if (authQuery.error) {
     return (
       <main className="grid min-h-svh place-items-center bg-white text-sm text-[#b42318]">
-        Unable to verify your session.
+        Não foi possível verificar sua sessão.
       </main>
     );
   }

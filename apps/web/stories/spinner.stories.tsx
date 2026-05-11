@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { Spinner } from "../app/components/ui/spinner";
 
 const meta = {
-  title: "Components/Spinner",
+  title: "Componentes/Spinner",
   component: Spinner,
   parameters: {
     layout: "centered",

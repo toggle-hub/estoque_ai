@@ -57,13 +57,13 @@ const isCategoryName = (value: string | null): value is string => typeof value =
  */
 const formatPrice = (value: string | null) => {
   if (value === null) {
-    return "Not set";
+    return "Não definido";
   }
 
   const numericValue = Number(value);
 
   if (!Number.isFinite(numericValue)) {
-    return "Invalid price";
+    return "Preço inválido";
   }
 
   return new Intl.NumberFormat("pt-BR", {
@@ -148,40 +148,40 @@ export function ItemsCatalogView({
         <header className="flex flex-col gap-4 border-b border-purple-100 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="m-0 text-sm font-medium text-purple-600">
-              {organization?.name ?? "Selected organization"}
+              {organization?.name ?? "Organização selecionada"}
             </p>
-            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Items catalog</h1>
+            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Catálogo de itens</h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">
-              Search products across locations and open location inventory for stock work.
+              Busque produtos entre locais e abra o estoque do local para operações de estoque.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant={canManage ? "secondary" : "outline"}>
-              {canManage ? "Can manage items" : "Read-only access"}
+              {canManage ? "Pode gerenciar itens" : "Acesso somente leitura"}
             </Badge>
-            <Badge variant={lowStockCount ? "outline" : "secondary"}>{lowStockCount} low stock</Badge>
+            <Badge variant={lowStockCount ? "outline" : "secondary"}>{lowStockCount} estoque baixo</Badge>
           </div>
         </header>
 
         {!organization ? (
           <Alert variant="destructive">
-            <AlertTitle>No organization selected</AlertTitle>
-            <AlertDescription>Select an organization before browsing item catalog.</AlertDescription>
+            <AlertTitle>Nenhuma organização selecionada</AlertTitle>
+            <AlertDescription>Selecione uma organização antes de navegar pelo catálogo de itens.</AlertDescription>
           </Alert>
         ) : null}
 
         {errorMessage ? (
           <Alert variant="destructive">
-            <AlertTitle>Unable to load items</AlertTitle>
+            <AlertTitle>Não foi possível carregar os itens</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
 
         {organization && !canManage ? (
           <Alert>
-            <AlertTitle>Viewer access</AlertTitle>
+            <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
-              Viewers can search item availability, but cannot create or edit item metadata.
+              Visualizadores podem buscar disponibilidade de itens, mas não podem criar ou editar metadados de itens.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -192,7 +192,7 @@ export function ItemsCatalogView({
             href={createHref}
           >
             <PackagePlus className="size-4" />
-            Create item in location
+            Criar item no local
           </Link>
         ) : null}
 
@@ -200,27 +200,27 @@ export function ItemsCatalogView({
           <label className="flex min-w-0 flex-col gap-1.5">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700">
               <Search className="size-3.5" />
-              Search
+              Buscar
             </span>
             <input
               className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="SKU, name, or category"
+              placeholder="SKU, nome ou categoria"
               value={query}
             />
           </label>
           <label className="flex min-w-0 flex-col gap-1.5">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700">
               <Filter className="size-3.5" />
-              Category
+              Categoria
             </span>
             <select
               className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
               onChange={(event) => setCategoryFilter(event.target.value)}
               value={categoryFilter}
             >
-              <option value="all">All categories</option>
-              <option value="uncategorized">Uncategorized</option>
+              <option value="all">Todas as categorias</option>
+              <option value="uncategorized">Sem categoria</option>
               {categories.map((category) => (
                 <option key={category} value={category}>
                   {category}
@@ -229,15 +229,15 @@ export function ItemsCatalogView({
             </select>
           </label>
           <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs font-semibold text-purple-700">Stock</span>
+            <span className="text-xs font-semibold text-purple-700">Estoque</span>
             <select
               className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
               onChange={(event) => setStockFilter(event.target.value)}
               value={stockFilter}
             >
-              <option value="all">All stock</option>
-              <option value="low">Low stock</option>
-              <option value="healthy">Healthy stock</option>
+              <option value="all">Todo estoque</option>
+              <option value="low">Estoque baixo</option>
+              <option value="healthy">Estoque saudável</option>
             </select>
           </label>
         </section>
@@ -245,11 +245,11 @@ export function ItemsCatalogView({
         {!errorMessage && !items.length ? (
           <Card className="border-dashed">
             <CardHeader>
-              <CardTitle>No items yet</CardTitle>
+              <CardTitle>Nenhum item ainda</CardTitle>
               <CardDescription>
                 {canManage
-                  ? "Create items from a location inventory page to populate the catalog."
-                  : "No items are available for this organization yet."}
+                  ? "Crie itens pela página de estoque de um local para preencher o catálogo."
+                  : "Nenhum item está disponível para esta organização ainda."}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -258,8 +258,8 @@ export function ItemsCatalogView({
         {!errorMessage && items.length > 0 && !filteredItems.length ? (
           <Card className="border-dashed">
             <CardHeader>
-              <CardTitle>No matching items</CardTitle>
-              <CardDescription>Adjust search or filters to widen the catalog list.</CardDescription>
+              <CardTitle>Nenhum item encontrado</CardTitle>
+              <CardDescription>Ajuste a busca ou os filtros para ampliar a lista do catálogo.</CardDescription>
             </CardHeader>
           </Card>
         ) : null}
@@ -270,12 +270,12 @@ export function ItemsCatalogView({
               <thead className="bg-purple-50 text-xs font-semibold text-purple-700">
                 <tr>
                   <th className="px-3 py-3">SKU</th>
-                  <th className="px-3 py-3">Name</th>
-                  <th className="px-3 py-3">Category</th>
-                  <th className="px-3 py-3 text-right">Total qty</th>
-                  <th className="px-3 py-3 text-right">Unit price</th>
-                  <th className="px-3 py-3 text-right">Reorder</th>
-                  <th className="px-3 py-3">Availability</th>
+                  <th className="px-3 py-3">Nome</th>
+                  <th className="px-3 py-3">Categoria</th>
+                  <th className="px-3 py-3 text-right">Qtd. total</th>
+                  <th className="px-3 py-3 text-right">Preço unitário</th>
+                  <th className="px-3 py-3 text-right">Reposição</th>
+                  <th className="px-3 py-3">Disponibilidade</th>
                   <th className="px-3 py-3">Status</th>
                 </tr>
               </thead>
@@ -294,7 +294,7 @@ export function ItemsCatalogView({
                           </div>
                         ) : null}
                       </td>
-                      <td className="px-3 py-3">{item.categoryName ?? "Uncategorized"}</td>
+                      <td className="px-3 py-3">{item.categoryName ?? "Sem categoria"}</td>
                       <td
                         className={cn(
                           "px-3 py-3 text-right font-semibold",
@@ -321,7 +321,7 @@ export function ItemsCatalogView({
                       </td>
                       <td className="px-3 py-3">
                         <Badge variant={lowStock ? "outline" : "secondary"}>
-                          {lowStock ? "Low stock" : "Healthy"}
+                          {lowStock ? "Estoque baixo" : "Saudável"}
                         </Badge>
                       </td>
                     </tr>
@@ -335,13 +335,13 @@ export function ItemsCatalogView({
         {errorMessage && onRetry ? (
           <Button className="w-fit" onClick={onRetry} type="button" variant="outline">
             <AlertCircle />
-            Retry
+            Tentar novamente
           </Button>
         ) : null}
 
         {!errorMessage && items.length ? (
           <div className="text-sm text-purple-700">
-            Showing {filteredItems.length} of {items.length} {items.length === 1 ? "item" : "items"}
+            Mostrando {filteredItems.length} de {items.length} {items.length === 1 ? "item" : "itens"}
           </div>
         ) : null}
       </div>

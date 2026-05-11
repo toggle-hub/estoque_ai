@@ -239,11 +239,11 @@ export const getCurrentUser = async () => {
   const payload = (await response.json().catch(() => ({}))) as CurrentUserResponse;
 
   if (!response.ok) {
-    throw new ApiError(payload.error ?? "Authentication check failed.", response.status);
+    throw new ApiError(payload.error ?? "Falha ao verificar autenticação.", response.status);
   }
 
   if (!payload.user) {
-    throw new ApiError("Authentication response did not include a user.", response.status);
+    throw new ApiError("A resposta de autenticação não incluiu um usuário.", response.status);
   }
 
   return payload.user;
@@ -261,7 +261,7 @@ export const getOrganizations = async () => {
   const payload = (await response.json().catch(() => ({}))) as OrganizationsResponse;
 
   if (!response.ok) {
-    throw new ApiError(payload.error ?? "Unable to load organizations.", response.status);
+    throw new ApiError(payload.error ?? "Não foi possível carregar as organizações.", response.status);
   }
 
   return payload.organizations ?? [];
@@ -285,11 +285,11 @@ export const createOrganization = async (input: { name: string }) => {
   const payload = (await response.json().catch(() => ({}))) as OrganizationResponse;
 
   if (!response.ok) {
-    throw new ApiError(payload.error ?? "Unable to create organization.", response.status);
+    throw new ApiError(payload.error ?? "Não foi possível criar a organização.", response.status);
   }
 
   if (!payload.organization) {
-    throw new ApiError("Organization response did not include an organization.", response.status);
+    throw new ApiError("A resposta de organização não incluiu uma organização.", response.status);
   }
 
   return payload.organization;
@@ -308,11 +308,11 @@ export const getOrganization = async (organizationId: string) => {
   const payload = (await response.json().catch(() => ({}))) as OrganizationResponse;
 
   if (!response.ok) {
-    throw new ApiError(payload.error ?? "Unable to load organization.", response.status);
+    throw new ApiError(payload.error ?? "Não foi possível carregar a organização.", response.status);
   }
 
   if (!payload.organization) {
-    throw new ApiError("Organization response did not include an organization.", response.status);
+    throw new ApiError("A resposta de organização não incluiu uma organização.", response.status);
   }
 
   return payload.organization;
@@ -340,11 +340,11 @@ export const updateOrganization = async (
   const payload = (await response.json().catch(() => ({}))) as OrganizationResponse;
 
   if (!response.ok) {
-    throw new ApiError(payload.error ?? "Unable to update organization.", response.status);
+    throw new ApiError(payload.error ?? "Não foi possível atualizar a organização.", response.status);
   }
 
   if (!payload.organization) {
-    throw new ApiError("Organization response did not include an organization.", response.status);
+    throw new ApiError("A resposta de organização não incluiu uma organização.", response.status);
   }
 
   return payload.organization;
@@ -363,7 +363,7 @@ export const getOrganizationLocations = async (organizationId: string) => {
   const payload = (await response.json().catch(() => ({}))) as LocationsResponse;
 
   if (!response.ok) {
-    throw new ApiError(payload.error ?? "Unable to load locations.", response.status);
+    throw new ApiError(payload.error ?? "Não foi possível carregar os locais.", response.status);
   }
 
   return payload.locations ?? [];
@@ -394,11 +394,11 @@ export const createOrganizationLocation = async (input: {
   const payload = (await response.json().catch(() => ({}))) as LocationResponse;
 
   if (!response.ok) {
-    throw new ApiError(payload.error ?? "Unable to create location.", response.status);
+    throw new ApiError(payload.error ?? "Não foi possível criar o local.", response.status);
   }
 
   if (!payload.location) {
-    throw new ApiError("Location response did not include a location.", response.status);
+    throw new ApiError("A resposta de local não incluiu um local.", response.status);
   }
 
   return payload.location;
@@ -430,7 +430,7 @@ export const getOrganizationStock = async (organizationId: string) => {
     const payload = (await response.json().catch(() => ({}))) as OrganizationStockResponse;
 
     if (!response.ok) {
-      throw new ApiError(payload.error ?? "Unable to load stock summary.", response.status);
+      throw new ApiError(payload.error ?? "Não foi possível carregar o resumo de estoque.", response.status);
     }
 
     stock.push(...(payload.stock ?? []));
@@ -471,7 +471,7 @@ export const getOrganizationCategories = async (organizationId: string) => {
     const payload = (await response.json().catch(() => ({}))) as CategoriesResponse;
 
     if (!response.ok) {
-      throw new ApiError(payload.error ?? "Unable to load categories.", response.status);
+      throw new ApiError(payload.error ?? "Não foi possível carregar as categorias.", response.status);
     }
 
     categories.push(...(payload.categories ?? []));
@@ -481,7 +481,7 @@ export const getOrganizationCategories = async (organizationId: string) => {
       const nextOffset = payload.pagination?.nextOffset ?? offset + limit;
 
       if (nextOffset <= offset) {
-        throw new ApiError("Category pagination did not advance.", response.status);
+        throw new ApiError("A paginação de categorias não avançou.", response.status);
       }
 
       offset = nextOffset;
@@ -513,11 +513,11 @@ export const createOrganizationCategory = async (
   const payload = (await response.json().catch(() => ({}))) as CategoryResponse;
 
   if (!response.ok) {
-    throw new ApiError(payload.error ?? "Unable to create category.", response.status);
+    throw new ApiError(payload.error ?? "Não foi possível criar a categoria.", response.status);
   }
 
   if (!payload.category) {
-    throw new ApiError("Category response did not include a category.", response.status);
+    throw new ApiError("A resposta de categoria não incluiu uma categoria.", response.status);
   }
 
   return payload.category;
@@ -549,7 +549,7 @@ export const getLocationItems = async (locationId: string) => {
     const payload = (await response.json().catch(() => ({}))) as LocationItemsResponse;
 
     if (!response.ok) {
-      throw new ApiError(payload.error ?? "Unable to load location items.", response.status);
+      throw new ApiError(payload.error ?? "Não foi possível carregar os itens do local.", response.status);
     }
 
     items.push(...(payload.items ?? []));
@@ -559,7 +559,7 @@ export const getLocationItems = async (locationId: string) => {
       const nextOffset = payload.pagination?.nextOffset ?? offset + limit;
 
       if (nextOffset <= offset) {
-        throw new ApiError("Location item pagination did not advance.", response.status);
+        throw new ApiError("A paginação de itens do local não avançou.", response.status);
       }
 
       offset = nextOffset;
@@ -588,11 +588,11 @@ export const createLocationItem = async (locationId: string, input: LocationItem
   const payload = (await response.json().catch(() => ({}))) as LocationItemResponse;
 
   if (!response.ok) {
-    throw new ApiError(payload.error ?? "Unable to create item.", response.status);
+    throw new ApiError(payload.error ?? "Não foi possível criar o item.", response.status);
   }
 
   if (!payload.item) {
-    throw new ApiError("Item response did not include an item.", response.status);
+    throw new ApiError("A resposta de item não incluiu um item.", response.status);
   }
 
   return payload.item;
@@ -620,11 +620,11 @@ export const createReceivingTransaction = async (
   const payload = (await response.json().catch(() => ({}))) as ReceivingTransactionResponse;
 
   if (!response.ok) {
-    throw new ApiError(payload.error ?? "Unable to receive stock.", response.status);
+    throw new ApiError(payload.error ?? "Não foi possível receber o estoque.", response.status);
   }
 
   if (!payload.transaction || !payload.stock_level) {
-    throw new ApiError("Receiving response did not include transaction details.", response.status);
+    throw new ApiError("A resposta de recebimento não incluiu os detalhes da transação.", response.status);
   }
 
   return {

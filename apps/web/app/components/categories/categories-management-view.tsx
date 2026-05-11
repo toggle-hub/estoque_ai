@@ -38,7 +38,7 @@ const formatDate = (value: string) =>
  * Renders organization-scoped category management.
  *
  * @param props View props.
- * @returns Categories management UI.
+ * @returns Categorias management UI.
  */
 export function CategoriesManagementView({
   categories,
@@ -95,37 +95,37 @@ export function CategoriesManagementView({
         <header className="flex flex-col gap-4 border-b border-purple-100 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="m-0 text-sm font-medium text-purple-600">
-              {organization?.name ?? "Selected organization"}
+              {organization?.name ?? "Organização selecionada"}
             </p>
-            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Categories</h1>
+            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Categorias</h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">
-              Manage product taxonomy used by inventory items and reports.
+              Gerencie a taxonomia de produtos usada por itens de estoque e relatórios.
             </p>
           </div>
           <Badge variant={canCreate ? "secondary" : "outline"}>
-            {canCreate ? "Can create categories" : "Read-only access"}
+            {canCreate ? "Pode criar categorias" : "Acesso somente leitura"}
           </Badge>
         </header>
 
         {!organization ? (
           <Alert variant="destructive">
-            <AlertTitle>No organization selected</AlertTitle>
-            <AlertDescription>Select an organization before managing categories.</AlertDescription>
+            <AlertTitle>Nenhuma organização selecionada</AlertTitle>
+            <AlertDescription>Selecione uma organização antes de gerenciar categorias.</AlertDescription>
           </Alert>
         ) : null}
 
         {errorMessage ? (
           <Alert variant="destructive">
-            <AlertTitle>Unable to load categories</AlertTitle>
+            <AlertTitle>Não foi possível carregar as categorias</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
 
         {organization && !canCreate ? (
           <Alert>
-            <AlertTitle>Viewer access</AlertTitle>
+            <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
-              Viewers can review category details, but cannot create taxonomy records.
+              Visualizadores podem revisar detalhes de categorias, mas não podem criar registros de taxonomia.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -133,8 +133,8 @@ export function CategoriesManagementView({
         {canCreate ? (
           <Card>
             <CardHeader>
-              <CardTitle>Create category</CardTitle>
-              <CardDescription>Add a product group that can be reused by item forms.</CardDescription>
+              <CardTitle>Criar categoria</CardTitle>
+              <CardDescription>Adicione um grupo de produtos que pode ser reutilizado nos formulários de itens.</CardDescription>
             </CardHeader>
             <CardContent>
               <form
@@ -142,27 +142,27 @@ export function CategoriesManagementView({
                 onSubmit={handleSubmit}
               >
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Name</span>
+                  <span className="text-xs font-semibold text-purple-700">Nome</span>
                   <input
                     className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     onChange={(event) => setName(event.target.value)}
-                    placeholder="Electronics"
+                    placeholder="Eletrônicos"
                     required
                     value={name}
                   />
                 </label>
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Description</span>
+                  <span className="text-xs font-semibold text-purple-700">Descrição</span>
                   <input
                     className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     onChange={(event) => setDescription(event.target.value)}
-                    placeholder="Devices, accessories, and parts"
+                    placeholder="Dispositivos, acessórios e peças"
                     value={description}
                   />
                 </label>
                 <Button className="self-end" disabled={isCreating || !name.trim()} type="submit">
                   {isCreating ? <RotateCw className="animate-spin" /> : <Plus />}
-                  Add category
+                  Adicionar categoria
                 </Button>
               </form>
               {createErrorMessage ? (
@@ -177,18 +177,18 @@ export function CategoriesManagementView({
         {!errorMessage && !hasCategories ? (
           <Card className="border-dashed">
             <CardHeader>
-              <CardTitle>No categories yet</CardTitle>
+              <CardTitle>Nenhuma categoria ainda</CardTitle>
               <CardDescription>
                 {canCreate
-                  ? "Create the first category to organize products for item workflows."
-                  : "No categories are available for this organization yet."}
+                  ? "Crie a primeira categoria para organizar produtos nos fluxos de itens."
+                  : "Nenhuma categoria está disponível para esta organização ainda."}
               </CardDescription>
             </CardHeader>
           </Card>
         ) : null}
 
         {hasCategories ? (
-          <section className="grid gap-4 lg:grid-cols-2" aria-label="Organization categories">
+          <section className="grid gap-4 lg:grid-cols-2" aria-label="Categorias da organização">
             {categories.map((category) => (
               <Card key={category.id}>
                 <CardHeader>
@@ -199,20 +199,20 @@ export function CategoriesManagementView({
                         <span className="truncate">{category.name}</span>
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {category.description ?? "No description set"}
+                        {category.description ?? "Sem descrição"}
                       </CardDescription>
                     </div>
-                    <Badge variant="secondary">Active</Badge>
+                    <Badge variant="secondary">Ativa</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <dl className="grid gap-3 text-sm sm:grid-cols-2">
                     <div>
-                      <dt className="text-xs font-medium text-purple-700">Created</dt>
+                      <dt className="text-xs font-medium text-purple-700">Criada</dt>
                       <dd className="m-0 mt-1 font-semibold">{formatDate(category.created_at)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs font-medium text-purple-700">Category ID</dt>
+                      <dt className="text-xs font-medium text-purple-700">ID da categoria</dt>
                       <dd className="m-0 mt-1 truncate font-mono text-xs">{category.id}</dd>
                     </div>
                   </dl>
@@ -232,7 +232,7 @@ export function CategoriesManagementView({
         {!errorMessage && hasCategories ? (
           <div className="inline-flex items-center gap-2 text-sm text-purple-700">
             <Boxes className="size-4" />
-            {categories.length} {categories.length === 1 ? "category" : "categories"}
+            {categories.length} {categories.length === 1 ? "categoria" : "categorias"}
           </div>
         ) : null}
       </div>

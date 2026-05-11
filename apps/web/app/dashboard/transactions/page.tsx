@@ -1,16 +1,14 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CategoriesManagementView } from "../../components/categories/categories-management-view";
 import { Navbar } from "../../components/navbar";
+import { TransactionsHistoryView } from "../../components/transactions/transactions-history-view";
 import {
-  createOrganizationCategory,
-  getOrganizationCategories,
   getOrganizationLocations,
   getOrganizations,
-  type CategoryInput,
   type Location,
+  type Organization,
 } from "../../lib/api";
 import {
   clearSelectedLocation,
@@ -51,29 +49,71 @@ const useSelectedOrganization = () => {
 const getActiveLocations = (locations: Location[]) =>
   locations.filter((location) => location.is_active !== false);
 
+type TransactionsPageViewProps = {
+  activeLocations: Location[];
+  errorMessage?: string;
+  hasLocationLoadError: boolean;
+  isLoading: boolean;
+  isLoadingLocations: boolean;
+  onRetry: () => void;
+  onSelectLocation: (location: Location) => void;
+  organization?: Organization;
+  selectedLocation?: SelectedLocation | null;
+};
+
 /**
- * Renders the selected organization's categories management page.
+ * Renders composed transaction history page content.
  *
- * @returns Categories page.
+ * @param props Page view props.
+ * @returns Transactions page shell with navigation and history content.
  */
-export default function CategoriesPage() {
-  const queryClient = useQueryClient();
+export function TransactionsPageView({
+  activeLocations,
+  errorMessage,
+  hasLocationLoadError,
+  isLoading,
+  isLoadingLocations,
+  onRetry,
+  onSelectLocation,
+  organization,
+  selectedLocation,
+}: TransactionsPageViewProps) {
+  return (
+    <div className="min-h-screen bg-white md:flex">
+      <Navbar
+        hasLocationLoadError={hasLocationLoadError}
+        isLoadingLocations={isLoadingLocations}
+        locations={activeLocations}
+        onSelectLocation={onSelectLocation}
+        organization={organization}
+        selectedLocationId={selectedLocation?.id}
+        selectedLocationName={selectedLocation?.name}
+      />
+
+      <div className="min-w-0 flex-1 pt-16 md:pt-0">
+        <TransactionsHistoryView
+          errorMessage={errorMessage}
+          isLoading={isLoading}
+          locations={activeLocations}
+          onRetry={onRetry}
+          organization={organization}
+          transactions={[]}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Renders the transaction history page.
+ *
+ * @returns Transaction history page.
+ */
+export default function TransactionsPage() {
   const { organizationsQuery, selectedOrganization } = useSelectedOrganization();
   const organizationId = selectedOrganization?.id;
   const prevOrganizationId = useRef<string | undefined>(organizationId);
   const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
-  const categoriesQuery = useQuery({
-    enabled: Boolean(organizationId),
-    queryKey: ["organizations", organizationId, "categories"],
-    queryFn: () => {
-      if (!organizationId) {
-        throw new Error("A organização é obrigatória para carregar categorias.");
-      }
-
-      return getOrganizationCategories(organizationId);
-    },
-    retry: false,
-  });
   const locationsQuery = useQuery({
     enabled: Boolean(organizationId),
     queryKey: ["organizations", organizationId, "locations"],
@@ -86,18 +126,6 @@ export default function CategoriesPage() {
     },
     retry: false,
   });
-  const createCategoryMutation = useMutation({
-    mutationFn: (input: CategoryInput & { organizationId: string }) =>
-      createOrganizationCategory(input.organizationId, {
-        description: input.description,
-        name: input.name,
-      }),
-    onSuccess: async (_category, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["organizations", variables.organizationId, "categories"],
-      });
-    },
-  });
   const hasOrganization = Boolean(organizationId);
   const isLoadingLocations = hasOrganization ? locationsQuery.isPending : false;
   const hasLocationLoadError = hasOrganization ? Boolean(locationsQuery.error) : false;
@@ -107,7 +135,7 @@ export default function CategoriesPage() {
   );
   const errorMessage =
     organizationsQuery.error?.message ??
-    (hasOrganization ? categoriesQuery.error?.message : undefined);
+    (hasOrganization ? locationsQuery.error?.message : undefined);
 
   useEffect(() => {
     if (prevOrganizationId.current === organizationId) {
@@ -146,54 +174,31 @@ export default function CategoriesPage() {
   }, [activeLocations, locationsQuery.data, organizationId]);
 
   return (
-    <div className="min-h-screen bg-white md:flex">
-      <Navbar
-        hasLocationLoadError={hasLocationLoadError}
-        isLoadingLocations={isLoadingLocations}
-        locations={activeLocations}
-        onSelectLocation={(location) => {
-          if (!organizationId) {
-            return;
-          }
+    <TransactionsPageView
+      activeLocations={activeLocations}
+      errorMessage={errorMessage}
+      hasLocationLoadError={hasLocationLoadError}
+      isLoading={organizationsQuery.isPending || isLoadingLocations}
+      isLoadingLocations={isLoadingLocations}
+      onRetry={() => {
+        organizationsQuery.refetch();
 
-          const nextLocation = { id: location.id, name: location.name };
+        if (organizationId) {
+          locationsQuery.refetch();
+        }
+      }}
+      onSelectLocation={(location) => {
+        if (!organizationId) {
+          return;
+        }
 
-          setSelectedLocation(organizationId, nextLocation);
-          setSelectedLocationState(nextLocation);
-        }}
-        organization={selectedOrganization}
-        selectedLocationId={selectedLocation?.id}
-        selectedLocationName={selectedLocation?.name}
-      />
+        const nextLocation = { id: location.id, name: location.name };
 
-      <div className="min-w-0 flex-1 pt-16 md:pt-0">
-        <CategoriesManagementView
-          categories={categoriesQuery.data ?? []}
-          createErrorMessage={createCategoryMutation.error?.message}
-          errorMessage={errorMessage}
-          isCreating={createCategoryMutation.isPending}
-          isLoading={organizationsQuery.isPending || (hasOrganization ? categoriesQuery.isPending : false)}
-          onCreate={
-            organizationId
-              ? async (input) => {
-                  await createCategoryMutation.mutateAsync({
-                    ...input,
-                    organizationId,
-                  });
-                }
-              : undefined
-          }
-          onRetry={() => {
-            organizationsQuery.refetch();
-
-            if (organizationId) {
-              categoriesQuery.refetch();
-              locationsQuery.refetch();
-            }
-          }}
-          organization={selectedOrganization}
-        />
-      </div>
-    </div>
+        setSelectedLocation(organizationId, nextLocation);
+        setSelectedLocationState(nextLocation);
+      }}
+      organization={selectedOrganization}
+      selectedLocation={selectedLocation}
+    />
   );
 }

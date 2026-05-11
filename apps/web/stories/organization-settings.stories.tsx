@@ -4,7 +4,7 @@ import type { Organization } from "../app/lib/api";
 
 const completeOrganization: Organization = {
   id: "00000000-0000-4000-8000-000000000001",
-  name: "Ada Industries",
+  name: "Indústrias Ada",
   cnpj: "12.345.678/0001-90",
   email: "ops@ada.example",
   phone: "+55 11 99999-0000",
@@ -23,7 +23,7 @@ const incompleteOrganization: Organization = {
 };
 
 const meta = {
-  title: "Pages/Organization Settings",
+  title: "Páginas/Configurações da organização",
   component: OrganizationSettingsView,
   parameters: {
     layout: "fullscreen",
@@ -58,7 +58,7 @@ export const Saving: Story = {
 
 export const ErrorState: Story = {
   args: {
-    errorMessage: "The API did not respond.",
+    errorMessage: "A API não respondeu.",
     onSave: async () => undefined,
     organization: completeOrganization,
   },

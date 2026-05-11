@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs";
-import { LocationsManagementView } from "../app/components/locations/locations-management-view";
+import { TransactionsPageView } from "../app/dashboard/transactions/page";
 import type { Location, Organization } from "../app/lib/api";
 
 const organization: Organization = {
@@ -14,7 +14,7 @@ const organization: Organization = {
   role: "admin",
 };
 
-const locations: Location[] = [
+const activeLocations: Location[] = [
   {
     id: "10000000-0000-4000-8000-000000000001",
     organization_id: organization.id,
@@ -30,92 +30,62 @@ const locations: Location[] = [
     organization_id: organization.id,
     name: "Loja secundária",
     address: "Rua B, 200",
-    is_active: false,
+    is_active: true,
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
     deleted_at: null,
   },
 ];
 
+const selectedLocation = {
+  id: activeLocations[0]?.id ?? "",
+  name: activeLocations[0]?.name ?? "Depósito principal",
+};
+
 const meta = {
-  title: "Páginas/Gerenciamento de locais",
-  component: LocationsManagementView,
+  title: "Páginas/Página de Transações",
+  component: TransactionsPageView,
   parameters: {
     layout: "fullscreen",
   },
-} satisfies Meta<typeof LocationsManagementView>;
+} satisfies Meta<typeof TransactionsPageView>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Loaded: Story = {
+export const Default: Story = {
   args: {
-    locations,
+    activeLocations,
+    hasLocationLoadError: false,
+    isLoading: false,
+    isLoadingLocations: false,
+    onRetry: () => undefined,
+    onSelectLocation: () => undefined,
     organization,
-    summaries: {
-      [locations[0]?.id ?? ""]: {
-        itemCount: 18,
-        lowStockCount: 2,
-        totalQuantity: 264,
-        totalValue: 12430.5,
-      },
-      [locations[1]?.id ?? ""]: {
-        itemCount: 6,
-        lowStockCount: 0,
-        totalQuantity: 72,
-        totalValue: 2910,
-      },
-    },
-    selectedLocationId: locations[0]?.id,
+    selectedLocation,
   },
 };
 
 export const Loading: Story = {
   args: {
+    ...Default.args,
     isLoading: true,
-    locations: [],
-    organization,
-  },
-};
-
-export const Empty: Story = {
-  args: {
-    locations: [],
-    organization,
-  },
-};
-
-export const Creating: Story = {
-  args: {
-    isCreating: true,
-    locations,
-    organization,
-  },
-};
-
-export const CreateError: Story = {
-  args: {
-    createErrorMessage: "Não foi possível criar o local. Tente novamente.",
-    locations,
-    organization,
   },
 };
 
 export const ErrorState: Story = {
   args: {
+    ...Default.args,
     errorMessage: "A API não respondeu.",
-    locations: [],
-    organization,
+    hasLocationLoadError: true,
   },
 };
 
-export const RoleRestricted: Story = {
+export const SingleLocationAutoSelection: Story = {
   args: {
-    locations,
-    organization: {
-      ...organization,
-      role: "viewer",
-    },
+    ...Default.args,
+    activeLocations: activeLocations.slice(0, 1),
+    selectedLocation,
   },
 };

@@ -53,24 +53,24 @@ type NavItem = {
 
 const actionRoles = new Set(["admin", "manager"]);
 
-const dashboardNavItem = { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" };
+const dashboardNavItem = { icon: LayoutDashboard, label: "Painel", href: "/dashboard" };
 const locationsNavItem = {
   icon: MapPin,
   isActive: (currentPath: string) => currentPath === "/dashboard/locations",
-  label: "Locations",
+  label: "Locais",
   href: "/dashboard/locations",
 };
 const organizationSettingsNavItem = {
   icon: Settings,
-  label: "Organization Settings",
+  label: "Configurações da organização",
   href: "/dashboard/settings/organization",
 };
 const workflowNavItems: NavItem[] = [
-  { icon: Package, label: "Items", href: "/dashboard/items" },
-  { icon: Tags, label: "Categories", href: "/dashboard/categories" },
-  { icon: Users, label: "Customers", href: "/dashboard/customers" },
-  { icon: Truck, label: "Receiving", href: "/dashboard/receiving", requiresActionRole: true },
-  { icon: ReceiptText, label: "Transactions", href: "/dashboard/transactions" },
+  { icon: Package, label: "Itens", href: "/dashboard/items" },
+  { icon: Tags, label: "Categorias", href: "/dashboard/categories" },
+  { icon: Users, label: "Clientes", href: "/dashboard/customers" },
+  { icon: Truck, label: "Recebimento", href: "/dashboard/receiving", requiresActionRole: true },
+  { icon: ReceiptText, label: "Transações", href: "/dashboard/transactions" },
 ];
 
 /**
@@ -86,11 +86,11 @@ const getLocationInventoryItem = (
   selectedLocationName?: string | null,
 ) => ({
   icon: PackageCheck,
-  label: "Location Inventory",
+  label: "Estoque do local",
   href: selectedLocationId
     ? `/dashboard/locations/${selectedLocationId}/inventory`
     : "/dashboard/locations",
-  helper: selectedLocationName ?? "Select location first",
+  helper: selectedLocationName ?? "Selecione um local primeiro",
   isActive: (currentPath: string) =>
     currentPath.startsWith("/dashboard/locations/") && currentPath.includes("/inventory"),
   opensLocationSelector: !selectedLocationId && hasSelectableLocations,
@@ -158,7 +158,7 @@ export const Navbar = ({
           <Building2 className="mt-0.5 size-4 shrink-0 text-purple-500" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-[#16151c]">
-              {organization?.name ?? "No organization selected"}
+              {organization?.name ?? "Nenhuma organização selecionada"}
             </p>
             <p className="mt-0.5 text-xs font-medium capitalize text-gray-500">{role}</p>
           </div>
@@ -167,12 +167,12 @@ export const Navbar = ({
           href="/organizations/select?next=%2Fdashboard&mode=switch"
           className="mt-3 inline-flex h-8 w-full items-center justify-center rounded-md border border-purple-200 bg-purple-50 px-3 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100"
         >
-          Switch organization
+          Trocar organização
         </Link>
       </div>
 
       <div className="mx-3 mt-3 rounded-md border border-purple-200 bg-white px-3 py-3">
-        <p className="m-0 text-xs font-semibold text-purple-700">Active location</p>
+        <p className="m-0 text-xs font-semibold text-purple-700">Local ativo</p>
         <button
           aria-expanded={isLocationSelectorOpen}
           className="mt-2 flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 text-left text-sm font-semibold text-[#16151c] transition-colors hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-70"
@@ -182,13 +182,13 @@ export const Navbar = ({
         >
           <span className="truncate">
             {isLoadingLocations
-              ? "Loading locations"
-              : (selectedLocationName ?? (locations.length ? "Select location" : "No locations"))}
+              ? "Carregando locais"
+              : (selectedLocationName ?? (locations.length ? "Selecionar local" : "Nenhum local"))}
           </span>
           <ChevronDown className="size-4 shrink-0 text-purple-600" />
         </button>
         {hasLocationLoadError ? (
-          <p className="m-0 mt-2 text-xs text-[#b42318]">Unable to load locations.</p>
+          <p className="m-0 mt-2 text-xs text-[#b42318]">Não foi possível carregar os locais.</p>
         ) : null}
         {isLocationSelectorOpen ? (
           <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-purple-100 bg-white p-1">
@@ -215,7 +215,7 @@ export const Navbar = ({
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{location.name}</span>
-                    {isInactive ? <span className="block text-xs">Inactive</span> : null}
+                    {isInactive ? <span className="block text-xs">Inativo</span> : null}
                   </span>
                   {isSelected ? <Check className="size-4 shrink-0" /> : null}
                 </button>
@@ -282,7 +282,7 @@ export const Navbar = ({
                     <span className="block truncate text-xs text-gray-500">{helper}</span>
                   ) : null}
                 </span>
-                {isLocked ? <Lock className="size-3.5 shrink-0" aria-label="Restricted" /> : null}
+                {isLocked ? <Lock className="size-3.5 shrink-0" aria-label="Restrito" /> : null}
               </Link>
             );
           },
@@ -290,7 +290,7 @@ export const Navbar = ({
       </nav>
 
       <div className="border-t border-purple-200 px-5 py-3 text-xs text-gray-500">
-        Sales, adjustments, and transfers available in Phase 2.
+        Vendas, ajustes e transferências estarão disponíveis na Fase 2.
       </div>
     </>
   );
@@ -300,7 +300,7 @@ export const Navbar = ({
       <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-purple-200 bg-white px-4 md:hidden">
         {brand}
         <button
-          aria-label={isMobileOpen ? "Close navigation" : "Open navigation"}
+          aria-label={isMobileOpen ? "Fechar navegação" : "Abrir navegação"}
           className="inline-flex size-10 items-center justify-center rounded-md border border-purple-200 text-purple-700"
           onClick={() => setIsMobileOpen((open) => !open)}
           type="button"
@@ -311,7 +311,7 @@ export const Navbar = ({
 
       {isMobileOpen ? (
         <button
-          aria-label="Close navigation overlay"
+          aria-label="Fechar menu de navegação"
           className="fixed inset-0 z-40 bg-black/20 md:hidden"
           onClick={() => setIsMobileOpen(false)}
           type="button"
