@@ -61,6 +61,16 @@ export type OrganizationStockLevel = {
   };
 };
 
+export type OrganizationLowStockLevel = Omit<OrganizationStockLevel, "created_at" | "updated_at">;
+
+export type OrganizationStockSummary = {
+  item_count: number;
+  location_count: number;
+  low_stock_count: number;
+  total_quantity: number;
+  total_stock_value: string;
+};
+
 export type Category = {
   id: string;
   organization_id: string;
@@ -169,6 +179,17 @@ type OrganizationStockResponse = {
   error?: string;
   pagination?: PaginationResponse;
   stock?: OrganizationStockLevel[];
+};
+
+type OrganizationLowStockResponse = {
+  error?: string;
+  pagination?: PaginationResponse;
+  stock?: OrganizationLowStockLevel[];
+};
+
+type OrganizationStockSummaryResponse = {
+  error?: string;
+  summary?: OrganizationStockSummary;
 };
 
 type CategoriesResponse = {
@@ -443,6 +464,69 @@ export const getOrganizationStock = async (organizationId: string) => {
   }
 
   return stock;
+};
+
+/**
+ * Lists all low-stock rows for an organization.
+ *
+ * @param organizationId Selected organization identifier.
+ * @returns Low-stock rows joined to item and location data.
+ */
+export const getOrganizationLowStock = async (organizationId: string) => {
+  const limit = 100;
+  let offset = 0;
+  let hasMore = true;
+  const stock: OrganizationLowStockLevel[] = [];
+
+  while (hasMore) {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    const response = await fetch(
+      getApiUrl(`/api/organizations/${organizationId}/stock/low?${query.toString()}`),
+      {
+        credentials: "include",
+      },
+    );
+    const payload = (await response.json().catch(() => ({}))) as OrganizationLowStockResponse;
+
+    if (!response.ok) {
+      throw new ApiError(payload.error ?? "Não foi possível carregar os alertas de estoque.", response.status);
+    }
+
+    stock.push(...(payload.stock ?? []));
+    hasMore = Boolean(payload.pagination?.hasMore);
+
+    if (hasMore) {
+      offset = payload.pagination?.nextOffset ?? offset + limit;
+    }
+  }
+
+  return stock;
+};
+
+/**
+ * Reads aggregate stock summary metrics for an organization.
+ *
+ * @param organizationId Selected organization identifier.
+ * @returns Stock summary totals produced by the API.
+ */
+export const getOrganizationStockSummary = async (organizationId: string) => {
+  const response = await fetch(getApiUrl(`/api/organizations/${organizationId}/stock/summary`), {
+    credentials: "include",
+  });
+  const payload = (await response.json().catch(() => ({}))) as OrganizationStockSummaryResponse;
+
+  if (!response.ok) {
+    throw new ApiError(payload.error ?? "Não foi possível carregar o resumo do painel.", response.status);
+  }
+
+  if (!payload.summary) {
+    throw new ApiError("A resposta do resumo do painel não incluiu métricas.", response.status);
+  }
+
+  return payload.summary;
 };
 
 /**
