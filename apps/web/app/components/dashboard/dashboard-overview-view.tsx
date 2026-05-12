@@ -187,7 +187,7 @@ export function DashboardOverviewView({
               {organization?.name ?? "Organização selecionada"}
             </p>
             <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Painel operacional</h1>
-            <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">
+            <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-gray-500">
               Acompanhe volume, valor e riscos de reposição do estoque.
             </p>
           </div>
@@ -255,7 +255,7 @@ export function DashboardOverviewView({
                   </span>
                 </CardHeader>
                 <CardContent>
-                  <p className="m-0 text-sm leading-6 text-[#5c6670]">{metric.description}</p>
+                  <p className="m-0 text-sm leading-6 text-gray-500">{metric.description}</p>
                 </CardContent>
               </Card>
             );
@@ -285,7 +285,7 @@ export function DashboardOverviewView({
                             <p className="m-0 truncate text-sm font-semibold">{activity.itemName}</p>
                             <Badge variant="outline">{activityType.label}</Badge>
                           </div>
-                          <p className="m-0 mt-1 truncate text-xs text-[#5c6670]">
+                          <p className="m-0 mt-1 truncate text-xs text-gray-500">
                             {activity.sku ?? "Sem SKU"} · {activity.locationName ?? "Local desconhecido"} ·{" "}
                             {formatActivityDate(activity.occurredAt)}
                           </p>
@@ -303,7 +303,7 @@ export function DashboardOverviewView({
                   <AlertCircle className="size-8 text-purple-500" />
                   <div>
                     <p className="m-0 text-sm font-semibold">Nenhuma movimentação recente</p>
-                    <p className="m-0 mt-1 text-sm leading-6 text-[#5c6670]">
+                    <p className="m-0 mt-1 text-sm leading-6 text-gray-500">
                       Recebimentos e vendas aparecerão aqui quando estiverem disponíveis.
                     </p>
                   </div>
@@ -322,7 +322,7 @@ export function DashboardOverviewView({
                 <p className="m-0 text-3xl font-semibold text-purple-700">
                   {formatNumber(metrics?.lowStockItems ?? 0)}
                 </p>
-                <p className="m-0 mt-2 text-sm leading-6 text-[#5c6670]">
+                <p className="m-0 mt-2 text-sm leading-6 text-gray-500">
                   {metrics?.lowStockItems
                     ? "Revise os itens abaixo do ponto de reposição antes das próximas vendas."
                     : "Nenhum item está abaixo do ponto de reposição no momento."}
