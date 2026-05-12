@@ -17,6 +17,15 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Spinner } from "../ui/spinner";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 
 export type DashboardOverviewMetrics = {
   inventoryValue: number;
@@ -110,6 +119,41 @@ const alertStatusLabels = {
   critical: "Crítico",
   low: "Baixo",
 } satisfies Record<DashboardLowStockAlert["status"], string>;
+
+const alertStatusStyles = {
+  critical: {
+    badgeClassName: "border-red-200 bg-red-50 text-red-700",
+    quantityClassName: "text-red-700",
+    rowClassName: "bg-red-50/60",
+  },
+  low: {
+    badgeClassName: "border-amber-200 bg-amber-50 text-amber-700",
+    quantityClassName: "text-amber-700",
+    rowClassName: "bg-amber-50/40",
+  },
+} satisfies Record<DashboardLowStockAlert["status"], {
+  badgeClassName: string;
+  quantityClassName: string;
+  rowClassName: string;
+}>;
+
+/**
+ * Returns the highest severity class for the dashboard low-stock summary.
+ *
+ * @param alerts Low-stock alert rows shown in the dashboard panel.
+ * @returns Badge class for the current alert severity.
+ */
+const getLowStockSummaryBadgeClassName = (alerts: DashboardLowStockAlert[]) => {
+  if (alerts.some((alert) => alert.status === "critical")) {
+    return alertStatusStyles.critical.badgeClassName;
+  }
+
+  if (alerts.length > 0) {
+    return alertStatusStyles.low.badgeClassName;
+  }
+
+  return undefined;
+};
 
 /**
  * Formats an integer metric using Brazilian separators.
@@ -210,6 +254,7 @@ export function DashboardOverviewView({
 
   const metricCards = !errorMessage && metrics ? getMetricCards(metrics) : undefined;
   const hasInventory = !errorMessage && metrics ? Boolean(metrics.totalSkus > 0 || metrics.totalStockUnits > 0) : false;
+  const lowStockSummaryBadgeClassName = getLowStockSummaryBadgeClassName(lowStockAlerts);
 
   return (
     <main className="min-h-[calc(100svh-4rem)] bg-white p-4 text-[#16151c] md:min-h-screen md:p-6">
@@ -225,7 +270,10 @@ export function DashboardOverviewView({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge variant={metrics?.lowStockItems ? "outline" : "secondary"}>
+            <Badge
+              className={lowStockSummaryBadgeClassName}
+              variant={lowStockSummaryBadgeClassName ? "outline" : "secondary"}
+            >
               {formatNumber(metrics?.lowStockItems ?? 0)} estoque baixo
             </Badge>
             <Badge variant="secondary">{formatNumber(activities.length)} atividades recentes</Badge>
@@ -306,28 +354,28 @@ export function DashboardOverviewView({
                 <CardContent>
                   {activities.length ? (
                     <div className="overflow-x-auto rounded-md border border-purple-100">
-                      <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-                        <caption className="sr-only">
+                      <Table className="min-w-[760px]">
+                        <TableCaption>
                           Atividades recentes de estoque com item, local, quantidade, tipo, responsável e data.
-                        </caption>
-                        <thead className="bg-purple-50 text-xs font-semibold text-purple-700">
-                          <tr>
-                            <th className="px-3 py-3">Item</th>
-                            <th className="px-3 py-3">Local</th>
-                            <th className="px-3 py-3">Tipo</th>
-                            <th className="px-3 py-3 text-right">Qtd.</th>
-                            <th className="px-3 py-3">Responsável</th>
-                            <th className="px-3 py-3">Data</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                        </TableCaption>
+                        <TableHeader>
+                          <TableRow className="border-t-0">
+                            <TableHead>Item</TableHead>
+                            <TableHead>Local</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead className="text-right">Qtd.</TableHead>
+                            <TableHead>Responsável</TableHead>
+                            <TableHead>Data</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
                           {activities.map((activity) => {
                             const activityType = activityLabels[activity.type];
                             const ActivityIcon = activityType.icon;
 
                             return (
-                              <tr className="border-t border-purple-100" key={activity.id}>
-                                <td className="px-3 py-3">
+                              <TableRow key={activity.id}>
+                                <TableCell>
                                   <div className="flex min-w-0 items-center gap-2">
                                     <span className="grid size-8 shrink-0 place-items-center rounded-md bg-purple-100 text-purple-700">
                                       <ActivityIcon className="size-4" />
@@ -339,23 +387,23 @@ export function DashboardOverviewView({
                                       </div>
                                     </div>
                                   </div>
-                                </td>
-                                <td className="px-3 py-3">{activity.locationName ?? "Local desconhecido"}</td>
-                                <td className="px-3 py-3">
+                                </TableCell>
+                                <TableCell>{activity.locationName ?? "Local desconhecido"}</TableCell>
+                                <TableCell>
                                   <Badge variant="outline">{activityType.label}</Badge>
-                                </td>
-                                <td className={cn("px-3 py-3 text-right font-semibold", activityType.quantityClassName)}>
+                                </TableCell>
+                                <TableCell className={cn("text-right font-semibold", activityType.quantityClassName)}>
                                   {formatActivityQuantity(activity)}
-                                </td>
-                                <td className="px-3 py-3">{activity.actorName ?? "Desconhecido"}</td>
-                                <td className="px-3 py-3 whitespace-nowrap">
+                                </TableCell>
+                                <TableCell>{activity.actorName ?? "Desconhecido"}</TableCell>
+                                <TableCell className="whitespace-nowrap">
                                   {formatActivityDate(activity.occurredAt)}
-                                </td>
-                              </tr>
+                                </TableCell>
+                              </TableRow>
                             );
                           })}
-                        </tbody>
-                      </table>
+                        </TableBody>
+                      </Table>
                     </div>
                   ) : (
                     <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-purple-200 p-6 text-center">
@@ -379,42 +427,49 @@ export function DashboardOverviewView({
                 <CardContent>
                   {lowStockAlerts.length ? (
                     <div className="overflow-x-auto rounded-md border border-purple-100">
-                      <table className="w-full min-w-[460px] border-collapse text-left text-sm">
-                        <caption className="sr-only">
+                      <Table className="min-w-[460px]">
+                        <TableCaption>
                           Alertas urgentes de estoque baixo com item, local, quantidade, ponto de reposição e status.
-                        </caption>
-                        <thead className="bg-purple-50 text-xs font-semibold text-purple-700">
-                          <tr>
-                            <th className="px-3 py-3">Item</th>
-                            <th className="px-3 py-3 text-right">Qtd.</th>
-                            <th className="px-3 py-3 text-right">Reposição</th>
-                            <th className="px-3 py-3">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lowStockAlerts.map((alert) => (
-                            <tr className="border-t border-purple-100" key={alert.id}>
-                              <td className="px-3 py-3">
-                                <div className="font-semibold">{alert.itemName}</div>
-                                <div className="mt-1 truncate text-xs text-gray-500">
-                                  {alert.sku} · {alert.locationName}
-                                </div>
-                              </td>
-                              <td className="px-3 py-3 text-right font-semibold">
-                                {formatNumber(alert.quantity)}
-                              </td>
-                              <td className="px-3 py-3 text-right">
-                                {formatNumber(alert.reorderPoint)}
-                              </td>
-                              <td className="px-3 py-3">
-                                <Badge variant={alert.status === "critical" ? "outline" : "secondary"}>
-                                  {alertStatusLabels[alert.status]}
-                                </Badge>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                        </TableCaption>
+                        <TableHeader>
+                          <TableRow className="border-t-0">
+                            <TableHead>Item</TableHead>
+                            <TableHead className="text-right">Qtd.</TableHead>
+                            <TableHead className="text-right">Reposição</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {lowStockAlerts.map((alert) => {
+                            const statusStyle = alertStatusStyles[alert.status];
+
+                            return (
+                              <TableRow
+                                className={statusStyle.rowClassName}
+                                key={alert.id}
+                              >
+                                <TableCell>
+                                  <div className="font-semibold">{alert.itemName}</div>
+                                  <div className="mt-1 truncate text-xs text-gray-500">
+                                    {alert.sku} · {alert.locationName}
+                                  </div>
+                                </TableCell>
+                                <TableCell className={cn("text-right font-semibold", statusStyle.quantityClassName)}>
+                                  {formatNumber(alert.quantity)}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {formatNumber(alert.reorderPoint)}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={statusStyle.badgeClassName} variant="outline">
+                                    {alertStatusLabels[alert.status]}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
                     </div>
                   ) : (
                     <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-purple-200 p-6 text-center">

@@ -172,7 +172,7 @@ export function ReceivingView({
         ) : null}
 
         {organization && !canReceive ? (
-          <Alert variant="destructive">
+          <Alert variant="warning">
             <AlertTitle>Recebimento indisponível</AlertTitle>
             <AlertDescription>
               Visualizadores podem revisar o estoque, mas não podem criar transações de recebimento.

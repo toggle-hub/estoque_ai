@@ -152,7 +152,7 @@ export function LocationsManagementView({
         ) : null}
 
         {!canCreate ? (
-          <Alert>
+          <Alert variant="warning">
             <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
               Visualizadores podem revisar locais e abrir o estoque, mas não podem criar ou editar locais.

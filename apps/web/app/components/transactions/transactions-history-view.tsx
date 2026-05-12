@@ -12,6 +12,14 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectItem } from "../ui/select";
 import { Spinner } from "../ui/spinner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 
 export type InventoryTransaction = {
   id: string;
@@ -245,49 +253,49 @@ export function TransactionsHistoryView({
 
         {filteredTransactions.length ? (
           <div className="overflow-x-auto rounded-md border border-purple-100 bg-white">
-            <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
-              <thead className="bg-purple-50 text-xs font-semibold text-purple-700">
-                <tr>
-                  <th className="px-3 py-3">Data e hora</th>
-                  <th className="px-3 py-3">Tipo</th>
-                  <th className="px-3 py-3">Item</th>
-                  <th className="px-3 py-3">Local</th>
-                  <th className="px-3 py-3 text-right">Qtd.</th>
-                  <th className="px-3 py-3 text-right">Anterior</th>
-                  <th className="px-3 py-3 text-right">Nova</th>
-                  <th className="px-3 py-3">Referência</th>
-                  <th className="px-3 py-3">Observações</th>
-                  <th className="px-3 py-3">Realizada por</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="min-w-[1180px]">
+              <TableHeader>
+                <TableRow className="border-t-0">
+                  <TableHead>Data e hora</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Local</TableHead>
+                  <TableHead className="text-right">Qtd.</TableHead>
+                  <TableHead className="text-right">Anterior</TableHead>
+                  <TableHead className="text-right">Nova</TableHead>
+                  <TableHead>Referência</TableHead>
+                  <TableHead>Observações</TableHead>
+                  <TableHead>Realizada por</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredTransactions.map((transaction) => (
-                  <tr className="border-t border-purple-100" key={transaction.id}>
-                    <td className="px-3 py-3 whitespace-nowrap">
+                  <TableRow key={transaction.id}>
+                    <TableCell className="whitespace-nowrap">
                       {formatTimestamp(transaction.createdAt)}
-                    </td>
-                    <td className="px-3 py-3">
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="secondary">{getTransactionTypeLabel(transaction.type)}</Badge>
-                    </td>
-                    <td className="px-3 py-3">
+                    </TableCell>
+                    <TableCell>
                       <div className="font-semibold">{transaction.item?.name ?? "Item desconhecido"}</div>
                       <div className="mt-1 font-mono text-xs text-[#5c6670]">
                         {transaction.item?.sku ?? "Sem SKU"}
                       </div>
-                    </td>
-                    <td className="px-3 py-3">{transaction.location?.name ?? "Local desconhecido"}</td>
-                    <td className="px-3 py-3 text-right font-semibold">{transaction.quantity}</td>
-                    <td className="px-3 py-3 text-right">{transaction.previousQuantity}</td>
-                    <td className="px-3 py-3 text-right">{transaction.newQuantity}</td>
-                    <td className="px-3 py-3">{transaction.reference ?? "-"}</td>
-                    <td className="px-3 py-3">{transaction.notes ?? "-"}</td>
-                    <td className="px-3 py-3 font-mono text-xs">
+                    </TableCell>
+                    <TableCell>{transaction.location?.name ?? "Local desconhecido"}</TableCell>
+                    <TableCell className="text-right font-semibold">{transaction.quantity}</TableCell>
+                    <TableCell className="text-right">{transaction.previousQuantity}</TableCell>
+                    <TableCell className="text-right">{transaction.newQuantity}</TableCell>
+                    <TableCell>{transaction.reference ?? "-"}</TableCell>
+                    <TableCell>{transaction.notes ?? "-"}</TableCell>
+                    <TableCell className="font-mono text-xs">
                       {transaction.performedBy ?? "Desconhecido"}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : null}
 

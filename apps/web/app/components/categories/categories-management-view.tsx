@@ -122,7 +122,7 @@ export function CategoriesManagementView({
         ) : null}
 
         {organization && !canCreate ? (
-          <Alert>
+          <Alert variant="warning">
             <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
               Visualizadores podem revisar detalhes de categorias, mas não podem criar registros de taxonomia.

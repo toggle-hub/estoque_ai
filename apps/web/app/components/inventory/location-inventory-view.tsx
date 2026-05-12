@@ -11,6 +11,14 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Spinner } from "../ui/spinner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 
 export type LocationInventoryViewProps = {
   categories?: Category[];
@@ -193,7 +201,7 @@ export function LocationInventoryView({
         ) : null}
 
         {organization && !canCreate ? (
-          <Alert>
+          <Alert variant="warning">
             <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
               Visualizadores podem revisar o estoque, mas não podem criar ou editar itens do local.
@@ -376,51 +384,51 @@ export function LocationInventoryView({
 
         {filteredItems.length ? (
           <div className="overflow-x-auto rounded-md border border-purple-100 bg-white">
-            <table className="w-full min-w-[920px] border-collapse text-left text-sm">
-              <thead className="bg-purple-50 text-xs font-semibold text-purple-700">
-                <tr>
-                  <th className="px-3 py-3">SKU</th>
-                  <th className="px-3 py-3">Nome</th>
-                  <th className="px-3 py-3">Categoria</th>
-                  <th className="px-3 py-3 text-right">Quantidade</th>
-                  <th className="px-3 py-3 text-right">Preço unitário</th>
-                  <th className="px-3 py-3 text-right">Reposição</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3">Recebimento</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="min-w-[920px]">
+              <TableHeader>
+                <TableRow className="border-t-0">
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead className="text-right">Quantidade</TableHead>
+                  <TableHead className="text-right">Preço unitário</TableHead>
+                  <TableHead className="text-right">Reposição</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Recebimento</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredItems.map((item) => {
                   const lowStock = isLowStock(item);
 
                   return (
-                    <tr className="border-t border-purple-100" key={item.id}>
-                      <td className="px-3 py-3 font-mono text-xs">{item.sku}</td>
-                      <td className="px-3 py-3">
+                    <TableRow key={item.id}>
+                      <TableCell className="font-mono text-xs">{item.sku}</TableCell>
+                      <TableCell>
                         <div className="font-semibold">{item.name}</div>
                         {item.description ? (
                           <div className="mt-1 max-w-md truncate text-xs text-[#5c6670]">
                             {item.description}
                           </div>
                         ) : null}
-                      </td>
-                      <td className="px-3 py-3">{item.category?.name ?? "Sem categoria"}</td>
-                      <td
+                      </TableCell>
+                      <TableCell>{item.category?.name ?? "Sem categoria"}</TableCell>
+                      <TableCell
                         className={cn(
-                          "px-3 py-3 text-right font-semibold",
+                          "text-right font-semibold",
                           lowStock ? "text-[#b42318]" : "text-[#16151c]",
                         )}
                       >
                         {item.quantity}
-                      </td>
-                      <td className="px-3 py-3 text-right">{formatPrice(item.unit_price)}</td>
-                      <td className="px-3 py-3 text-right">{item.reorder_point}</td>
-                      <td className="px-3 py-3">
+                      </TableCell>
+                      <TableCell className="text-right">{formatPrice(item.unit_price)}</TableCell>
+                      <TableCell className="text-right">{item.reorder_point}</TableCell>
+                      <TableCell>
                         <Badge variant={lowStock ? "outline" : "secondary"}>
                           {lowStock ? "Estoque baixo" : "Saudável"}
                         </Badge>
-                      </td>
-                      <td className="px-3 py-3">
+                      </TableCell>
+                      <TableCell>
                         {canCreate && location ? (
                           <Link
                             className="inline-flex min-h-8 items-center justify-center rounded-md border border-purple-200 bg-purple-50 px-2 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100"
@@ -434,12 +442,12 @@ export function LocationInventoryView({
                         ) : (
                           <span className="text-xs text-[#5c6670]">Somente leitura</span>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : null}
 

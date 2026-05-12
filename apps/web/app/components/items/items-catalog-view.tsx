@@ -10,6 +10,14 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Spinner } from "../ui/spinner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 
 export type CatalogLocationAvailability = {
   locationId: string;
@@ -178,7 +186,7 @@ export function ItemsCatalogView({
         ) : null}
 
         {organization && !canManage ? (
-          <Alert>
+          <Alert variant="warning">
             <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
               Visualizadores podem buscar disponibilidade de itens, mas não podem criar ou editar metadados de itens.
@@ -266,46 +274,46 @@ export function ItemsCatalogView({
 
         {filteredItems.length ? (
           <div className="overflow-x-auto rounded-md border border-purple-100 bg-white">
-            <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
-              <thead className="bg-purple-50 text-xs font-semibold text-purple-700">
-                <tr>
-                  <th className="px-3 py-3">SKU</th>
-                  <th className="px-3 py-3">Nome</th>
-                  <th className="px-3 py-3">Categoria</th>
-                  <th className="px-3 py-3 text-right">Qtd. total</th>
-                  <th className="px-3 py-3 text-right">Preço unitário</th>
-                  <th className="px-3 py-3 text-right">Reposição</th>
-                  <th className="px-3 py-3">Disponibilidade</th>
-                  <th className="px-3 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="min-w-[1040px]">
+              <TableHeader>
+                <TableRow className="border-t-0">
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead className="text-right">Qtd. total</TableHead>
+                  <TableHead className="text-right">Preço unitário</TableHead>
+                  <TableHead className="text-right">Reposição</TableHead>
+                  <TableHead>Disponibilidade</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredItems.map((item) => {
                   const lowStock = hasLowStock(item);
 
                   return (
-                    <tr className="border-t border-purple-100" key={item.id}>
-                      <td className="px-3 py-3 font-mono text-xs">{item.sku}</td>
-                      <td className="px-3 py-3">
+                    <TableRow key={item.id}>
+                      <TableCell className="font-mono text-xs">{item.sku}</TableCell>
+                      <TableCell>
                         <div className="font-semibold">{item.name}</div>
                         {item.description ? (
                           <div className="mt-1 max-w-md truncate text-xs text-[#5c6670]">
                             {item.description}
                           </div>
                         ) : null}
-                      </td>
-                      <td className="px-3 py-3">{item.categoryName ?? "Sem categoria"}</td>
-                      <td
+                      </TableCell>
+                      <TableCell>{item.categoryName ?? "Sem categoria"}</TableCell>
+                      <TableCell
                         className={cn(
-                          "px-3 py-3 text-right font-semibold",
+                          "text-right font-semibold",
                           lowStock ? "text-[#b42318]" : "text-[#16151c]",
                         )}
                       >
                         {item.totalQuantity}
-                      </td>
-                      <td className="px-3 py-3 text-right">{formatPrice(item.unitPrice)}</td>
-                      <td className="px-3 py-3 text-right">{item.reorderPoint}</td>
-                      <td className="px-3 py-3">
+                      </TableCell>
+                      <TableCell className="text-right">{formatPrice(item.unitPrice)}</TableCell>
+                      <TableCell className="text-right">{item.reorderPoint}</TableCell>
+                      <TableCell>
                         <div className="flex max-w-xs flex-wrap gap-1.5">
                           {item.locations.map((location) => (
                             <Link
@@ -318,17 +326,17 @@ export function ItemsCatalogView({
                             </Link>
                           ))}
                         </div>
-                      </td>
-                      <td className="px-3 py-3">
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={lowStock ? "outline" : "secondary"}>
                           {lowStock ? "Estoque baixo" : "Saudável"}
                         </Badge>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : null}
 
