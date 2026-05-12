@@ -6,6 +6,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import type { Location, Organization } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { FirstRunGuidance } from "../onboarding/first-run-guidance";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -212,16 +213,19 @@ export function LocationsManagementView({
         ) : null}
 
         {!errorMessage && !hasLocations ? (
-          <Card className="border-dashed">
-            <CardHeader>
-              <CardTitle>Nenhum local ainda</CardTitle>
-              <CardDescription>
-                {canCreate
-                  ? "Crie o primeiro local para iniciar operações de estoque por local."
-                  : "Nenhum local está disponível para esta organização ainda."}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <>
+            <FirstRunGuidance canManage={canCreate} currentStep="location" organization={organization} />
+            <Card className="border-dashed">
+              <CardHeader>
+                <CardTitle>Nenhum local ainda</CardTitle>
+                <CardDescription>
+                  {canCreate
+                    ? "Crie o primeiro local para iniciar operações de estoque por local."
+                    : "Nenhum local está disponível para esta organização ainda."}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </>
         ) : null}
 
         {hasLocations ? (

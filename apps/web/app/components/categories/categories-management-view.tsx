@@ -4,6 +4,7 @@ import { AlertCircle, Boxes, Plus, RotateCw, Tags } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import type { Category, CategoryInput, Organization } from "../../lib/api";
+import { FirstRunGuidance } from "../onboarding/first-run-guidance";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -186,16 +187,19 @@ export function CategoriesManagementView({
         ) : null}
 
         {!errorMessage && !hasCategories ? (
-          <Card className="border-dashed">
-            <CardHeader>
-              <CardTitle>Nenhuma categoria ainda</CardTitle>
-              <CardDescription>
-                {canCreate
-                  ? "Crie a primeira categoria para organizar produtos nos fluxos de itens."
-                  : "Nenhuma categoria está disponível para esta organização ainda."}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <>
+            <FirstRunGuidance canManage={canCreate} currentStep="catalog" organization={organization} />
+            <Card className="border-dashed">
+              <CardHeader>
+                <CardTitle>Nenhuma categoria ainda</CardTitle>
+                <CardDescription>
+                  {canCreate
+                    ? "Crie a primeira categoria para organizar produtos nos fluxos de itens."
+                    : "Nenhuma categoria está disponível para esta organização ainda."}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </>
         ) : null}
 
         {hasCategories ? (

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Organization } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { FirstRunGuidance, type FirstRunGuidanceStep } from "../onboarding/first-run-guidance";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -66,6 +67,7 @@ type MetricCardConfig = {
 export type DashboardOverviewViewProps = {
   activities: DashboardActivity[];
   errorMessage?: string;
+  firstRunGuidanceStep?: FirstRunGuidanceStep;
   isLoading?: boolean;
   lowStockAlerts: DashboardLowStockAlert[];
   metrics?: DashboardOverviewMetrics;
@@ -356,6 +358,7 @@ function DashboardOverviewSkeleton() {
 export function DashboardOverviewView({
   activities,
   errorMessage,
+  firstRunGuidanceStep = "location",
   isLoading = false,
   lowStockAlerts,
   metrics,
@@ -417,12 +420,20 @@ export function DashboardOverviewView({
         {organization && !errorMessage && metricCards ? (
           <>
             {!hasInventory ? (
-              <Alert>
-                <AlertTitle>Estoque ainda vazio</AlertTitle>
-                <AlertDescription>
-                  Cadastre itens e registre recebimentos para preencher os indicadores operacionais.
-                </AlertDescription>
-              </Alert>
+              <>
+                <FirstRunGuidance
+                  canManage={["admin", "manager"].includes(organization.role.toLowerCase())}
+                  completedSteps={firstRunGuidanceStep === "catalog" ? ["location"] : []}
+                  currentStep={firstRunGuidanceStep}
+                  organization={organization}
+                />
+                <Alert>
+                  <AlertTitle>Estoque ainda vazio</AlertTitle>
+                  <AlertDescription>
+                    Cadastre itens e registre recebimentos para preencher os indicadores operacionais.
+                  </AlertDescription>
+                </Alert>
+              </>
             ) : null}
 
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
