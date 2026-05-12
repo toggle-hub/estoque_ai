@@ -11,12 +11,14 @@ import { Navbar } from "../components/navbar";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import {
   getCurrentUser,
+  getOrganizationLowStock,
   getOrganizationLocations,
-  getOrganizationStock,
+  getOrganizationStockSummary,
   getOrganizations,
   type Location,
+  type OrganizationLowStockLevel,
   type Organization,
-  type OrganizationStockLevel,
+  type OrganizationStockSummary,
 } from "../lib/api";
 import {
   clearSelectedLocation,
@@ -67,41 +69,19 @@ const getActiveLocations = (locations: Location[]) =>
   locations.filter((location) => location.is_active !== false);
 
 /**
- * Aggregates organization stock rows into dashboard metrics.
+ * Maps API stock summary totals into dashboard metric cards.
  *
- * @param stock Organization stock rows.
+ * @param summary API stock summary totals.
  * @returns Overview metrics for the dashboard.
  */
 export const getDashboardOverviewMetrics = (
-  stock: OrganizationStockLevel[],
-): DashboardOverviewMetrics => {
-  const skuIds = new Set<string>();
-  const lowStockItemIds = new Set<string>();
-  let totalStockUnits = 0;
-  let inventoryValue = 0;
-
-  for (const stockLevel of stock) {
-    skuIds.add(stockLevel.item_id);
-    totalStockUnits += stockLevel.quantity;
-
-    const unitPrice = Number(stockLevel.item.unit_price ?? 0);
-
-    if (Number.isFinite(unitPrice)) {
-      inventoryValue += stockLevel.quantity * unitPrice;
-    }
-
-    if (stockLevel.quantity <= stockLevel.item.reorder_point) {
-      lowStockItemIds.add(stockLevel.item_id);
-    }
-  }
-
-  return {
-    inventoryValue,
-    lowStockItems: lowStockItemIds.size,
-    totalSkus: skuIds.size,
-    totalStockUnits,
-  };
-};
+  summary?: OrganizationStockSummary,
+): DashboardOverviewMetrics => ({
+  inventoryValue: Number(summary?.total_stock_value ?? 0),
+  lowStockItems: summary?.low_stock_count ?? 0,
+  totalSkus: summary?.item_count ?? 0,
+  totalStockUnits: summary?.total_quantity ?? 0,
+});
 
 /**
  * Maps stock rows below reorder point into dashboard alert rows.
@@ -110,7 +90,7 @@ export const getDashboardOverviewMetrics = (
  * @returns Low-stock alert rows ordered by urgency and item name.
  */
 export const getDashboardLowStockAlerts = (
-  stock: OrganizationStockLevel[],
+  stock: OrganizationLowStockLevel[],
 ): DashboardLowStockAlert[] =>
   stock
     .filter((stockLevel) => stockLevel.quantity <= stockLevel.item.reorder_point)
@@ -158,15 +138,27 @@ const Dashboard = () => {
     queryFn: () => getOrganizationLocations(organizationId ?? ""),
     retry: false,
   });
-  const stockQuery = useQuery({
+  const summaryQuery = useQuery({
     enabled: Boolean(organizationId),
-    queryKey: ["organizations", organizationId, "stock-overview"],
+    queryKey: ["organizations", organizationId, "stock-summary"],
     queryFn: () => {
       if (!organizationId) {
         throw new Error("A organização é obrigatória para carregar o painel.");
       }
 
-      return getOrganizationStock(organizationId);
+      return getOrganizationStockSummary(organizationId);
+    },
+    retry: false,
+  });
+  const lowStockQuery = useQuery({
+    enabled: Boolean(organizationId),
+    queryKey: ["organizations", organizationId, "stock-low"],
+    queryFn: () => {
+      if (!organizationId) {
+        throw new Error("A organização é obrigatória para carregar alertas.");
+      }
+
+      return getOrganizationLowStock(organizationId);
     },
     retry: false,
   });
@@ -178,18 +170,19 @@ const Dashboard = () => {
     [locationsQuery.data],
   );
   const metrics = useMemo(
-    () => getDashboardOverviewMetrics(stockQuery.data ?? []),
-    [stockQuery.data],
+    () => getDashboardOverviewMetrics(summaryQuery.data),
+    [summaryQuery.data],
   );
   const lowStockAlerts = useMemo(
-    () => getDashboardLowStockAlerts(stockQuery.data ?? []),
-    [stockQuery.data],
+    () => getDashboardLowStockAlerts(lowStockQuery.data ?? []),
+    [lowStockQuery.data],
   );
   const userName = userQuery.data?.name ?? "Usuário";
   const errorMessage =
     userQuery.error?.message ??
     (hasOrganization ? locationsQuery.error?.message : undefined) ??
-    (hasOrganization ? stockQuery.error?.message : undefined);
+    (hasOrganization ? summaryQuery.error?.message : undefined) ??
+    (hasOrganization ? lowStockQuery.error?.message : undefined);
 
   useEffect(() => {
     if (prevOrganizationId.current === organizationId) {
@@ -283,7 +276,8 @@ const Dashboard = () => {
           isLoading={
             userQuery.isPending ||
             (hasOrganization ? locationsQuery.isPending : false) ||
-            (hasOrganization ? stockQuery.isPending : false)
+            (hasOrganization ? summaryQuery.isPending : false) ||
+            (hasOrganization ? lowStockQuery.isPending : false)
           }
           lowStockAlerts={lowStockAlerts}
           metrics={metrics}
@@ -292,7 +286,8 @@ const Dashboard = () => {
 
             if (organizationId) {
               locationsQuery.refetch();
-              stockQuery.refetch();
+              summaryQuery.refetch();
+              lowStockQuery.refetch();
             }
           }}
           organization={selectedOrganization}
