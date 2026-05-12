@@ -2,12 +2,13 @@ import type * as React from "react";
 import { cn } from "../../lib/utils";
 
 type AlertProps = React.ComponentProps<"div"> & {
-  variant?: "default" | "destructive";
+  variant?: "default" | "destructive" | "warning";
 };
 
 const variants = {
   default: "border-purple-100 bg-white text-[#16151c]",
   destructive: "border-[#f3b8b0] bg-white text-[#b42318]",
+  warning: "border-amber-200 bg-amber-50 text-amber-800",
 };
 
 /**

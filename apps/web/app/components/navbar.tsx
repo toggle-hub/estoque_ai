@@ -15,7 +15,6 @@ import {
   Settings,
   Tags,
   Truck,
-  Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -72,7 +71,6 @@ const organizationSettingsNavItem = {
 const workflowNavItems: NavItem[] = [
   { icon: Package, label: "Itens", href: "/dashboard/items" },
   { icon: Tags, label: "Categorias", href: "/dashboard/categories" },
-  { icon: Users, label: "Clientes", href: "/dashboard/customers" },
   {
     icon: Truck,
     label: "Recebimento",

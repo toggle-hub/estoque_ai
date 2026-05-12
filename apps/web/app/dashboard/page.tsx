@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DashboardOverviewView,
+  type DashboardLowStockAlert,
   type DashboardOverviewMetrics,
 } from "../components/dashboard/dashboard-overview-view";
 import { Navbar } from "../components/navbar";
@@ -103,6 +104,40 @@ export const getDashboardOverviewMetrics = (
 };
 
 /**
+ * Maps stock rows below reorder point into dashboard alert rows.
+ *
+ * @param stock Organization stock rows.
+ * @returns Low-stock alert rows ordered by urgency and item name.
+ */
+export const getDashboardLowStockAlerts = (
+  stock: OrganizationStockLevel[],
+): DashboardLowStockAlert[] =>
+  stock
+    .filter((stockLevel) => stockLevel.quantity <= stockLevel.item.reorder_point)
+    .map((stockLevel) => ({
+      id: stockLevel.id,
+      itemName: stockLevel.item.name,
+      locationName: stockLevel.location.name,
+      quantity: stockLevel.quantity,
+      reorderPoint: stockLevel.item.reorder_point,
+      sku: stockLevel.item.sku,
+      status: stockLevel.quantity <= 0 ? ("critical" as const) : ("low" as const),
+    }))
+    .sort((left, right) => {
+      if (left.status !== right.status) {
+        return left.status === "critical" ? -1 : 1;
+      }
+
+      const quantityDelta = left.quantity - right.quantity;
+
+      if (quantityDelta !== 0) {
+        return quantityDelta;
+      }
+
+      return left.itemName.localeCompare(right.itemName, "pt-BR");
+    });
+
+/**
  * Renders the authenticated dashboard shell for the selected organization.
  *
  * @returns Dashboard page.
@@ -144,6 +179,10 @@ const Dashboard = () => {
   );
   const metrics = useMemo(
     () => getDashboardOverviewMetrics(stockQuery.data ?? []),
+    [stockQuery.data],
+  );
+  const lowStockAlerts = useMemo(
+    () => getDashboardLowStockAlerts(stockQuery.data ?? []),
     [stockQuery.data],
   );
   const userName = userQuery.data?.name ?? "Usuário";
@@ -246,6 +285,7 @@ const Dashboard = () => {
             (hasOrganization ? locationsQuery.isPending : false) ||
             (hasOrganization ? stockQuery.isPending : false)
           }
+          lowStockAlerts={lowStockAlerts}
           metrics={metrics}
           onRetry={() => {
             userQuery.refetch();

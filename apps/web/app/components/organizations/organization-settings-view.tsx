@@ -191,7 +191,7 @@ export function OrganizationSettingsView({
         ) : null}
 
         {!canEdit ? (
-          <Alert>
+          <Alert variant="warning">
             <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
               Visualizadores podem revisar os dados da empresa, mas não podem editar configurações da organização.
