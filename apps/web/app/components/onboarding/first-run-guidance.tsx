@@ -44,6 +44,32 @@ const stepConfigs = {
 const orderedSteps: FirstRunGuidanceStep[] = ["location", "catalog", "receiving"];
 
 /**
+ * Returns true when a parsed storage value is a dismissal map.
+ *
+ * @param value Parsed local-storage value.
+ * @returns Whether the value is a record of boolean dismissal states.
+ */
+const isDismissedOrganizationMap = (value: unknown): value is Record<string, boolean> =>
+  typeof value === "object" &&
+  value !== null &&
+  !Array.isArray(value) &&
+  Object.entries(value).every(
+    ([organizationId, isDismissed]) =>
+      typeof organizationId === "string" && typeof isDismissed === "boolean",
+  );
+
+/**
+ * Removes invalid first-run guidance storage when available.
+ */
+const clearDismissedOrganizations = () => {
+  try {
+    window.localStorage.removeItem(firstRunGuidanceStorageKey);
+  } catch {
+    return;
+  }
+};
+
+/**
  * Reads the dismissed-guidance map from local storage.
  *
  * @returns Dismissal state keyed by organization id.
@@ -53,16 +79,23 @@ const getDismissedOrganizations = () => {
     return {};
   }
 
-  const value = window.localStorage.getItem(firstRunGuidanceStorageKey);
-
-  if (!value) {
-    return {};
-  }
-
   try {
-    return JSON.parse(value) as Record<string, boolean>;
+    const value = window.localStorage.getItem(firstRunGuidanceStorageKey);
+
+    if (!value) {
+      return {};
+    }
+
+    const parsedValue = JSON.parse(value) as unknown;
+
+    if (!isDismissedOrganizationMap(parsedValue)) {
+      clearDismissedOrganizations();
+      return {};
+    }
+
+    return parsedValue;
   } catch {
-    window.localStorage.removeItem(firstRunGuidanceStorageKey);
+    clearDismissedOrganizations();
     return {};
   }
 };
@@ -77,13 +110,17 @@ const dismissGuidance = (organizationId: string) => {
     return;
   }
 
-  window.localStorage.setItem(
-    firstRunGuidanceStorageKey,
-    JSON.stringify({
-      ...getDismissedOrganizations(),
-      [organizationId]: true,
-    }),
-  );
+  try {
+    window.localStorage.setItem(
+      firstRunGuidanceStorageKey,
+      JSON.stringify({
+        ...getDismissedOrganizations(),
+        [organizationId]: true,
+      }),
+    );
+  } catch {
+    return;
+  }
 };
 
 /**
