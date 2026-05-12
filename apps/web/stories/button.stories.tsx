@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import { PackagePlus } from "lucide-react";
+import type { ComponentProps } from "react";
 import { Button } from "../app/components/ui/button";
 
 const meta = {
@@ -36,6 +37,7 @@ const meta = {
 export default meta;
 
 type Story = StoryObj<typeof meta>;
+type ButtonStoryArgs = ComponentProps<typeof Button>;
 
 export const Default: Story = {};
 
@@ -71,12 +73,13 @@ export const Icon: Story = {
 /**
  * Renders a Button that clones styling and props onto an anchor child.
  *
+ * @param args Storybook args forwarded to the Button.
  * @returns Button asChild story element.
  */
-const ButtonAsChildStory = () => (
-  <Button asChild className="min-w-40" variant="outline">
+const ButtonAsChildStory = ({ children, ...args }: ButtonStoryArgs) => (
+  <Button {...args} asChild className="min-w-40">
     <a href="/dashboard/items" className="font-semibold">
-      Abrir itens
+      {children}
     </a>
   </Button>
 );
