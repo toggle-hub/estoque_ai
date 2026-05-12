@@ -26,13 +26,24 @@ export type DashboardOverviewMetrics = {
 };
 
 export type DashboardActivity = {
+  actorName: string | null;
   id: string;
   itemName: string;
   locationName: string | null;
   occurredAt: string;
   quantity: number;
   sku: string | null;
-  type: "RECEIVING" | "SALE";
+  type: "ADJUSTMENT" | "RECEIVING" | "SALE" | "TRANSFER";
+};
+
+export type DashboardLowStockAlert = {
+  id: string;
+  itemName: string;
+  locationName: string;
+  quantity: number;
+  reorderPoint: number;
+  sku: string;
+  status: "critical" | "low";
 };
 
 type MetricCardConfig = {
@@ -47,6 +58,7 @@ export type DashboardOverviewViewProps = {
   activities: DashboardActivity[];
   errorMessage?: string;
   isLoading?: boolean;
+  lowStockAlerts: DashboardLowStockAlert[];
   metrics?: DashboardOverviewMetrics;
   onRetry?: () => void;
   organization?: Organization | null;
@@ -68,6 +80,11 @@ const activityDateFormatter = new Intl.DateTimeFormat("pt-BR", {
 });
 
 const activityLabels = {
+  ADJUSTMENT: {
+    icon: RotateCw,
+    label: "Ajuste",
+    quantityClassName: "text-purple-700",
+  },
   RECEIVING: {
     icon: ArrowDownLeft,
     label: "Recebimento",
@@ -78,11 +95,21 @@ const activityLabels = {
     label: "Venda",
     quantityClassName: "text-purple-700",
   },
+  TRANSFER: {
+    icon: ArrowUpRight,
+    label: "Transferência",
+    quantityClassName: "text-purple-700",
+  },
 } satisfies Record<DashboardActivity["type"], {
   icon: typeof ArrowDownLeft;
   label: string;
   quantityClassName: string;
 }>;
+
+const alertStatusLabels = {
+  critical: "Crítico",
+  low: "Baixo",
+} satisfies Record<DashboardLowStockAlert["status"], string>;
 
 /**
  * Formats an integer metric using Brazilian separators.
@@ -108,6 +135,18 @@ const formatCurrency = (value: number) => currencyFormatter.format(value);
  */
 const formatActivityDate = (value: string) =>
   activityDateFormatter.format(new Date(value));
+
+/**
+ * Formats signed activity quantities by transaction type.
+ *
+ * @param activity Dashboard activity row.
+ * @returns Signed localized quantity.
+ */
+const formatActivityQuantity = (activity: DashboardActivity) => {
+  const prefix = activity.type === "SALE" ? "-" : "+";
+
+  return `${prefix}${formatNumber(activity.quantity)}`;
+};
 
 /**
  * Builds the metric card configuration shown in the overview grid.
@@ -156,6 +195,7 @@ export function DashboardOverviewView({
   activities,
   errorMessage,
   isLoading = false,
+  lowStockAlerts,
   metrics,
   onRetry,
   organization,
@@ -265,33 +305,57 @@ export function DashboardOverviewView({
                 </CardHeader>
                 <CardContent>
                   {activities.length ? (
-                    <div className="divide-y divide-purple-100">
-                      {activities.map((activity) => {
-                        const activityType = activityLabels[activity.type];
-                        const ActivityIcon = activityType.icon;
+                    <div className="overflow-x-auto rounded-md border border-purple-100">
+                      <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+                        <caption className="sr-only">
+                          Atividades recentes de estoque com item, local, quantidade, tipo, responsável e data.
+                        </caption>
+                        <thead className="bg-purple-50 text-xs font-semibold text-purple-700">
+                          <tr>
+                            <th className="px-3 py-3">Item</th>
+                            <th className="px-3 py-3">Local</th>
+                            <th className="px-3 py-3">Tipo</th>
+                            <th className="px-3 py-3 text-right">Qtd.</th>
+                            <th className="px-3 py-3">Responsável</th>
+                            <th className="px-3 py-3">Data</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activities.map((activity) => {
+                            const activityType = activityLabels[activity.type];
+                            const ActivityIcon = activityType.icon;
 
-                        return (
-                          <div className="flex min-w-0 items-center gap-3 py-3" key={activity.id}>
-                            <span className="grid size-9 shrink-0 place-items-center rounded-md bg-purple-100 text-purple-700">
-                              <ActivityIcon className="size-4" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                                <p className="m-0 truncate text-sm font-semibold">{activity.itemName}</p>
-                                <Badge variant="outline">{activityType.label}</Badge>
-                              </div>
-                              <p className="m-0 mt-1 truncate text-xs text-gray-500">
-                                {activity.sku ?? "Sem SKU"} · {activity.locationName ?? "Local desconhecido"} ·{" "}
-                                {formatActivityDate(activity.occurredAt)}
-                              </p>
-                            </div>
-                            <span className={cn("shrink-0 text-sm font-semibold", activityType.quantityClassName)}>
-                              {activity.type === "SALE" ? "-" : "+"}
-                              {formatNumber(activity.quantity)}
-                            </span>
-                          </div>
-                        );
-                      })}
+                            return (
+                              <tr className="border-t border-purple-100" key={activity.id}>
+                                <td className="px-3 py-3">
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <span className="grid size-8 shrink-0 place-items-center rounded-md bg-purple-100 text-purple-700">
+                                      <ActivityIcon className="size-4" />
+                                    </span>
+                                    <div className="min-w-0">
+                                      <div className="truncate font-semibold">{activity.itemName}</div>
+                                      <div className="mt-1 truncate font-mono text-xs text-gray-500">
+                                        {activity.sku ?? "Sem SKU"}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-3">{activity.locationName ?? "Local desconhecido"}</td>
+                                <td className="px-3 py-3">
+                                  <Badge variant="outline">{activityType.label}</Badge>
+                                </td>
+                                <td className={cn("px-3 py-3 text-right font-semibold", activityType.quantityClassName)}>
+                                  {formatActivityQuantity(activity)}
+                                </td>
+                                <td className="px-3 py-3">{activity.actorName ?? "Desconhecido"}</td>
+                                <td className="px-3 py-3 whitespace-nowrap">
+                                  {formatActivityDate(activity.occurredAt)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   ) : (
                     <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-purple-200 p-6 text-center">
@@ -309,20 +373,60 @@ export function DashboardOverviewView({
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Reposição</CardTitle>
-                  <CardDescription>Prioridade operacional para o dia.</CardDescription>
+                  <CardTitle>Alertas de estoque baixo</CardTitle>
+                  <CardDescription>Itens no ponto de reposição por local.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="rounded-md border border-purple-100 bg-purple-50 p-4">
-                    <p className="m-0 text-3xl font-semibold text-purple-700">
-                      {formatNumber(metrics?.lowStockItems ?? 0)}
-                    </p>
-                    <p className="m-0 mt-2 text-sm leading-6 text-gray-500">
-                      {metrics?.lowStockItems
-                        ? "Revise os itens abaixo do ponto de reposição antes das próximas vendas."
-                        : "Nenhum item está abaixo do ponto de reposição no momento."}
-                    </p>
-                  </div>
+                  {lowStockAlerts.length ? (
+                    <div className="overflow-x-auto rounded-md border border-purple-100">
+                      <table className="w-full min-w-[460px] border-collapse text-left text-sm">
+                        <caption className="sr-only">
+                          Alertas urgentes de estoque baixo com item, local, quantidade, ponto de reposição e status.
+                        </caption>
+                        <thead className="bg-purple-50 text-xs font-semibold text-purple-700">
+                          <tr>
+                            <th className="px-3 py-3">Item</th>
+                            <th className="px-3 py-3 text-right">Qtd.</th>
+                            <th className="px-3 py-3 text-right">Reposição</th>
+                            <th className="px-3 py-3">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lowStockAlerts.map((alert) => (
+                            <tr className="border-t border-purple-100" key={alert.id}>
+                              <td className="px-3 py-3">
+                                <div className="font-semibold">{alert.itemName}</div>
+                                <div className="mt-1 truncate text-xs text-gray-500">
+                                  {alert.sku} · {alert.locationName}
+                                </div>
+                              </td>
+                              <td className="px-3 py-3 text-right font-semibold">
+                                {formatNumber(alert.quantity)}
+                              </td>
+                              <td className="px-3 py-3 text-right">
+                                {formatNumber(alert.reorderPoint)}
+                              </td>
+                              <td className="px-3 py-3">
+                                <Badge variant={alert.status === "critical" ? "outline" : "secondary"}>
+                                  {alertStatusLabels[alert.status]}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-purple-200 p-6 text-center">
+                      <TriangleAlert className="size-8 text-purple-500" />
+                      <div>
+                        <p className="m-0 text-sm font-semibold">Nenhum alerta urgente</p>
+                        <p className="m-0 mt-1 text-sm leading-6 text-gray-500">
+                          Itens abaixo do ponto de reposição aparecerão aqui.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </section>
