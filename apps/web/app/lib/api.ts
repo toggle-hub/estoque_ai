@@ -499,7 +499,13 @@ export const getOrganizationLowStock = async (organizationId: string) => {
     hasMore = Boolean(payload.pagination?.hasMore);
 
     if (hasMore) {
-      offset = payload.pagination?.nextOffset ?? offset + limit;
+      const nextOffset = payload.pagination?.nextOffset;
+
+      if (nextOffset === undefined || nextOffset === null || nextOffset <= offset) {
+        hasMore = false;
+      } else {
+        offset = nextOffset;
+      }
     }
   }
 
