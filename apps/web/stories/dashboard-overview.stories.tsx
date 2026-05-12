@@ -35,7 +35,7 @@ const activities: DashboardActivity[] = [
     itemName: "Etiquetas térmicas",
     locationName: "Loja secundária",
     occurredAt: "2026-05-11T11:45:00.000Z",
-    quantity: 6,
+    quantity: -6,
     sku: "LBL-010",
     type: "SALE",
   },

@@ -181,15 +181,22 @@ const formatActivityDate = (value: string) =>
   activityDateFormatter.format(new Date(value));
 
 /**
- * Formats signed activity quantities by transaction type.
+ * Formats activity quantities while preserving backend-provided signs.
  *
  * @param activity Dashboard activity row.
  * @returns Signed localized quantity.
  */
 const formatActivityQuantity = (activity: DashboardActivity) => {
+  const formattedQuantity = formatNumber(activity.quantity);
+  const firstCharacter = formattedQuantity[0];
+
+  if (firstCharacter === "+" || firstCharacter === "-") {
+    return formattedQuantity;
+  }
+
   const prefix = activity.type === "SALE" ? "-" : "+";
 
-  return `${prefix}${formatNumber(activity.quantity)}`;
+  return `${prefix}${formattedQuantity}`;
 };
 
 /**
