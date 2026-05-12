@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Organization } from "../../lib/api";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -101,9 +101,13 @@ export function FirstRunGuidance({
   organization,
 }: FirstRunGuidanceProps) {
   const organizationId = organization?.id;
-  const [isDismissed, setIsDismissed] = useState(() =>
-    initialDismissed || (organizationId ? Boolean(getDismissedOrganizations()[organizationId]) : false),
-  );
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  useEffect(() => {
+    setIsDismissed(
+      initialDismissed || (organizationId ? Boolean(getDismissedOrganizations()[organizationId]) : false),
+    );
+  }, [initialDismissed, organizationId]);
 
   if (!organization || (!forceVisible && isDismissed)) {
     return null;
@@ -162,12 +166,9 @@ export function FirstRunGuidance({
           })}
         </ol>
         {canManage ? (
-          <Link
-            className="inline-flex h-10 w-fit items-center justify-center rounded-md bg-purple-500 px-4 text-sm font-medium text-white transition-colors hover:bg-purple-600"
-            href={currentStepConfig.actionHref}
-          >
-            {currentStepConfig.actionLabel}
-          </Link>
+          <Button asChild className="w-fit">
+            <Link href={currentStepConfig.actionHref}>{currentStepConfig.actionLabel}</Link>
+          </Button>
         ) : null}
       </CardContent>
     </Card>

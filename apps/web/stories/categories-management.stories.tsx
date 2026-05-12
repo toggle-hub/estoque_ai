@@ -80,6 +80,40 @@ export const Empty: Story = {
   },
 };
 
+export const FirstRunEmptyState: Story = {
+  args: {
+    categories: [],
+    onCreate: async () => undefined,
+    organization,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Shows the first-run category setup state with currentStep=\"catalog\" and create-capable guidance.",
+      },
+    },
+  },
+};
+
+export const FirstRunEmptyStateViewer: Story = {
+  args: {
+    categories: [],
+    organization: {
+      ...organization,
+      role: "viewer",
+    },
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Shows the first-run category setup state for canCreate=false; viewer guidance stays read-only and omits create actions.",
+      },
+    },
+  },
+};
+
 export const ManyCategories: Story = {
   args: {
     categories: manyCategories,
