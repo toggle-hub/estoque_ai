@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Spinner } from "../ui/spinner";
+import { Skeleton } from "../ui/skeleton";
 import {
   Table,
   TableBody,
@@ -148,8 +148,16 @@ export function LocationInventoryView({
 
   if (isLoading) {
     return (
-      <main className="grid min-h-[calc(100svh-4rem)] place-items-center bg-white p-6 md:min-h-screen">
-        <Spinner />
+      <main aria-busy="true" className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+          <div className="border-b border-purple-100 pb-5">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="mt-3 h-8 w-56" />
+            <Skeleton className="mt-3 h-4 w-full max-w-2xl" />
+          </div>
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-80 w-full" />
+        </div>
       </main>
     );
   }

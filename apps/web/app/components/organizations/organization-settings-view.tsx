@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Spinner } from "../ui/spinner";
+import { Skeleton } from "../ui/skeleton";
 
 type CompletionItem = {
   isComplete: boolean;
@@ -133,8 +133,18 @@ export function OrganizationSettingsView({
 
   if (isLoading) {
     return (
-      <main className="grid min-h-[calc(100svh-4rem)] place-items-center bg-white p-6 md:min-h-screen">
-        <Spinner />
+      <main aria-busy="true" className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
+          <div className="border-b border-purple-100 pb-5">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="mt-3 h-8 w-72" />
+            <Skeleton className="mt-3 h-4 w-full max-w-2xl" />
+          </div>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
+            <Skeleton className="h-96 w-full" />
+            <Skeleton className="h-72 w-full" />
+          </div>
+        </div>
       </main>
     );
   }

@@ -11,7 +11,7 @@ import { Field } from "../ui/field";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectItem } from "../ui/select";
-import { Spinner } from "../ui/spinner";
+import { Skeleton } from "../ui/skeleton";
 import {
   Table,
   TableBody,
@@ -69,6 +69,7 @@ const transactionTypeLabels: Record<string, string> = {
   SALE: "Venda",
   TRANSFER: "Transferência",
 };
+const transactionFilterSkeletonKeys = ["search", "location", "type", "from", "to"];
 
 /**
  * Returns localized copy for a transaction type.
@@ -126,8 +127,18 @@ export function TransactionsHistoryView({
 
   if (isLoading) {
     return (
-      <main className="grid min-h-[calc(100svh-4rem)] place-items-center bg-white p-6 md:min-h-screen">
-        <Spinner />
+      <main aria-busy="true" className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+          <div className="border-b border-purple-100 pb-5">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="mt-3 h-8 w-40" />
+            <Skeleton className="mt-3 h-4 w-full max-w-2xl" />
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_180px_160px_160px]">
+            {transactionFilterSkeletonKeys.map((key) => <Skeleton className="h-16" key={key} />)}
+          </div>
+          <Skeleton className="h-80 w-full" />
+        </div>
       </main>
     );
   }
