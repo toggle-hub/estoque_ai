@@ -6,6 +6,7 @@ import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 import type { Category, Location, LocationItem, LocationItemInput, Organization } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { FirstRunGuidance } from "../onboarding/first-run-guidance";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -369,16 +370,24 @@ export function LocationInventoryView({
         </section>
 
         {!errorMessage && location && !items.length ? (
-          <Card className="border-dashed">
-            <CardHeader>
-              <CardTitle>Nenhum item ainda</CardTitle>
-              <CardDescription>
-                {canCreate
-                  ? "Crie o primeiro item para começar a acompanhar o estoque deste local."
-                  : "Nenhum item de estoque está disponível para este local ainda."}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <>
+            <FirstRunGuidance
+              canManage={canCreate}
+              completedSteps={["location"]}
+              currentStep="catalog"
+              organization={organization}
+            />
+            <Card className="border-dashed">
+              <CardHeader>
+                <CardTitle>Nenhum item ainda</CardTitle>
+                <CardDescription>
+                  {canCreate
+                    ? "Crie o primeiro item para começar a acompanhar o estoque deste local."
+                    : "Nenhum item de estoque está disponível para este local ainda."}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </>
         ) : null}
 
         {!errorMessage && items.length > 0 && !filteredItems.length ? (

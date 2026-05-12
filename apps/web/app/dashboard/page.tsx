@@ -273,6 +273,7 @@ const Dashboard = () => {
         <DashboardOverviewView
           activities={[]}
           errorMessage={errorMessage}
+          firstRunGuidanceStep={activeLocations.length ? "catalog" : "location"}
           isLoading={
             userQuery.isPending ||
             (hasOrganization ? locationsQuery.isPending : false) ||

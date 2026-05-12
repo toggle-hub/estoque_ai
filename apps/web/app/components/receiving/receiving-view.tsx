@@ -10,6 +10,7 @@ import type {
   ReceivingTransactionInput,
   ReceivingTransactionResult,
 } from "../../lib/api";
+import { FirstRunGuidance } from "../onboarding/first-run-guidance";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -75,6 +76,7 @@ export function ReceivingView({
   const [validationError, setValidationError] = useState("");
   const role = organization?.role?.toLowerCase() ?? "viewer";
   const canReceive = writeRoles.has(role);
+  const firstRunGuidanceStep = !locations.length ? "location" : !items.length ? "catalog" : null;
   const selectedLocation = locations.find((location) => location.id === locationId);
   const locationItems = items.filter((item) => item.location_id === locationId);
   const filteredItems = useMemo(() => {
@@ -192,6 +194,15 @@ export function ReceivingView({
             <AlertTitle>Não foi possível carregar os dados de recebimento</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
+        ) : null}
+
+        {!errorMessage && firstRunGuidanceStep ? (
+          <FirstRunGuidance
+            canManage={canReceive}
+            completedSteps={firstRunGuidanceStep === "catalog" ? ["location"] : []}
+            currentStep={firstRunGuidanceStep}
+            organization={organization}
+          />
         ) : null}
 
         {successResult ? (
