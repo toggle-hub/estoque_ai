@@ -8,12 +8,17 @@ import { FirstRunGuidance } from "../onboarding/first-run-guidance";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Skeleton } from "../ui/skeleton";
 
 export type CategoriesManagementViewProps = {
   categories: Category[];
-  createErrorMessage?: string;
   errorMessage?: string;
   isCreating?: boolean;
   isLoading?: boolean;
@@ -43,7 +48,6 @@ const formatDate = (value: string) =>
  */
 export function CategoriesManagementView({
   categories,
-  createErrorMessage,
   errorMessage,
   isCreating = false,
   isLoading = false,
@@ -84,7 +88,10 @@ export function CategoriesManagementView({
 
   if (isLoading) {
     return (
-      <main aria-busy="true" className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6">
+      <main
+        aria-busy="true"
+        className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6"
+      >
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
           <div className="border-b border-purple-100 pb-5">
             <Skeleton className="h-4 w-36" />
@@ -109,9 +116,12 @@ export function CategoriesManagementView({
             <p className="m-0 text-sm font-medium text-purple-600">
               {organization?.name ?? "Organização selecionada"}
             </p>
-            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Categorias</h1>
+            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">
+              Categorias
+            </h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">
-              Gerencie a taxonomia de produtos usada por itens de estoque e relatórios.
+              Gerencie a taxonomia de produtos usada por itens de estoque e
+              relatórios.
             </p>
           </div>
           <Badge variant={canCreate ? "secondary" : "outline"}>
@@ -122,7 +132,9 @@ export function CategoriesManagementView({
         {!organization ? (
           <Alert variant="destructive">
             <AlertTitle>Nenhuma organização selecionada</AlertTitle>
-            <AlertDescription>Selecione uma organização antes de gerenciar categorias.</AlertDescription>
+            <AlertDescription>
+              Selecione uma organização antes de gerenciar categorias.
+            </AlertDescription>
           </Alert>
         ) : null}
 
@@ -137,7 +149,8 @@ export function CategoriesManagementView({
           <Alert variant="warning">
             <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
-              Visualizadores podem revisar detalhes de categorias, mas não podem criar registros de taxonomia.
+              Visualizadores podem revisar detalhes de categorias, mas não podem
+              criar registros de taxonomia.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -146,7 +159,10 @@ export function CategoriesManagementView({
           <Card>
             <CardHeader>
               <CardTitle>Criar categoria</CardTitle>
-              <CardDescription>Adicione um grupo de produtos que pode ser reutilizado nos formulários de itens.</CardDescription>
+              <CardDescription>
+                Adicione um grupo de produtos que pode ser reutilizado nos
+                formulários de itens.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form
@@ -154,7 +170,9 @@ export function CategoriesManagementView({
                 onSubmit={handleSubmit}
               >
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Nome</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    Nome
+                  </span>
                   <input
                     className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     onChange={(event) => setName(event.target.value)}
@@ -164,7 +182,9 @@ export function CategoriesManagementView({
                   />
                 </label>
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Descrição</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    Descrição
+                  </span>
                   <input
                     className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     onChange={(event) => setDescription(event.target.value)}
@@ -172,23 +192,30 @@ export function CategoriesManagementView({
                     value={description}
                   />
                 </label>
-                <Button className="self-end" disabled={isCreating || !name.trim()} type="submit">
-                  {isCreating ? <RotateCw className="animate-spin" /> : <Plus />}
+                <Button
+                  className="self-end"
+                  disabled={isCreating || !name.trim()}
+                  type="submit"
+                >
+                  {isCreating ? (
+                    <RotateCw className="animate-spin" />
+                  ) : (
+                    <Plus />
+                  )}
                   Adicionar categoria
                 </Button>
               </form>
-              {createErrorMessage ? (
-                <p className="m-0 mt-3 text-sm text-[#b42318]" role="alert">
-                  {createErrorMessage}
-                </p>
-              ) : null}
             </CardContent>
           </Card>
         ) : null}
 
         {!errorMessage && !hasCategories ? (
           <>
-            <FirstRunGuidance canManage={canCreate} currentStep="catalog" organization={organization} />
+            <FirstRunGuidance
+              canManage={canCreate}
+              currentStep="catalog"
+              organization={organization}
+            />
             <Card className="border-dashed">
               <CardHeader>
                 <CardTitle>Nenhuma categoria ainda</CardTitle>
@@ -203,7 +230,10 @@ export function CategoriesManagementView({
         ) : null}
 
         {hasCategories ? (
-          <section className="grid gap-4 lg:grid-cols-2" aria-label="Categorias da organização">
+          <section
+            className="grid gap-4 lg:grid-cols-2"
+            aria-label="Categorias da organização"
+          >
             {categories.map((category) => (
               <Card key={category.id}>
                 <CardHeader>
@@ -223,12 +253,20 @@ export function CategoriesManagementView({
                 <CardContent>
                   <dl className="grid gap-3 text-sm sm:grid-cols-2">
                     <div>
-                      <dt className="text-xs font-medium text-purple-700">Criada</dt>
-                      <dd className="m-0 mt-1 font-semibold">{formatDate(category.created_at)}</dd>
+                      <dt className="text-xs font-medium text-purple-700">
+                        Criada
+                      </dt>
+                      <dd className="m-0 mt-1 font-semibold">
+                        {formatDate(category.created_at)}
+                      </dd>
                     </div>
                     <div>
-                      <dt className="text-xs font-medium text-purple-700">ID da categoria</dt>
-                      <dd className="m-0 mt-1 truncate font-mono text-xs">{category.id}</dd>
+                      <dt className="text-xs font-medium text-purple-700">
+                        ID da categoria
+                      </dt>
+                      <dd className="m-0 mt-1 truncate font-mono text-xs">
+                        {category.id}
+                      </dd>
                     </div>
                   </dl>
                 </CardContent>
@@ -238,7 +276,12 @@ export function CategoriesManagementView({
         ) : null}
 
         {errorMessage && onRetry ? (
-          <Button className="w-fit" onClick={onRetry} type="button" variant="outline">
+          <Button
+            className="w-fit"
+            onClick={onRetry}
+            type="button"
+            variant="outline"
+          >
             <AlertCircle />
             Retry
           </Button>
@@ -247,7 +290,8 @@ export function CategoriesManagementView({
         {!errorMessage && hasCategories ? (
           <div className="inline-flex items-center gap-2 text-sm text-purple-700">
             <Boxes className="size-4" />
-            {categories.length} {categories.length === 1 ? "categoria" : "categorias"}
+            {categories.length}{" "}
+            {categories.length === 1 ? "categoria" : "categorias"}
           </div>
         ) : null}
       </div>

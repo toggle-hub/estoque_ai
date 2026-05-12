@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Navbar } from "../../components/navbar";
 import { ReceivingView } from "../../components/receiving/receiving-view";
 import {
@@ -90,10 +91,12 @@ export default function ReceivingPage() {
   const preselectedLocationId = searchParams.get("locationId");
   const preselectedItemId = searchParams.get("itemId");
   const queryClient = useQueryClient();
-  const { organizationsQuery, selectedOrganization } = useSelectedOrganization();
+  const { organizationsQuery, selectedOrganization } =
+    useSelectedOrganization();
   const organizationId = selectedOrganization?.id;
   const prevOrganizationId = useRef<string | undefined>(organizationId);
-  const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
+  const [selectedLocation, setSelectedLocationState] =
+    useState<SelectedLocation | null>(null);
   const locationsQuery = useQuery({
     enabled: Boolean(organizationId),
     queryKey: ["organizations", organizationId, "locations"],
@@ -110,7 +113,12 @@ export default function ReceivingPage() {
     () => getActiveLocations(locationsQuery.data ?? []),
     [locationsQuery.data],
   );
-  const itemsQueryKey = ["organizations", organizationId, "receiving-items", activeLocations] as const;
+  const itemsQueryKey = [
+    "organizations",
+    organizationId,
+    "receiving-items",
+    activeLocations,
+  ] as const;
   const itemsQuery = useQuery({
     enabled: Boolean(organizationId) && Boolean(locationsQuery.data),
     queryKey: itemsQueryKey,
@@ -123,9 +131,14 @@ export default function ReceivingPage() {
 
       return createReceivingTransaction(locationId, payload);
     },
-    onSuccess: async (_result, variables) => {
+    onSuccess: async (result, variables) => {
+      toast.success("Estoque recebido.", {
+        description: `Quantidade alterada de ${result.transaction.previous_quantity} para ${result.transaction.new_quantity}.`,
+      });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["locations", variables.locationId, "items"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["locations", variables.locationId, "items"],
+        }),
         organizationId
           ? queryClient.invalidateQueries({
               queryKey: ["organizations", organizationId, "receiving-items"],
@@ -133,10 +146,15 @@ export default function ReceivingPage() {
           : Promise.resolve(),
       ]);
     },
+    onError: (error) => {
+      toast.error(error.message);
+    },
   });
   const hasOrganization = Boolean(organizationId);
   const isLoadingLocations = hasOrganization ? locationsQuery.isPending : false;
-  const hasLocationLoadError = hasOrganization ? Boolean(locationsQuery.error) : false;
+  const hasLocationLoadError = hasOrganization
+    ? Boolean(locationsQuery.error)
+    : false;
   const errorMessage =
     organizationsQuery.error?.message ??
     (hasOrganization ? locationsQuery.error?.message : undefined) ??
@@ -161,7 +179,10 @@ export default function ReceivingPage() {
     );
 
     if (preselectedLocation) {
-      const nextLocation = { id: preselectedLocation.id, name: preselectedLocation.name };
+      const nextLocation = {
+        id: preselectedLocation.id,
+        name: preselectedLocation.name,
+      };
 
       setSelectedLocation(organizationId, nextLocation);
       setSelectedLocationState(nextLocation);
@@ -174,13 +195,21 @@ export default function ReceivingPage() {
     );
 
     if (storedActiveLocation) {
-      setSelectedLocationState({ id: storedActiveLocation.id, name: storedActiveLocation.name });
+      setSelectedLocationState({
+        id: storedActiveLocation.id,
+        name: storedActiveLocation.name,
+      });
       return;
     }
 
     clearSelectedLocation(organizationId);
     setSelectedLocationState(null);
-  }, [activeLocations, locationsQuery.data, organizationId, preselectedLocationId]);
+  }, [
+    activeLocations,
+    locationsQuery.data,
+    organizationId,
+    preselectedLocationId,
+  ]);
 
   return (
     <div className="min-h-screen bg-white md:flex">
@@ -228,8 +257,6 @@ export default function ReceivingPage() {
           organization={selectedOrganization}
           preselectedItemId={preselectedItemId}
           preselectedLocationId={preselectedLocationId}
-          submitErrorMessage={receiveMutation.error?.message}
-          successResult={receiveMutation.data ?? null}
         />
       </div>
     </div>

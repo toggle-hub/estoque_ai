@@ -1,22 +1,14 @@
 "use client";
 
-import { X } from "lucide-react";
+import { driver, type DriveStep, type Driver } from "driver.js";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Button } from "../ui/button";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FirstRunGuidanceStep } from "./first-run-guidance";
 
 export const firstRunSpotlightTourStorageKey =
   "estoque_ai:first_run_spotlight_tour_dismissed_by_org";
 
 export type SpotlightTargetType = "content" | "navigation";
-
-type SpotlightRect = {
-  height: number;
-  left: number;
-  top: number;
-  width: number;
-};
 
 type SpotlightTourStep = {
   description: string;
@@ -31,17 +23,15 @@ type FirstRunSpotlightTourProps = {
   organizationId?: string | null;
 };
 
-type SpotlightTourOverlayProps = {
+type DriverSpotlightPreviewProps = {
+  description: string;
   isDismissed?: boolean;
-  onDismiss?: () => void;
-  targetRect: SpotlightRect;
+  targetSelector: string;
   targetType: SpotlightTargetType;
   title: string;
-  description: string;
 };
 
 const contentTargetId = "first-run-guidance";
-const tourPadding = 8;
 
 const navigationTargets = {
   catalog: "tour-nav-categories",
@@ -202,142 +192,110 @@ const getTourStep = (
 };
 
 /**
- * Converts a DOMRect into the serializable rectangle used by the overlay.
+ * Builds one Driver.js step for the selected target.
  *
- * @param rect DOM bounding rectangle.
- * @returns Plain spotlight rectangle.
+ * @param targetSelector CSS selector for the highlighted target.
+ * @param tourStep Route-aware tour step copy.
+ * @returns Driver.js step configuration.
  */
-const toSpotlightRect = (rect: DOMRect): SpotlightRect => ({
-  height: rect.height,
-  left: rect.left,
-  top: rect.top,
-  width: rect.width,
+const getDriverStep = (
+  targetSelector: string,
+  tourStep: SpotlightTourStep,
+): DriveStep => ({
+  disableActiveInteraction: false,
+  element: targetSelector,
+  popover: {
+    description: tourStep.description,
+    doneBtnText: "Pular tour",
+    side: tourStep.targetType === "navigation" ? "right" : "bottom",
+    title: tourStep.title,
+  },
 });
 
 /**
- * Calculates the overlay panel placement near the highlighted target.
+ * Starts a single-step Driver.js tour against one DOM target.
  *
- * @param targetRect Target rectangle.
- * @returns Fixed-position style for the guidance panel.
+ * @param step Driver.js step configuration.
+ * @param onDismiss Callback used when the user explicitly skips the tour.
+ * @returns Driver instance.
  */
-const getPanelStyle = (targetRect: SpotlightRect): CSSProperties => {
-  if (typeof window === "undefined" || window.innerWidth < 640) {
-    return {
-      bottom: 16,
-      left: 16,
-      right: 16,
-    };
-  }
+const startDriverTour = (step: DriveStep, onDismiss: () => void): Driver => {
+  const driverInstance = driver({
+    allowClose: true,
+    allowKeyboardControl: true,
+    animate: true,
+    disableActiveInteraction: false,
+    doneBtnText: "Pular tour",
+    nextBtnText: "Pular tour",
+    overlayClickBehavior: () => undefined,
+    overlayColor: "#0f0f11",
+    overlayOpacity: 0.7,
+    popoverClass: "estoque-tour-popover",
+    showButtons: ["next", "close"],
+    smoothScroll: true,
+    stagePadding: 8,
+    stageRadius: 8,
+    steps: [step],
+    onCloseClick: (_element, _step, { driver: activeDriver }) => {
+      onDismiss();
+      activeDriver.destroy();
+    },
+    onNextClick: (_element, _step, { driver: activeDriver }) => {
+      onDismiss();
+      activeDriver.destroy();
+    },
+  });
 
-  const width = 352;
-  const left = Math.min(
-    Math.max(targetRect.left, 16),
-    Math.max(window.innerWidth - width - 16, 16),
-  );
-  const hasRoomBelow =
-    targetRect.top + targetRect.height + 16 + 220 < window.innerHeight;
+  driverInstance.drive();
 
-  return {
-    left,
-    top: hasRoomBelow
-      ? targetRect.top + targetRect.height + 16
-      : Math.max(targetRect.top - 236, 16),
-    width,
-  };
+  return driverInstance;
 };
 
 /**
- * Renders the dimming layers and guidance panel around a measured target.
+ * Runs a Driver.js spotlight preview for Storybook.
  *
- * @param props Spotlight overlay props.
- * @returns Spotlight overlay or `null` when dismissed.
+ * @param props Preview props.
+ * @returns Null because Driver.js owns the overlay DOM.
  */
-export function SpotlightTourOverlay({
+export function DriverSpotlightPreview({
   description,
   isDismissed = false,
-  onDismiss,
-  targetRect,
+  targetSelector,
   targetType,
   title,
-}: SpotlightTourOverlayProps) {
-  if (isDismissed) {
-    return null;
-  }
+}: DriverSpotlightPreviewProps) {
+  useEffect(() => {
+    if (isDismissed) {
+      return undefined;
+    }
 
-  const cutTop = Math.max(targetRect.top - tourPadding, 0);
-  const cutLeft = Math.max(targetRect.left - tourPadding, 0);
-  const cutWidth = targetRect.width + tourPadding * 2;
-  const cutHeight = targetRect.height + tourPadding * 2;
-  const panelStyle = getPanelStyle(targetRect);
+    const targetElement = document.querySelector(targetSelector);
 
-  return (
-    <>
-      <div
-        className="fixed inset-x-0 top-0 z-[60] bg-[#0f0f11]/70"
-        style={{ height: cutTop }}
-      />
-      <div
-        className="fixed z-[60] bg-[#0f0f11]/70"
-        style={{ height: cutHeight, left: 0, top: cutTop, width: cutLeft }}
-      />
-      <div
-        className="fixed z-[60] bg-[#0f0f11]/70"
-        style={{
-          height: cutHeight,
-          left: cutLeft + cutWidth,
-          right: 0,
-          top: cutTop,
-        }}
-      />
-      <div
-        className="fixed inset-x-0 bottom-0 z-[60] bg-[#0f0f11]/70"
-        style={{ top: cutTop + cutHeight }}
-      />
-      <section
-        aria-labelledby="first-run-spotlight-title"
-        className="fixed z-[80] rounded-md border border-purple-200 bg-white p-4 text-[#16151c] shadow-2xl"
-        role="dialog"
-        style={panelStyle}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="m-0 text-xs font-semibold uppercase text-purple-700">
-              {targetType === "navigation" ? "Navegação" : "Configuração"}
-            </p>
-            <h2
-              id="first-run-spotlight-title"
-              className="m-0 mt-1 text-base font-semibold"
-            >
-              {title}
-            </h2>
-          </div>
-          <button
-            aria-label="Pular tour"
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-purple-50 hover:text-purple-700"
-            onClick={onDismiss}
-            type="button"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-        <p className="m-0 mt-2 text-sm leading-6 text-gray-600">
-          {description}
-        </p>
-        <div className="mt-4 flex justify-end">
-          <Button onClick={onDismiss} type="button" variant="outline">
-            Pular tour
-          </Button>
-        </div>
-      </section>
-    </>
-  );
+    if (!targetElement) {
+      return undefined;
+    }
+
+    const driverInstance = startDriverTour(
+      getDriverStep(targetSelector, {
+        description,
+        targetId: targetSelector,
+        targetType,
+        title,
+      }),
+      () => undefined,
+    );
+
+    return () => driverInstance.destroy();
+  }, [description, isDismissed, targetSelector, targetType, title]);
+
+  return null;
 }
 
 /**
- * Runs the route-aware first-run spotlight tour.
+ * Runs the route-aware first-run spotlight tour with Driver.js.
  *
  * @param props First-run spotlight tour props.
- * @returns Spotlight tour overlay or `null` when unavailable.
+ * @returns Null because Driver.js owns the overlay DOM.
  */
 export function FirstRunSpotlightTour({
   canManage,
@@ -345,12 +303,13 @@ export function FirstRunSpotlightTour({
   organizationId,
 }: FirstRunSpotlightTourProps) {
   const pathname = usePathname();
+  const driverRef = useRef<Driver | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
-  const [targetRect, setTargetRect] = useState<SpotlightRect | null>(null);
   const tourStep = useMemo(
     () => getTourStep(pathname, currentStep, canManage),
     [canManage, currentStep, pathname],
   );
+  const targetSelector = `[data-tour-target="${tourStep.targetId}"]`;
 
   useEffect(() => {
     setIsDismissed(
@@ -361,103 +320,39 @@ export function FirstRunSpotlightTour({
   }, [organizationId]);
 
   useEffect(() => {
-    if (isDismissed) {
+    if (!organizationId || isDismissed) {
       return undefined;
     }
 
-    let targetElement: HTMLElement | null = null;
-    let originalPosition = "";
-    let originalZIndex = "";
-    let originalBoxShadow = "";
-    let originalBorderRadius = "";
+    const targetElement = document.querySelector(targetSelector);
 
-    const updateTargetRect = () => {
-      targetElement = document.querySelector<HTMLElement>(
-        `[data-tour-target="${tourStep.targetId}"]`,
-      );
-
-      if (!targetElement) {
-        setTargetRect(null);
-        return;
-      }
-
-      const rect = targetElement.getBoundingClientRect();
-
-      if (rect.width <= 0 || rect.height <= 0) {
-        setTargetRect(null);
-        return;
-      }
-
-      setTargetRect(toSpotlightRect(rect));
-    };
-
-    updateTargetRect();
-    targetElement = document.querySelector<HTMLElement>(
-      `[data-tour-target="${tourStep.targetId}"]`,
-    );
-
-    if (targetElement) {
-      originalPosition = targetElement.style.position;
-      originalZIndex = targetElement.style.zIndex;
-      originalBoxShadow = targetElement.style.boxShadow;
-      originalBorderRadius = targetElement.style.borderRadius;
-
-      if (window.getComputedStyle(targetElement).position === "static") {
-        targetElement.style.position = "relative";
-      }
-
-      targetElement.style.zIndex = "70";
-      targetElement.style.boxShadow = "0 0 0 4px rgba(147, 51, 234, 0.28)";
-      targetElement.style.borderRadius =
-        targetElement.style.borderRadius || "0.5rem";
+    if (!targetElement) {
+      return undefined;
     }
 
-    window.addEventListener("resize", updateTargetRect);
-    window.addEventListener("scroll", updateTargetRect, true);
-
-    return () => {
-      window.removeEventListener("resize", updateTargetRect);
-      window.removeEventListener("scroll", updateTargetRect, true);
-
-      if (targetElement) {
-        targetElement.style.position = originalPosition;
-        targetElement.style.zIndex = originalZIndex;
-        targetElement.style.boxShadow = originalBoxShadow;
-        targetElement.style.borderRadius = originalBorderRadius;
-      }
+    const dismiss = () => {
+      dismissTour(organizationId);
+      setIsDismissed(true);
     };
-  }, [isDismissed, tourStep.targetId]);
-
-  useEffect(() => {
     const dismissOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (organizationId) {
-          dismissTour(organizationId);
-        }
-
-        setIsDismissed(true);
+        dismiss();
       }
     };
 
+    driverRef.current?.destroy();
+    driverRef.current = startDriverTour(
+      getDriverStep(targetSelector, tourStep),
+      dismiss,
+    );
     window.addEventListener("keydown", dismissOnEscape);
 
-    return () => window.removeEventListener("keydown", dismissOnEscape);
-  }, [organizationId]);
+    return () => {
+      window.removeEventListener("keydown", dismissOnEscape);
+      driverRef.current?.destroy();
+      driverRef.current = null;
+    };
+  }, [isDismissed, organizationId, targetSelector, tourStep]);
 
-  if (!organizationId || isDismissed || !targetRect) {
-    return null;
-  }
-
-  return (
-    <SpotlightTourOverlay
-      description={tourStep.description}
-      onDismiss={() => {
-        dismissTour(organizationId);
-        setIsDismissed(true);
-      }}
-      targetRect={targetRect}
-      targetType={tourStep.targetType}
-      title={tourStep.title}
-    />
-  );
+  return null;
 }

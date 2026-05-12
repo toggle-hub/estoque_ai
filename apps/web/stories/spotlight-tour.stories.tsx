@@ -1,24 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import type { ComponentProps, ReactNode } from "react";
-import { SpotlightTourOverlay } from "../app/components/onboarding/spotlight-tour";
-
-const contentRect = {
-  height: 176,
-  left: 112,
-  top: 128,
-  width: 640,
-};
-
-const navigationRect = {
-  height: 44,
-  left: 24,
-  top: 244,
-  width: 240,
-};
+import { DriverSpotlightPreview } from "../app/components/onboarding/spotlight-tour";
 
 const meta = {
   title: "Componentes/Spotlight Tour",
-  component: SpotlightTourOverlay,
+  component: DriverSpotlightPreview,
   argTypes: {
     isDismissed: {
       control: "boolean",
@@ -32,24 +18,24 @@ const meta = {
     description:
       "Use esta etapa para conduzir a configuração inicial sem sair do fluxo operacional.",
     isDismissed: false,
-    targetRect: contentRect,
+    targetSelector: '[data-tour-target="storybook-content-target"]',
     targetType: "content",
     title: "Primeiros passos",
   },
   parameters: {
     layout: "fullscreen",
   },
-} satisfies Meta<typeof SpotlightTourOverlay>;
+} satisfies Meta<typeof DriverSpotlightPreview>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
-type SpotlightTourStoryArgs = ComponentProps<typeof SpotlightTourOverlay>;
+type SpotlightTourStoryArgs = ComponentProps<typeof DriverSpotlightPreview>;
 
 /**
- * Renders a fake app shell behind the spotlight overlay.
+ * Renders a fake app shell behind the Driver.js spotlight.
  *
- * @param children Overlay story content.
+ * @param children Driver.js preview component.
  * @returns Story shell element.
  */
 const SpotlightStoryFrame = ({ children }: { children: ReactNode }) => (
@@ -60,7 +46,10 @@ const SpotlightStoryFrame = ({ children }: { children: ReactNode }) => (
         <div className="rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-sm font-semibold">
           Painel
         </div>
-        <div className="rounded-r-md border-l-2 border-l-purple-500 bg-white px-4 py-2.5 text-sm font-semibold text-purple-700 shadow-sm">
+        <div
+          className="rounded-r-md border-l-2 border-l-purple-500 bg-white px-4 py-2.5 text-sm font-semibold text-purple-700 shadow-sm"
+          data-tour-target="storybook-navigation-target"
+        >
           Locais
         </div>
         <div className="rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-sm font-semibold">
@@ -69,7 +58,10 @@ const SpotlightStoryFrame = ({ children }: { children: ReactNode }) => (
       </div>
     </aside>
     <main className="ml-72 p-10">
-      <div className="max-w-3xl rounded-md border border-purple-200 bg-purple-50/50 p-5">
+      <div
+        className="max-w-3xl rounded-md border border-purple-200 bg-purple-50/50 p-5"
+        data-tour-target="storybook-content-target"
+      >
         <h1 className="m-0 text-base font-semibold">Primeiros passos</h1>
         <p className="m-0 mt-2 text-sm text-gray-600">
           Siga a sequência operacional mínima para começar a movimentar estoque.
@@ -92,33 +84,33 @@ const SpotlightStoryFrame = ({ children }: { children: ReactNode }) => (
 );
 
 /**
- * Renders a content spotlight over the first-run guidance card.
+ * Renders a Driver.js content spotlight over the first-run guidance card.
  *
- * @param args Storybook args forwarded to the overlay.
+ * @param args Storybook args forwarded to the Driver.js preview.
  * @returns Content spotlight story element.
  */
 const ContentSpotlightStory = (args: SpotlightTourStoryArgs) => (
   <SpotlightStoryFrame>
-    <SpotlightTourOverlay
+    <DriverSpotlightPreview
       {...args}
-      targetRect={contentRect}
+      targetSelector='[data-tour-target="storybook-content-target"]'
       targetType="content"
     />
   </SpotlightStoryFrame>
 );
 
 /**
- * Renders a navigation spotlight over the next route target.
+ * Renders a Driver.js navigation spotlight over the next route target.
  *
- * @param args Storybook args forwarded to the overlay.
+ * @param args Storybook args forwarded to the Driver.js preview.
  * @returns Navigation spotlight story element.
  */
 const NavigationSpotlightStory = (args: SpotlightTourStoryArgs) => (
   <SpotlightStoryFrame>
-    <SpotlightTourOverlay
+    <DriverSpotlightPreview
       {...args}
       description="Abra locais para cadastrar onde o estoque físico será controlado."
-      targetRect={navigationRect}
+      targetSelector='[data-tour-target="storybook-navigation-target"]'
       targetType="navigation"
       title="Próximo destino"
     />
@@ -126,29 +118,33 @@ const NavigationSpotlightStory = (args: SpotlightTourStoryArgs) => (
 );
 
 /**
- * Renders the dismissed spotlight state.
+ * Renders the dismissed Driver.js spotlight state.
  *
- * @param args Storybook args forwarded to the overlay.
+ * @param args Storybook args forwarded to the Driver.js preview.
  * @returns Dismissed spotlight story element.
  */
 const DismissedStory = (args: SpotlightTourStoryArgs) => (
   <SpotlightStoryFrame>
-    <SpotlightTourOverlay {...args} isDismissed targetRect={contentRect} />
+    <DriverSpotlightPreview
+      {...args}
+      isDismissed
+      targetSelector='[data-tour-target="storybook-content-target"]'
+    />
   </SpotlightStoryFrame>
 );
 
 /**
  * Renders read-only viewer copy with no unavailable creation CTA.
  *
- * @param args Storybook args forwarded to the overlay.
+ * @param args Storybook args forwarded to the Driver.js preview.
  * @returns Viewer spotlight story element.
  */
 const ViewerStory = (args: SpotlightTourStoryArgs) => (
   <SpotlightStoryFrame>
-    <SpotlightTourOverlay
+    <DriverSpotlightPreview
       {...args}
       description="Este painel mostra o que ainda falta configurar. Seu acesso permite acompanhar e pesquisar, sem criar ou editar registros."
-      targetRect={contentRect}
+      targetSelector='[data-tour-target="storybook-content-target"]'
       targetType="content"
       title="Primeiros passos"
     />
@@ -158,15 +154,15 @@ const ViewerStory = (args: SpotlightTourStoryArgs) => (
 /**
  * Renders the tour after location and catalog setup have been completed.
  *
- * @param args Storybook args forwarded to the overlay.
+ * @param args Storybook args forwarded to the Driver.js preview.
  * @returns Partially completed setup spotlight story element.
  */
 const PartiallyCompletedStory = (args: SpotlightTourStoryArgs) => (
   <SpotlightStoryFrame>
-    <SpotlightTourOverlay
+    <DriverSpotlightPreview
       {...args}
       description="Abra recebimento quando locais e catálogo estiverem prontos para entrada inicial de estoque."
-      targetRect={navigationRect}
+      targetSelector='[data-tour-target="storybook-navigation-target"]'
       targetType="navigation"
       title="Próximo destino"
     />

@@ -25,6 +25,7 @@ type FirstRunGuidanceProps = {
   forceVisible?: boolean;
   initialDismissed?: boolean;
   organization?: Organization | null;
+  showSpotlightTour?: boolean;
 };
 
 const stepConfigs = {
@@ -153,6 +154,7 @@ export function FirstRunGuidance({
   forceVisible = false,
   initialDismissed = false,
   organization,
+  showSpotlightTour = true,
 }: FirstRunGuidanceProps) {
   const organizationId = organization?.id;
   const [isDismissed, setIsDismissed] = useState(false);
@@ -166,11 +168,22 @@ export function FirstRunGuidance({
     );
   }, [initialDismissed, organizationId]);
 
-  if (!organization || (!forceVisible && isDismissed)) {
+  if (!organization) {
     return null;
   }
 
   const currentStepConfig = stepConfigs[currentStep];
+  const spotlightTour = showSpotlightTour ? (
+    <FirstRunSpotlightTour
+      canManage={canManage}
+      currentStep={currentStep}
+      organizationId={organizationId}
+    />
+  ) : null;
+
+  if (!forceVisible && isDismissed) {
+    return spotlightTour;
+  }
 
   return (
     <>
@@ -237,11 +250,7 @@ export function FirstRunGuidance({
           ) : null}
         </CardContent>
       </Card>
-      <FirstRunSpotlightTour
-        canManage={canManage}
-        currentStep={currentStep}
-        organizationId={organizationId}
-      />
+      {spotlightTour}
     </>
   );
 }

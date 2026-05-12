@@ -1,13 +1,25 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, ClipboardCheck, RotateCw, Save } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ClipboardCheck,
+  RotateCw,
+  Save,
+} from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Organization, OrganizationProfileInput } from "../../lib/api";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Skeleton } from "../ui/skeleton";
 
 type CompletionItem = {
@@ -23,8 +35,6 @@ export type OrganizationSettingsViewProps = {
   onRetry?: () => void;
   onSave?: (input: OrganizationProfileInput) => Promise<void>;
   organization?: Organization | null;
-  saveErrorMessage?: string;
-  saveSuccessMessage?: string;
 };
 
 const writeRoles = new Set(["admin", "manager"]);
@@ -43,7 +53,9 @@ const getNullableValue = (value: string) => value.trim() || null;
  * @param organization Organization profile.
  * @returns Checklist items with CNPJ marked as primary.
  */
-const getCompletionItems = (organization?: Organization | null): CompletionItem[] => [
+const getCompletionItems = (
+  organization?: Organization | null,
+): CompletionItem[] => [
   {
     isComplete: Boolean(organization?.cnpj),
     label: "CNPJ",
@@ -76,8 +88,6 @@ export function OrganizationSettingsView({
   onRetry,
   onSave,
   organization,
-  saveErrorMessage,
-  saveSuccessMessage,
 }: OrganizationSettingsViewProps) {
   const [name, setName] = useState("");
   const [cnpj, setCnpj] = useState("");
@@ -87,7 +97,10 @@ export function OrganizationSettingsView({
   const previousOrganizationIdRef = useRef<string | null>(null);
   const role = organization?.role?.toLowerCase() ?? "viewer";
   const canEdit = writeRoles.has(role);
-  const completionItems = useMemo(() => getCompletionItems(organization), [organization]);
+  const completionItems = useMemo(
+    () => getCompletionItems(organization),
+    [organization],
+  );
   const missingItems = completionItems.filter((item) => !item.isComplete);
   const isProfileIncomplete = Boolean(organization) && missingItems.length > 0;
 
@@ -133,7 +146,10 @@ export function OrganizationSettingsView({
 
   if (isLoading) {
     return (
-      <main aria-busy="true" className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6">
+      <main
+        aria-busy="true"
+        className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6"
+      >
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
           <div className="border-b border-purple-100 pb-5">
             <Skeleton className="h-4 w-36" />
@@ -172,7 +188,9 @@ export function OrganizationSettingsView({
         {!organization ? (
           <Alert variant="destructive">
             <AlertTitle>Nenhuma organização selecionada</AlertTitle>
-            <AlertDescription>Selecione uma organização antes de editar as configurações.</AlertDescription>
+            <AlertDescription>
+              Selecione uma organização antes de editar as configurações.
+            </AlertDescription>
           </Alert>
         ) : null}
 
@@ -194,7 +212,8 @@ export function OrganizationSettingsView({
             <div className="pl-6">
               <AlertTitle>Complete o perfil da empresa</AlertTitle>
               <AlertDescription>
-                CNPJ é o principal identificador da empresa. Adicione quando disponível; campos ausentes não bloqueiam o trabalho de estoque.
+                CNPJ é o principal identificador da empresa. Adicione quando
+                disponível; campos ausentes não bloqueiam o trabalho de estoque.
               </AlertDescription>
             </div>
           </Alert>
@@ -204,7 +223,8 @@ export function OrganizationSettingsView({
           <Alert variant="warning">
             <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
-              Visualizadores podem revisar os dados da empresa, mas não podem editar configurações da organização.
+              Visualizadores podem revisar os dados da empresa, mas não podem
+              editar configurações da organização.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -214,13 +234,16 @@ export function OrganizationSettingsView({
             <CardHeader>
               <CardTitle>Perfil da empresa</CardTitle>
               <CardDescription>
-                Mantenha os dados legais e de contato atualizados para esta organização.
+                Mantenha os dados legais e de contato atualizados para esta
+                organização.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form className="grid gap-4" onSubmit={handleSubmit}>
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Nome</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    Nome
+                  </span>
                   <input
                     className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                     disabled={!canEdit || isSaving}
@@ -233,7 +256,9 @@ export function OrganizationSettingsView({
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">CNPJ</span>
+                    <span className="text-xs font-semibold text-purple-700">
+                      CNPJ
+                    </span>
                     <input
                       className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                       disabled={!canEdit || isSaving}
@@ -244,7 +269,9 @@ export function OrganizationSettingsView({
                   </label>
 
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Email</span>
+                    <span className="text-xs font-semibold text-purple-700">
+                      Email
+                    </span>
                     <input
                       className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                       disabled={!canEdit || isSaving}
@@ -258,7 +285,9 @@ export function OrganizationSettingsView({
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Telefone</span>
+                    <span className="text-xs font-semibold text-purple-700">
+                      Telefone
+                    </span>
                     <input
                       className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                       disabled={!canEdit || isSaving}
@@ -269,7 +298,9 @@ export function OrganizationSettingsView({
                   </label>
 
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Tipo de plano</span>
+                    <span className="text-xs font-semibold text-purple-700">
+                      Tipo de plano
+                    </span>
                     <input
                       className="h-10 min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:cursor-not-allowed disabled:bg-purple-50"
                       disabled={!canEdit || isSaving}
@@ -280,25 +311,17 @@ export function OrganizationSettingsView({
                   </label>
                 </div>
 
-                {saveErrorMessage ? (
-                  <p className="m-0 text-sm text-[#b42318]" role="alert">
-                    {saveErrorMessage}
-                  </p>
-                ) : null}
-
-                {saveSuccessMessage ? (
-                  <p className="m-0 text-sm text-purple-700" role="status">
-                    {saveSuccessMessage}
-                  </p>
-                ) : null}
-
                 {canEdit ? (
                   <Button
                     className="justify-self-start"
                     disabled={!onSave || isSaving || !name.trim()}
                     type="submit"
                   >
-                    {isSaving ? <RotateCw className="animate-spin" /> : <Save />}
+                    {isSaving ? (
+                      <RotateCw className="animate-spin" />
+                    ) : (
+                      <Save />
+                    )}
                     Salvar alterações
                   </Button>
                 ) : null}
@@ -309,7 +332,9 @@ export function OrganizationSettingsView({
           <Card>
             <CardHeader>
               <CardTitle>Checklist do perfil</CardTitle>
-              <CardDescription>Complete o perfil principal da organização ao longo do tempo.</CardDescription>
+              <CardDescription>
+                Complete o perfil principal da organização ao longo do tempo.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="m-0 grid list-none gap-3 p-0">
@@ -327,7 +352,11 @@ export function OrganizationSettingsView({
                       <span className="truncate">{item.label}</span>
                     </span>
                     <Badge variant={item.isComplete ? "secondary" : "outline"}>
-                      {item.isComplete ? "Concluído" : item.primary ? "Principal" : "Pendente"}
+                      {item.isComplete
+                        ? "Concluído"
+                        : item.primary
+                          ? "Principal"
+                          : "Pendente"}
                     </Badge>
                   </li>
                 ))}

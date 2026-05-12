@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { AuthGuard } from "../../components/auth/auth-guard";
 import { OrganizationSelectionView } from "../../components/organizations/organization-selection-view";
 import { createOrganization, getOrganizations } from "../../lib/api";
@@ -30,7 +31,11 @@ export default function OrganizationSelectionRoute() {
     <AuthGuard>
       <Suspense
         fallback={
-          <OrganizationSelectionView isLoading organizations={[]} selectedOrganizationId={null} />
+          <OrganizationSelectionView
+            isLoading
+            organizations={[]}
+            selectedOrganizationId={null}
+          />
         }
       >
         <OrganizationSelectionPage />
@@ -50,7 +55,9 @@ function OrganizationSelectionPage() {
   const searchParams = useSearchParams();
   const nextPath = getSafeNextPath(searchParams.get("next"));
   const isSwitchMode = searchParams.get("mode") === "switch";
-  const [selectedOrganizationId, setSelectedOrganizationIdState] = useState<string | null>(null);
+  const [selectedOrganizationId, setSelectedOrganizationIdState] = useState<
+    string | null
+  >(null);
   const organizationsQuery = useQuery({
     queryKey: ["organizations"],
     queryFn: getOrganizations,
@@ -59,9 +66,13 @@ function OrganizationSelectionPage() {
   const createOrganizationMutation = useMutation({
     mutationFn: createOrganization,
     onSuccess: async (organization) => {
+      toast.success("Organização criada.");
       setSelectedOrganizationId(organization.id);
       setSelectedOrganizationIdState(organization.id);
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
+    },
+    onError: (error) => {
+      toast.error(error.message);
     },
   });
 
@@ -89,7 +100,6 @@ function OrganizationSelectionPage() {
     <OrganizationSelectionView
       errorMessage={organizationsQuery.error?.message}
       isLoading={organizationsQuery.isPending}
-      createErrorMessage={createOrganizationMutation.error?.message}
       isCreating={createOrganizationMutation.isPending}
       onCreate={async (input) => {
         await createOrganizationMutation.mutateAsync(input);
