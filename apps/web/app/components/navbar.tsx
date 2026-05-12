@@ -53,7 +53,11 @@ type NavItem = {
 
 const actionRoles = new Set(["admin", "manager"]);
 
-const dashboardNavItem = { icon: LayoutDashboard, label: "Painel", href: "/dashboard" };
+const dashboardNavItem = {
+  icon: LayoutDashboard,
+  label: "Painel",
+  href: "/dashboard",
+};
 const locationsNavItem = {
   icon: MapPin,
   isActive: (currentPath: string) => currentPath === "/dashboard/locations",
@@ -69,7 +73,12 @@ const workflowNavItems: NavItem[] = [
   { icon: Package, label: "Itens", href: "/dashboard/items" },
   { icon: Tags, label: "Categorias", href: "/dashboard/categories" },
   { icon: Users, label: "Clientes", href: "/dashboard/customers" },
-  { icon: Truck, label: "Recebimento", href: "/dashboard/receiving", requiresActionRole: true },
+  {
+    icon: Truck,
+    label: "Recebimento",
+    href: "/dashboard/receiving",
+    requiresActionRole: true,
+  },
   { icon: ReceiptText, label: "Transações", href: "/dashboard/transactions" },
 ];
 
@@ -92,7 +101,8 @@ const getLocationInventoryItem = (
     : "/dashboard/locations",
   helper: selectedLocationName ?? "Selecione um local primeiro",
   isActive: (currentPath: string) =>
-    currentPath.startsWith("/dashboard/locations/") && currentPath.includes("/inventory"),
+    currentPath.startsWith("/dashboard/locations/") &&
+    currentPath.includes("/inventory"),
   opensLocationSelector: !selectedLocationId && hasSelectableLocations,
 });
 
@@ -104,7 +114,8 @@ const getLocationInventoryItem = (
  * @returns True when the target matches the current route.
  */
 const isActivePath = (currentPath: string, href: string) =>
-  currentPath === href || (href !== "/dashboard" && currentPath.startsWith(`${href}/`));
+  currentPath === href ||
+  (href !== "/dashboard" && currentPath.startsWith(`${href}/`));
 
 /**
  * Renders authenticated inventory navigation.
@@ -129,12 +140,19 @@ export const Navbar = ({
   const activePath = currentPath ?? pathname;
   const role = organization?.role?.toLowerCase() ?? "viewer";
   const canUseActionWorkflows = actionRoles.has(role);
-  const activeLocations = locations.filter((location) => location.is_active !== false);
-  const hasSelectableLocations = activeLocations.length > 0 && !hasLocationLoadError;
+  const activeLocations = locations.filter(
+    (location) => location.is_active !== false,
+  );
+  const hasSelectableLocations =
+    activeLocations.length > 0 && !hasLocationLoadError;
   const navItems: NavItem[] = [
     dashboardNavItem,
     locationsNavItem,
-    getLocationInventoryItem(hasSelectableLocations, selectedLocationId, selectedLocationName),
+    getLocationInventoryItem(
+      hasSelectableLocations,
+      selectedLocationId,
+      selectedLocationName,
+    ),
     organizationSettingsNavItem,
     ...workflowNavItems,
   ];
@@ -145,7 +163,9 @@ export const Navbar = ({
         <span className="absolute top-3.5 left-0.5 h-[21px] w-[21px] rotate-[30deg] skew-y-[-30deg] bg-purple-300" />
         <span className="absolute top-3.5 right-0.5 h-[21px] w-[21px] rotate-[30deg] skew-y-[-30deg] bg-purple-700" />
       </span>
-      <span className="truncate text-lg leading-6 font-bold text-[#0f0f11]">estoque ai</span>
+      <span className="truncate text-lg leading-6 font-bold text-[#0f0f11]">
+        estoque ai
+      </span>
     </Link>
   );
 
@@ -160,7 +180,9 @@ export const Navbar = ({
             <p className="truncate text-sm font-semibold text-[#16151c]">
               {organization?.name ?? "Nenhuma organização selecionada"}
             </p>
-            <p className="mt-0.5 text-xs font-medium capitalize text-gray-500">{role}</p>
+            <p className="mt-0.5 text-xs font-medium capitalize text-gray-500">
+              {role}
+            </p>
           </div>
         </div>
         <Link
@@ -176,19 +198,24 @@ export const Navbar = ({
         <button
           aria-expanded={isLocationSelectorOpen}
           className="mt-2 flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 text-left text-sm font-semibold text-[#16151c] transition-colors hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-70"
-          disabled={isLoadingLocations || hasLocationLoadError || !locations.length}
+          disabled={
+            isLoadingLocations || hasLocationLoadError || !locations.length
+          }
           onClick={() => setIsLocationSelectorOpen((open) => !open)}
           type="button"
         >
           <span className="truncate">
             {isLoadingLocations
               ? "Carregando locais"
-              : (selectedLocationName ?? (locations.length ? "Selecionar local" : "Nenhum local"))}
+              : (selectedLocationName ??
+                (locations.length ? "Selecionar local" : "Nenhum local"))}
           </span>
           <ChevronDown className="size-4 shrink-0 text-purple-600" />
         </button>
         {hasLocationLoadError ? (
-          <p className="m-0 mt-2 text-xs text-[#b42318]">Não foi possível carregar os locais.</p>
+          <p className="m-0 mt-2 text-xs text-[#b42318]">
+            Não foi possível carregar os locais.
+          </p>
         ) : null}
         {isLocationSelectorOpen ? (
           <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-purple-100 bg-white p-1">
@@ -214,8 +241,12 @@ export const Navbar = ({
                   type="button"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate font-medium">{location.name}</span>
-                    {isInactive ? <span className="block text-xs">Inativo</span> : null}
+                    <span className="block truncate font-medium">
+                      {location.name}
+                    </span>
+                    {isInactive ? (
+                      <span className="block text-xs">Inativo</span>
+                    ) : null}
                   </span>
                   {isSelected ? <Check className="size-4 shrink-0" /> : null}
                 </button>
@@ -236,7 +267,9 @@ export const Navbar = ({
             opensLocationSelector,
             requiresActionRole,
           }) => {
-            const isLocked = Boolean(requiresActionRole && !canUseActionWorkflows);
+            const isLocked = Boolean(
+              requiresActionRole && !canUseActionWorkflows,
+            );
             const isActive = isItemActive
               ? isItemActive(activePath)
               : isActivePath(activePath, href);
@@ -251,9 +284,13 @@ export const Navbar = ({
                 >
                   <Icon className="size-4 shrink-0" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold">{label}</span>
+                    <span className="block truncate text-sm font-semibold">
+                      {label}
+                    </span>
                     {helper ? (
-                      <span className="block truncate text-xs text-gray-500">{helper}</span>
+                      <span className="block truncate text-xs text-gray-500">
+                        {helper}
+                      </span>
                     ) : null}
                   </span>
                 </button>
@@ -266,7 +303,8 @@ export const Navbar = ({
                 className={cn(
                   "flex min-h-11 items-center gap-3 rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-[#16151c] transition-colors",
                   "hover:border-l-purple-500 hover:bg-purple-500/10 hover:text-purple-600",
-                  isActive && "border-l-purple-500 bg-white text-purple-700 shadow-sm",
+                  isActive &&
+                    "border-l-purple-500 bg-white text-purple-700 shadow-sm",
                   isLocked &&
                     "pointer-events-none text-gray-400 hover:border-l-transparent hover:bg-transparent",
                 )}
@@ -277,12 +315,18 @@ export const Navbar = ({
               >
                 <Icon className="size-4 shrink-0" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">{label}</span>
+                  <span className="block truncate text-sm font-semibold">
+                    {label}
+                  </span>
                   {helper ? (
-                    <span className="block truncate text-xs text-gray-500">{helper}</span>
+                    <span className="block truncate text-xs text-gray-500">
+                      {helper}
+                    </span>
                   ) : null}
                 </span>
-                {isLocked ? <Lock className="size-3.5 shrink-0" aria-label="Restrito" /> : null}
+                {isLocked ? (
+                  <Lock className="size-3.5 shrink-0" aria-label="Restrito" />
+                ) : null}
               </Link>
             );
           },
@@ -305,7 +349,11 @@ export const Navbar = ({
           onClick={() => setIsMobileOpen((open) => !open)}
           type="button"
         >
-          {isMobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+          {isMobileOpen ? (
+            <X className="size-5" />
+          ) : (
+            <Menu className="size-5" />
+          )}
         </button>
       </header>
 

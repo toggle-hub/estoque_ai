@@ -168,15 +168,8 @@ export function DashboardOverviewView({
     );
   }
 
-  const hasInventory = Boolean(metrics && (metrics.totalSkus > 0 || metrics.totalStockUnits > 0));
-  const metricCards = getMetricCards(
-    metrics ?? {
-      inventoryValue: 0,
-      lowStockItems: 0,
-      totalSkus: 0,
-      totalStockUnits: 0,
-    },
-  );
+  const metricCards = !errorMessage && metrics ? getMetricCards(metrics) : undefined;
+  const hasInventory = !errorMessage && metrics ? Boolean(metrics.totalSkus > 0 || metrics.totalStockUnits > 0) : false;
 
   return (
     <main className="min-h-[calc(100svh-4rem)] bg-white p-4 text-[#16151c] md:min-h-screen md:p-6">
@@ -219,9 +212,9 @@ export function DashboardOverviewView({
           </Alert>
         ) : null}
 
-        {organization ? (
+        {organization && !errorMessage && metricCards ? (
           <>
-            {!errorMessage && !hasInventory ? (
+            {!hasInventory ? (
               <Alert>
                 <AlertTitle>Estoque ainda vazio</AlertTitle>
                 <AlertDescription>
