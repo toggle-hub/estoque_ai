@@ -219,118 +219,122 @@ export function DashboardOverviewView({
           </Alert>
         ) : null}
 
-        {!errorMessage && organization && !hasInventory ? (
-          <Alert>
-            <AlertTitle>Estoque ainda vazio</AlertTitle>
-            <AlertDescription>
-              Cadastre itens e registre recebimentos para preencher os indicadores operacionais.
-            </AlertDescription>
-          </Alert>
-        ) : null}
+        {organization ? (
+          <>
+            {!errorMessage && !hasInventory ? (
+              <Alert>
+                <AlertTitle>Estoque ainda vazio</AlertTitle>
+                <AlertDescription>
+                  Cadastre itens e registre recebimentos para preencher os indicadores operacionais.
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {metricCards.map((metric) => {
-            const Icon = metric.icon;
+            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {metricCards.map((metric) => {
+                const Icon = metric.icon;
 
-            return (
-              <Card
-                className={cn(
-                  "min-h-36",
-                  metric.tone === "warning" ? "border-purple-200 bg-purple-50" : undefined,
-                )}
-                key={metric.title}
-              >
-                <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
-                  <div className="min-w-0">
-                    <CardDescription>{metric.title}</CardDescription>
-                    <CardTitle className="mt-2 truncate text-2xl">{metric.value}</CardTitle>
-                  </div>
-                  <span
+                return (
+                  <Card
                     className={cn(
-                      "grid size-10 shrink-0 place-items-center rounded-md bg-purple-100 text-purple-700",
-                      metric.tone === "warning" ? "bg-purple-500 text-white" : undefined,
+                      "min-h-36",
+                      metric.tone === "warning" ? "border-purple-200 bg-purple-50" : undefined,
                     )}
+                    key={metric.title}
                   >
-                    <Icon className="size-5" />
-                  </span>
+                    <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
+                      <div className="min-w-0">
+                        <CardDescription>{metric.title}</CardDescription>
+                        <CardTitle className="mt-2 truncate text-2xl">{metric.value}</CardTitle>
+                      </div>
+                      <span
+                        className={cn(
+                          "grid size-10 shrink-0 place-items-center rounded-md bg-purple-100 text-purple-700",
+                          metric.tone === "warning" ? "bg-purple-500 text-white" : undefined,
+                        )}
+                      >
+                        <Icon className="size-5" />
+                      </span>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="m-0 text-sm leading-6 text-gray-500">{metric.description}</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </section>
+
+            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Atividade recente</CardTitle>
+                  <CardDescription>Últimos recebimentos e vendas registrados.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="m-0 text-sm leading-6 text-gray-500">{metric.description}</p>
+                  {activities.length ? (
+                    <div className="divide-y divide-purple-100">
+                      {activities.map((activity) => {
+                        const activityType = activityLabels[activity.type];
+                        const ActivityIcon = activityType.icon;
+
+                        return (
+                          <div className="flex min-w-0 items-center gap-3 py-3" key={activity.id}>
+                            <span className="grid size-9 shrink-0 place-items-center rounded-md bg-purple-100 text-purple-700">
+                              <ActivityIcon className="size-4" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                <p className="m-0 truncate text-sm font-semibold">{activity.itemName}</p>
+                                <Badge variant="outline">{activityType.label}</Badge>
+                              </div>
+                              <p className="m-0 mt-1 truncate text-xs text-gray-500">
+                                {activity.sku ?? "Sem SKU"} · {activity.locationName ?? "Local desconhecido"} ·{" "}
+                                {formatActivityDate(activity.occurredAt)}
+                              </p>
+                            </div>
+                            <span className={cn("shrink-0 text-sm font-semibold", activityType.quantityClassName)}>
+                              {activity.type === "SALE" ? "-" : "+"}
+                              {formatNumber(activity.quantity)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-purple-200 p-6 text-center">
+                      <AlertCircle className="size-8 text-purple-500" />
+                      <div>
+                        <p className="m-0 text-sm font-semibold">Nenhuma movimentação recente</p>
+                        <p className="m-0 mt-1 text-sm leading-6 text-gray-500">
+                          Recebimentos e vendas aparecerão aqui quando estiverem disponíveis.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            );
-          })}
-        </section>
 
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Atividade recente</CardTitle>
-              <CardDescription>Últimos recebimentos e vendas registrados.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {activities.length ? (
-                <div className="divide-y divide-purple-100">
-                  {activities.map((activity) => {
-                    const activityType = activityLabels[activity.type];
-                    const ActivityIcon = activityType.icon;
-
-                    return (
-                      <div className="flex min-w-0 items-center gap-3 py-3" key={activity.id}>
-                        <span className="grid size-9 shrink-0 place-items-center rounded-md bg-purple-100 text-purple-700">
-                          <ActivityIcon className="size-4" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                            <p className="m-0 truncate text-sm font-semibold">{activity.itemName}</p>
-                            <Badge variant="outline">{activityType.label}</Badge>
-                          </div>
-                          <p className="m-0 mt-1 truncate text-xs text-gray-500">
-                            {activity.sku ?? "Sem SKU"} · {activity.locationName ?? "Local desconhecido"} ·{" "}
-                            {formatActivityDate(activity.occurredAt)}
-                          </p>
-                        </div>
-                        <span className={cn("shrink-0 text-sm font-semibold", activityType.quantityClassName)}>
-                          {activity.type === "SALE" ? "-" : "+"}
-                          {formatNumber(activity.quantity)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-purple-200 p-6 text-center">
-                  <AlertCircle className="size-8 text-purple-500" />
-                  <div>
-                    <p className="m-0 text-sm font-semibold">Nenhuma movimentação recente</p>
-                    <p className="m-0 mt-1 text-sm leading-6 text-gray-500">
-                      Recebimentos e vendas aparecerão aqui quando estiverem disponíveis.
+              <Card>
+                <CardHeader>
+                  <CardTitle>Reposição</CardTitle>
+                  <CardDescription>Prioridade operacional para o dia.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border border-purple-100 bg-purple-50 p-4">
+                    <p className="m-0 text-3xl font-semibold text-purple-700">
+                      {formatNumber(metrics?.lowStockItems ?? 0)}
+                    </p>
+                    <p className="m-0 mt-2 text-sm leading-6 text-gray-500">
+                      {metrics?.lowStockItems
+                        ? "Revise os itens abaixo do ponto de reposição antes das próximas vendas."
+                        : "Nenhum item está abaixo do ponto de reposição no momento."}
                     </p>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Reposição</CardTitle>
-              <CardDescription>Prioridade operacional para o dia.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border border-purple-100 bg-purple-50 p-4">
-                <p className="m-0 text-3xl font-semibold text-purple-700">
-                  {formatNumber(metrics?.lowStockItems ?? 0)}
-                </p>
-                <p className="m-0 mt-2 text-sm leading-6 text-gray-500">
-                  {metrics?.lowStockItems
-                    ? "Revise os itens abaixo do ponto de reposição antes das próximas vendas."
-                    : "Nenhum item está abaixo do ponto de reposição no momento."}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
+                </CardContent>
+              </Card>
+            </section>
+          </>
+        ) : null}
       </div>
     </main>
   );
