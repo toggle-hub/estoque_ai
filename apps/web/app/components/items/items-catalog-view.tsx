@@ -48,6 +48,7 @@ export type ItemsCatalogViewProps = {
 };
 
 const writeRoles = new Set(["admin", "manager"]);
+const catalogFilterSkeletonKeys = ["search", "category", "stock"];
 
 /**
  * Narrows nullable category names to strings.
@@ -152,7 +153,7 @@ export function ItemsCatalogView({
             <Skeleton className="mt-3 h-4 w-full max-w-2xl" />
           </div>
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_180px]">
-            {Array.from({ length: 3 }, (_, index) => <Skeleton className="h-16" key={index} />)}
+            {catalogFilterSkeletonKeys.map((key) => <Skeleton className="h-16" key={key} />)}
           </div>
           <Skeleton className="h-80 w-full" />
         </div>

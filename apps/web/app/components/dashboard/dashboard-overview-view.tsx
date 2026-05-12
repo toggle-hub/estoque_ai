@@ -236,6 +236,12 @@ const getMetricCards = (metrics: DashboardOverviewMetrics): MetricCardConfig[] =
   },
 ];
 
+const metricSkeletonKeys = ["sku", "units", "low-stock", "value"];
+const activityHeaderSkeletonKeys = ["item", "location", "type", "quantity", "actor", "date"];
+const activityRowSkeletonKeys = ["row-a", "row-b", "row-c", "row-d"];
+const alertHeaderSkeletonKeys = ["item", "quantity", "reorder-point", "status"];
+const alertRowSkeletonKeys = ["row-a", "row-b", "row-c"];
+
 /**
  * Renders a layout-preserving loading state for the dashboard overview.
  *
@@ -262,8 +268,8 @@ function DashboardOverviewSkeleton() {
         </header>
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }, (_, index) => (
-            <Card className="min-h-36" key={index}>
+          {metricSkeletonKeys.map((key) => (
+            <Card className="min-h-36" key={key}>
               <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
                 <div className="min-w-0 flex-1">
                   <Skeleton className="h-4 w-24" />
@@ -288,18 +294,18 @@ function DashboardOverviewSkeleton() {
             <CardContent>
               <div className="rounded-md border border-purple-100">
                 <div className="grid grid-cols-[2fr_1fr_1fr_0.7fr_1fr_1fr] gap-3 bg-purple-50 px-3 py-3">
-                  {Array.from({ length: 6 }, (_, index) => (
-                    <Skeleton className="h-4" key={index} />
+                  {activityHeaderSkeletonKeys.map((key) => (
+                    <Skeleton className="h-4" key={key} />
                   ))}
                 </div>
                 <div className="divide-y divide-purple-100">
-                  {Array.from({ length: 4 }, (_, rowIndex) => (
+                  {activityRowSkeletonKeys.map((rowKey) => (
                     <div
                       className="grid grid-cols-[2fr_1fr_1fr_0.7fr_1fr_1fr] gap-3 px-3 py-3"
-                      key={rowIndex}
+                      key={rowKey}
                     >
-                      {Array.from({ length: 6 }, (_, cellIndex) => (
-                        <Skeleton className="h-4" key={cellIndex} />
+                      {activityHeaderSkeletonKeys.map((cellKey) => (
+                        <Skeleton className="h-4" key={`${rowKey}-${cellKey}`} />
                       ))}
                     </div>
                   ))}
@@ -316,18 +322,18 @@ function DashboardOverviewSkeleton() {
             <CardContent>
               <div className="rounded-md border border-purple-100">
                 <div className="grid grid-cols-[1.5fr_0.7fr_0.9fr_0.9fr] gap-3 bg-purple-50 px-3 py-3">
-                  {Array.from({ length: 4 }, (_, index) => (
-                    <Skeleton className="h-4" key={index} />
+                  {alertHeaderSkeletonKeys.map((key) => (
+                    <Skeleton className="h-4" key={key} />
                   ))}
                 </div>
                 <div className="divide-y divide-purple-100">
-                  {Array.from({ length: 3 }, (_, rowIndex) => (
+                  {alertRowSkeletonKeys.map((rowKey) => (
                     <div
                       className="grid grid-cols-[1.5fr_0.7fr_0.9fr_0.9fr] gap-3 px-3 py-3"
-                      key={rowIndex}
+                      key={rowKey}
                     >
-                      {Array.from({ length: 4 }, (_, cellIndex) => (
-                        <Skeleton className="h-4" key={cellIndex} />
+                      {alertHeaderSkeletonKeys.map((cellKey) => (
+                        <Skeleton className="h-4" key={`${rowKey}-${cellKey}`} />
                       ))}
                     </div>
                   ))}

@@ -69,6 +69,7 @@ const transactionTypeLabels: Record<string, string> = {
   SALE: "Venda",
   TRANSFER: "Transferência",
 };
+const transactionFilterSkeletonKeys = ["search", "location", "type", "from", "to"];
 
 /**
  * Returns localized copy for a transaction type.
@@ -134,7 +135,7 @@ export function TransactionsHistoryView({
             <Skeleton className="mt-3 h-4 w-full max-w-2xl" />
           </div>
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_180px_160px_160px]">
-            {Array.from({ length: 5 }, (_, index) => <Skeleton className="h-16" key={index} />)}
+            {transactionFilterSkeletonKeys.map((key) => <Skeleton className="h-16" key={key} />)}
           </div>
           <Skeleton className="h-80 w-full" />
         </div>
