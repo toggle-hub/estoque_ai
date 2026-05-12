@@ -16,7 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Spinner } from "../ui/spinner";
+import { Skeleton } from "../ui/skeleton";
 import {
   Table,
   TableBody,
@@ -237,6 +237,111 @@ const getMetricCards = (metrics: DashboardOverviewMetrics): MetricCardConfig[] =
 ];
 
 /**
+ * Renders a layout-preserving loading state for the dashboard overview.
+ *
+ * @returns Dashboard overview skeleton UI.
+ */
+function DashboardOverviewSkeleton() {
+  return (
+    <main
+      aria-busy="true"
+      aria-label="Carregando painel operacional"
+      className="min-h-[calc(100svh-4rem)] bg-white p-4 text-[#16151c] md:min-h-screen md:p-6"
+    >
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+        <header className="flex flex-col gap-4 border-b border-purple-100 pb-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="mt-3 h-8 w-56" />
+            <Skeleton className="mt-3 h-4 w-full max-w-xl" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-6 w-28" />
+            <Skeleton className="h-6 w-36" />
+          </div>
+        </header>
+
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }, (_, index) => (
+            <Card className="min-h-36" key={index}>
+              <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
+                <div className="min-w-0 flex-1">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="mt-3 h-8 w-32" />
+                </div>
+                <Skeleton className="size-10 shrink-0" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="mt-2 h-4 w-3/4" />
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="mt-2 h-4 w-64" />
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border border-purple-100">
+                <div className="grid grid-cols-[2fr_1fr_1fr_0.7fr_1fr_1fr] gap-3 bg-purple-50 px-3 py-3">
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <Skeleton className="h-4" key={index} />
+                  ))}
+                </div>
+                <div className="divide-y divide-purple-100">
+                  {Array.from({ length: 4 }, (_, rowIndex) => (
+                    <div
+                      className="grid grid-cols-[2fr_1fr_1fr_0.7fr_1fr_1fr] gap-3 px-3 py-3"
+                      key={rowIndex}
+                    >
+                      {Array.from({ length: 6 }, (_, cellIndex) => (
+                        <Skeleton className="h-4" key={cellIndex} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-52" />
+              <Skeleton className="mt-2 h-4 w-60" />
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border border-purple-100">
+                <div className="grid grid-cols-[1.5fr_0.7fr_0.9fr_0.9fr] gap-3 bg-purple-50 px-3 py-3">
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <Skeleton className="h-4" key={index} />
+                  ))}
+                </div>
+                <div className="divide-y divide-purple-100">
+                  {Array.from({ length: 3 }, (_, rowIndex) => (
+                    <div
+                      className="grid grid-cols-[1.5fr_0.7fr_0.9fr_0.9fr] gap-3 px-3 py-3"
+                      key={rowIndex}
+                    >
+                      {Array.from({ length: 4 }, (_, cellIndex) => (
+                        <Skeleton className="h-4" key={cellIndex} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+/**
  * Renders the operational dashboard overview content.
  *
  * @param props Dashboard overview props.
@@ -252,11 +357,7 @@ export function DashboardOverviewView({
   organization,
 }: DashboardOverviewViewProps) {
   if (isLoading) {
-    return (
-      <main className="grid min-h-[calc(100svh-4rem)] place-items-center bg-white p-6 md:min-h-screen">
-        <Spinner />
-      </main>
-    );
+    return <DashboardOverviewSkeleton />;
   }
 
   const metricCards = !errorMessage && metrics ? getMetricCards(metrics) : undefined;

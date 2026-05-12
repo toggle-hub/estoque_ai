@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Spinner } from "../ui/spinner";
+import { Skeleton } from "../ui/skeleton";
 import {
   Table,
   TableBody,
@@ -144,8 +144,18 @@ export function ItemsCatalogView({
 
   if (isLoading) {
     return (
-      <main className="grid min-h-[calc(100svh-4rem)] place-items-center bg-white p-6 md:min-h-screen">
-        <Spinner />
+      <main aria-busy="true" className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+          <div className="border-b border-purple-100 pb-5">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="mt-3 h-8 w-52" />
+            <Skeleton className="mt-3 h-4 w-full max-w-2xl" />
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_180px]">
+            {Array.from({ length: 3 }, (_, index) => <Skeleton className="h-16" key={index} />)}
+          </div>
+          <Skeleton className="h-80 w-full" />
+        </div>
       </main>
     );
   }
