@@ -2,7 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LocationsManagementView, type LocationInventorySummary } from "../../components/locations/locations-management-view";
+import { toast } from "sonner";
+import {
+  LocationsManagementView,
+  type LocationInventorySummary,
+} from "../../components/locations/locations-management-view";
 import { Navbar } from "../../components/navbar";
 import {
   createOrganizationLocation,
@@ -50,25 +54,29 @@ const useSelectedOrganization = () => {
  * @returns Inventory summary keyed by location id.
  */
 const getLocationSummaries = (stock: OrganizationStockLevel[]) =>
-  stock.reduce<Record<string, LocationInventorySummary>>((summaries, stockLevel) => {
-    const current = summaries[stockLevel.location_id] ?? {
-      itemCount: 0,
-      lowStockCount: 0,
-      totalQuantity: 0,
-      totalValue: 0,
-    };
-    const unitPrice = Number(stockLevel.item.unit_price ?? 0);
+  stock.reduce<Record<string, LocationInventorySummary>>(
+    (summaries, stockLevel) => {
+      const current = summaries[stockLevel.location_id] ?? {
+        itemCount: 0,
+        lowStockCount: 0,
+        totalQuantity: 0,
+        totalValue: 0,
+      };
+      const unitPrice = Number(stockLevel.item.unit_price ?? 0);
 
-    summaries[stockLevel.location_id] = {
-      itemCount: current.itemCount + 1,
-      lowStockCount:
-        current.lowStockCount + (stockLevel.quantity <= stockLevel.item.reorder_point ? 1 : 0),
-      totalQuantity: current.totalQuantity + stockLevel.quantity,
-      totalValue: current.totalValue + stockLevel.quantity * unitPrice,
-    };
+      summaries[stockLevel.location_id] = {
+        itemCount: current.itemCount + 1,
+        lowStockCount:
+          current.lowStockCount +
+          (stockLevel.quantity <= stockLevel.item.reorder_point ? 1 : 0),
+        totalQuantity: current.totalQuantity + stockLevel.quantity,
+        totalValue: current.totalValue + stockLevel.quantity * unitPrice,
+      };
 
-    return summaries;
-  }, {});
+      return summaries;
+    },
+    {},
+  );
 
 /**
  * Returns selectable active locations.
@@ -86,8 +94,10 @@ const getActiveLocations = (locations: Location[]) =>
  */
 export default function LocationsPage() {
   const queryClient = useQueryClient();
-  const { organizationsQuery, selectedOrganization } = useSelectedOrganization();
-  const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
+  const { organizationsQuery, selectedOrganization } =
+    useSelectedOrganization();
+  const [selectedLocation, setSelectedLocationState] =
+    useState<SelectedLocation | null>(null);
   const organizationId = selectedOrganization?.id;
   const prevOrganizationId = useRef<string | undefined>(organizationId);
   const locationsQuery = useQuery({
@@ -103,16 +113,24 @@ export default function LocationsPage() {
     retry: false,
   });
   const createLocationMutation = useMutation({
-    mutationFn: (input: { address?: string; name: string; organization: Organization }) =>
+    mutationFn: (input: {
+      address?: string;
+      name: string;
+      organization: Organization;
+    }) =>
       createOrganizationLocation({
         address: input.address,
         name: input.name,
         organizationId: input.organization.id,
       }),
     onSuccess: async (_location, variables) => {
+      toast.success("Local criado.");
       await queryClient.invalidateQueries({
         queryKey: ["organizations", variables.organization.id, "locations"],
       });
+    },
+    onError: (error) => {
+      toast.error(error.message);
     },
   });
   const summaries = useMemo(
@@ -121,7 +139,9 @@ export default function LocationsPage() {
   );
   const hasOrganization = Boolean(organizationId);
   const isLoadingLocations = hasOrganization ? locationsQuery.isPending : false;
-  const hasLocationLoadError = hasOrganization ? Boolean(locationsQuery.error) : false;
+  const hasLocationLoadError = hasOrganization
+    ? Boolean(locationsQuery.error)
+    : false;
   const errorMessage =
     organizationsQuery.error?.message ??
     (hasOrganization ? locationsQuery.error?.message : undefined) ??
@@ -147,15 +167,23 @@ export default function LocationsPage() {
 
     const activeLocations = getActiveLocations(locationsQuery.data);
     const storedLocation = getSelectedLocation(organizationId);
-    const storedActiveLocation = activeLocations.find((location) => location.id === storedLocation?.id);
+    const storedActiveLocation = activeLocations.find(
+      (location) => location.id === storedLocation?.id,
+    );
 
     if (storedActiveLocation) {
-      setSelectedLocationState({ id: storedActiveLocation.id, name: storedActiveLocation.name });
+      setSelectedLocationState({
+        id: storedActiveLocation.id,
+        name: storedActiveLocation.name,
+      });
       return;
     }
 
     if (activeLocations.length === 1 && activeLocations[0]) {
-      const nextLocation = { id: activeLocations[0].id, name: activeLocations[0].name };
+      const nextLocation = {
+        id: activeLocations[0].id,
+        name: activeLocations[0].name,
+      };
 
       setSelectedLocation(organizationId, nextLocation);
       setSelectedLocationState(nextLocation);
@@ -189,7 +217,6 @@ export default function LocationsPage() {
 
       <div className="min-w-0 flex-1 pt-16 md:pt-0">
         <LocationsManagementView
-          createErrorMessage={createLocationMutation.error?.message}
           errorMessage={errorMessage}
           isCreating={createLocationMutation.isPending}
           isLoading={organizationsQuery.isPending || isLoadingLocations}

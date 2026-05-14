@@ -94,14 +94,6 @@ export const Creating: Story = {
   },
 };
 
-export const CreateError: Story = {
-  args: {
-    createErrorMessage: "Não foi possível criar o local. Tente novamente.",
-    locations,
-    organization,
-  },
-};
-
 export const ErrorState: Story = {
   args: {
     errorMessage: "A API não respondeu.",

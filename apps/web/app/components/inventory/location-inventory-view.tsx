@@ -4,13 +4,25 @@ import { AlertCircle, Filter, Plus, RotateCw, Search } from "lucide-react";
 import Link from "next/link";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
-import type { Category, Location, LocationItem, LocationItemInput, Organization } from "../../lib/api";
+import type {
+  Category,
+  Location,
+  LocationItem,
+  LocationItemInput,
+  Organization,
+} from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { FirstRunGuidance } from "../onboarding/first-run-guidance";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Skeleton } from "../ui/skeleton";
 import {
   Table,
@@ -23,7 +35,6 @@ import {
 
 export type LocationInventoryViewProps = {
   categories?: Category[];
-  createErrorMessage?: string;
   errorMessage?: string;
   isCreating?: boolean;
   isLoading?: boolean;
@@ -70,7 +81,6 @@ const isLowStock = (item: LocationItem) => item.quantity <= item.reorder_point;
  */
 export function LocationInventoryView({
   categories = [],
-  createErrorMessage,
   errorMessage,
   isCreating = false,
   isLoading = false,
@@ -103,9 +113,12 @@ export function LocationInventoryView({
         item.category?.name.toLowerCase().includes(normalizedQuery);
       const matchesCategory =
         categoryFilter === "all" ||
-        (categoryFilter === "uncategorized" ? !item.category : item.category?.id === categoryFilter);
+        (categoryFilter === "uncategorized"
+          ? !item.category
+          : item.category?.id === categoryFilter);
       const matchesStock =
-        stockFilter === "all" || (stockFilter === "low" ? isLowStock(item) : !isLowStock(item));
+        stockFilter === "all" ||
+        (stockFilter === "low" ? isLowStock(item) : !isLowStock(item));
 
       return matchesQuery && matchesCategory && matchesStock;
     });
@@ -149,7 +162,10 @@ export function LocationInventoryView({
 
   if (isLoading) {
     return (
-      <main aria-busy="true" className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6">
+      <main
+        aria-busy="true"
+        className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6"
+      >
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
           <div className="border-b border-purple-100 pb-5">
             <Skeleton className="h-4 w-36" />
@@ -175,21 +191,26 @@ export function LocationInventoryView({
               {location?.name ?? "Estoque do local"}
             </h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">
-              Consulte quantidades, preços, categorias e status de reposição dos itens de um local.
+              Consulte quantidades, preços, categorias e status de reposição dos
+              itens de um local.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant={canCreate ? "secondary" : "outline"}>
               {canCreate ? "Pode criar itens" : "Acesso somente leitura"}
             </Badge>
-            <Badge variant={lowStockCount ? "outline" : "secondary"}>{lowStockCount} estoque baixo</Badge>
+            <Badge variant={lowStockCount ? "outline" : "secondary"}>
+              {lowStockCount} estoque baixo
+            </Badge>
           </div>
         </header>
 
         {!organization ? (
           <Alert variant="destructive">
             <AlertTitle>Nenhuma organização selecionada</AlertTitle>
-            <AlertDescription>Selecione uma organização antes de abrir o estoque.</AlertDescription>
+            <AlertDescription>
+              Selecione uma organização antes de abrir o estoque.
+            </AlertDescription>
           </Alert>
         ) : null}
 
@@ -197,7 +218,8 @@ export function LocationInventoryView({
           <Alert variant="destructive">
             <AlertTitle>Local indisponível</AlertTitle>
             <AlertDescription>
-              Selecione um local ativo na navegação antes de consultar o estoque.
+              Selecione um local ativo na navegação antes de consultar o
+              estoque.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -213,7 +235,8 @@ export function LocationInventoryView({
           <Alert variant="warning">
             <AlertTitle>Acesso de visualizador</AlertTitle>
             <AlertDescription>
-              Visualizadores podem revisar o estoque, mas não podem criar ou editar itens do local.
+              Visualizadores podem revisar o estoque, mas não podem criar ou
+              editar itens do local.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -222,12 +245,19 @@ export function LocationInventoryView({
           <Card>
             <CardHeader>
               <CardTitle>Criar item</CardTitle>
-              <CardDescription>Adicione um produto a este local com quantidade inicial.</CardDescription>
+              <CardDescription>
+                Adicione um produto a este local com quantidade inicial.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="grid gap-3 lg:grid-cols-6" onSubmit={handleSubmit}>
+              <form
+                className="grid gap-3 lg:grid-cols-6"
+                onSubmit={handleSubmit}
+              >
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">SKU</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    SKU
+                  </span>
                   <input
                     className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     onChange={(event) => setSku(event.target.value)}
@@ -237,7 +267,9 @@ export function LocationInventoryView({
                   />
                 </label>
                 <label className="flex min-w-0 flex-col gap-1.5 lg:col-span-2">
-                  <span className="text-xs font-semibold text-purple-700">Nome</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    Nome
+                  </span>
                   <input
                     className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     onChange={(event) => setName(event.target.value)}
@@ -247,7 +279,9 @@ export function LocationInventoryView({
                   />
                 </label>
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Categoria</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    Categoria
+                  </span>
                   <select
                     className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     onChange={(event) => setCategoryId(event.target.value)}
@@ -262,7 +296,9 @@ export function LocationInventoryView({
                   </select>
                 </label>
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Preço</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    Preço
+                  </span>
                   <input
                     className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     min="0"
@@ -275,7 +311,9 @@ export function LocationInventoryView({
                   />
                 </label>
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Quantidade</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    Quantidade
+                  </span>
                   <input
                     className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     min="0"
@@ -286,7 +324,9 @@ export function LocationInventoryView({
                   />
                 </label>
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Ponto de reposição</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    Ponto de reposição
+                  </span>
                   <input
                     className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     min="0"
@@ -297,7 +337,9 @@ export function LocationInventoryView({
                   />
                 </label>
                 <label className="flex min-w-0 flex-col gap-1.5 lg:col-span-4">
-                  <span className="text-xs font-semibold text-purple-700">Descrição</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    Descrição
+                  </span>
                   <input
                     className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     onChange={(event) => setDescription(event.target.value)}
@@ -307,18 +349,19 @@ export function LocationInventoryView({
                 </label>
                 <Button
                   className="self-end lg:col-span-2"
-                  disabled={isCreating || !sku.trim() || !name.trim() || !unitPrice}
+                  disabled={
+                    isCreating || !sku.trim() || !name.trim() || !unitPrice
+                  }
                   type="submit"
                 >
-                  {isCreating ? <RotateCw className="animate-spin" /> : <Plus />}
+                  {isCreating ? (
+                    <RotateCw className="animate-spin" />
+                  ) : (
+                    <Plus />
+                  )}
                   Adicionar item
                 </Button>
               </form>
-              {createErrorMessage ? (
-                <p className="m-0 mt-3 text-sm text-[#b42318]" role="alert">
-                  {createErrorMessage}
-                </p>
-              ) : null}
             </CardContent>
           </Card>
         ) : null}
@@ -356,7 +399,9 @@ export function LocationInventoryView({
             </select>
           </label>
           <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs font-semibold text-purple-700">Estoque</span>
+            <span className="text-xs font-semibold text-purple-700">
+              Estoque
+            </span>
             <select
               className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
               onChange={(event) => setStockFilter(event.target.value)}
@@ -394,7 +439,9 @@ export function LocationInventoryView({
           <Card className="border-dashed">
             <CardHeader>
               <CardTitle>Nenhum item encontrado</CardTitle>
-              <CardDescription>Ajuste a busca ou os filtros para ampliar a lista de estoque.</CardDescription>
+              <CardDescription>
+                Ajuste a busca ou os filtros para ampliar a lista de estoque.
+              </CardDescription>
             </CardHeader>
           </Card>
         ) : null}
@@ -420,7 +467,9 @@ export function LocationInventoryView({
 
                   return (
                     <TableRow key={item.id}>
-                      <TableCell className="font-mono text-xs">{item.sku}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {item.sku}
+                      </TableCell>
                       <TableCell>
                         <div className="font-semibold">{item.name}</div>
                         {item.description ? (
@@ -429,7 +478,9 @@ export function LocationInventoryView({
                           </div>
                         ) : null}
                       </TableCell>
-                      <TableCell>{item.category?.name ?? "Sem categoria"}</TableCell>
+                      <TableCell>
+                        {item.category?.name ?? "Sem categoria"}
+                      </TableCell>
                       <TableCell
                         className={cn(
                           "text-right font-semibold",
@@ -438,8 +489,12 @@ export function LocationInventoryView({
                       >
                         {item.quantity}
                       </TableCell>
-                      <TableCell className="text-right">{formatPrice(item.unit_price)}</TableCell>
-                      <TableCell className="text-right">{item.reorder_point}</TableCell>
+                      <TableCell className="text-right">
+                        {formatPrice(item.unit_price)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.reorder_point}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={lowStock ? "outline" : "secondary"}>
                           {lowStock ? "Estoque baixo" : "Saudável"}
@@ -457,7 +512,9 @@ export function LocationInventoryView({
                             Receber
                           </Link>
                         ) : (
-                          <span className="text-xs text-[#5c6670]">Somente leitura</span>
+                          <span className="text-xs text-[#5c6670]">
+                            Somente leitura
+                          </span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -469,7 +526,12 @@ export function LocationInventoryView({
         ) : null}
 
         {errorMessage && onRetry ? (
-          <Button className="w-fit" onClick={onRetry} type="button" variant="outline">
+          <Button
+            className="w-fit"
+            onClick={onRetry}
+            type="button"
+            variant="outline"
+          >
             <AlertCircle />
             Retry
           </Button>
@@ -477,7 +539,8 @@ export function LocationInventoryView({
 
         {!errorMessage && items.length ? (
           <div className="text-sm text-purple-700">
-            Mostrando {filteredItems.length} de {items.length} {items.length === 1 ? "item" : "itens"}
+            Mostrando {filteredItems.length} de {items.length}{" "}
+            {items.length === 1 ? "item" : "itens"}
           </div>
         ) : null}
       </div>

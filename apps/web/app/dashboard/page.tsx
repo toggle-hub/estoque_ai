@@ -7,6 +7,7 @@ import {
   type DashboardLowStockAlert,
   type DashboardOverviewMetrics,
 } from "../components/dashboard/dashboard-overview-view";
+import type { FirstRunGuidanceStep } from "../components/onboarding/first-run-guidance";
 import { Navbar } from "../components/navbar";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import {
@@ -93,7 +94,9 @@ export const getDashboardLowStockAlerts = (
   stock: OrganizationLowStockLevel[],
 ): DashboardLowStockAlert[] =>
   stock
-    .filter((stockLevel) => stockLevel.quantity <= stockLevel.item.reorder_point)
+    .filter(
+      (stockLevel) => stockLevel.quantity <= stockLevel.item.reorder_point,
+    )
     .map((stockLevel) => ({
       id: stockLevel.id,
       itemName: stockLevel.item.name,
@@ -101,7 +104,8 @@ export const getDashboardLowStockAlerts = (
       quantity: stockLevel.quantity,
       reorderPoint: stockLevel.item.reorder_point,
       sku: stockLevel.item.sku,
-      status: stockLevel.quantity <= 0 ? ("critical" as const) : ("low" as const),
+      status:
+        stockLevel.quantity <= 0 ? ("critical" as const) : ("low" as const),
     }))
     .sort((left, right) => {
       if (left.status !== right.status) {
@@ -131,7 +135,8 @@ const Dashboard = () => {
   const selectedOrganization = useSelectedOrganization();
   const organizationId = selectedOrganization?.id;
   const prevOrganizationId = useRef<string | undefined>(organizationId);
-  const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
+  const [selectedLocation, setSelectedLocationState] =
+    useState<SelectedLocation | null>(null);
   const locationsQuery = useQuery({
     enabled: Boolean(organizationId),
     queryKey: ["organizations", organizationId, "locations"],
@@ -164,7 +169,9 @@ const Dashboard = () => {
   });
   const hasOrganization = Boolean(organizationId);
   const isLoadingLocations = hasOrganization ? locationsQuery.isPending : false;
-  const hasLocationLoadError = hasOrganization ? Boolean(locationsQuery.error) : false;
+  const hasLocationLoadError = hasOrganization
+    ? Boolean(locationsQuery.error)
+    : false;
   const activeLocations = useMemo(
     () => getActiveLocations(locationsQuery.data ?? []),
     [locationsQuery.data],
@@ -173,6 +180,11 @@ const Dashboard = () => {
     () => getDashboardOverviewMetrics(summaryQuery.data),
     [summaryQuery.data],
   );
+  const firstRunGuidanceStep: FirstRunGuidanceStep = !activeLocations.length
+    ? "location"
+    : metrics.totalSkus <= 0
+      ? "catalog"
+      : "receiving";
   const lowStockAlerts = useMemo(
     () => getDashboardLowStockAlerts(lowStockQuery.data ?? []),
     [lowStockQuery.data],
@@ -199,15 +211,23 @@ const Dashboard = () => {
     }
 
     const storedLocation = getSelectedLocation(organizationId);
-    const storedActiveLocation = activeLocations.find((location) => location.id === storedLocation?.id);
+    const storedActiveLocation = activeLocations.find(
+      (location) => location.id === storedLocation?.id,
+    );
 
     if (storedActiveLocation) {
-      setSelectedLocationState({ id: storedActiveLocation.id, name: storedActiveLocation.name });
+      setSelectedLocationState({
+        id: storedActiveLocation.id,
+        name: storedActiveLocation.name,
+      });
       return;
     }
 
     if (activeLocations.length === 1 && activeLocations[0]) {
-      const nextLocation = { id: activeLocations[0].id, name: activeLocations[0].name };
+      const nextLocation = {
+        id: activeLocations[0].id,
+        name: activeLocations[0].name,
+      };
 
       setSelectedLocation(organizationId, nextLocation);
       setSelectedLocationState(nextLocation);
@@ -248,7 +268,9 @@ const Dashboard = () => {
               {getGreeting()}, {userName}
             </h1>
             <p className="text-sm text-gray-500">
-              {selectedOrganization ? selectedOrganization.name : "Selecione uma organização"}
+              {selectedOrganization
+                ? selectedOrganization.name
+                : "Selecione uma organização"}
             </p>
           </div>
 
@@ -263,9 +285,13 @@ const Dashboard = () => {
 
           {/* Profile */}
           <div className="flex items-center gap-3">
-            <span className="min-w-0 truncate text-sm font-medium">{userName}</span>
+            <span className="min-w-0 truncate text-sm font-medium">
+              {userName}
+            </span>
             <Avatar>
-              <AvatarFallback>{userName.slice(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarFallback>
+                {userName.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
           </div>
         </header>
@@ -273,7 +299,7 @@ const Dashboard = () => {
         <DashboardOverviewView
           activities={[]}
           errorMessage={errorMessage}
-          firstRunGuidanceStep={activeLocations.length ? "catalog" : "location"}
+          firstRunGuidanceStep={firstRunGuidanceStep}
           isLoading={
             userQuery.isPending ||
             (hasOrganization ? locationsQuery.isPending : false) ||

@@ -4,9 +4,17 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Organization } from "../../lib/api";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { FirstRunSpotlightTour } from "./spotlight-tour";
 
-export const firstRunGuidanceStorageKey = "estoque_ai:first_run_guidance_dismissed_by_org";
+export const firstRunGuidanceStorageKey =
+  "estoque_ai:first_run_guidance_dismissed_by_org";
 
 export type FirstRunGuidanceStep = "location" | "catalog" | "receiving";
 
@@ -17,6 +25,7 @@ type FirstRunGuidanceProps = {
   forceVisible?: boolean;
   initialDismissed?: boolean;
   organization?: Organization | null;
+  showSpotlightTour?: boolean;
 };
 
 const stepConfigs = {
@@ -35,13 +44,20 @@ const stepConfigs = {
     actionLabel: "Abrir recebimento",
     label: "Receber o primeiro estoque",
   },
-} satisfies Record<FirstRunGuidanceStep, {
-  actionHref: string;
-  actionLabel: string;
-  label: string;
-}>;
+} satisfies Record<
+  FirstRunGuidanceStep,
+  {
+    actionHref: string;
+    actionLabel: string;
+    label: string;
+  }
+>;
 
-const orderedSteps: FirstRunGuidanceStep[] = ["location", "catalog", "receiving"];
+const orderedSteps: FirstRunGuidanceStep[] = [
+  "location",
+  "catalog",
+  "receiving",
+];
 
 /**
  * Returns true when a parsed storage value is a dismissal map.
@@ -49,7 +65,9 @@ const orderedSteps: FirstRunGuidanceStep[] = ["location", "catalog", "receiving"
  * @param value Parsed local-storage value.
  * @returns Whether the value is a record of boolean dismissal states.
  */
-const isDismissedOrganizationMap = (value: unknown): value is Record<string, boolean> =>
+const isDismissedOrganizationMap = (
+  value: unknown,
+): value is Record<string, boolean> =>
   typeof value === "object" &&
   value !== null &&
   !Array.isArray(value) &&
@@ -136,78 +154,103 @@ export function FirstRunGuidance({
   forceVisible = false,
   initialDismissed = false,
   organization,
+  showSpotlightTour = true,
 }: FirstRunGuidanceProps) {
   const organizationId = organization?.id;
   const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
     setIsDismissed(
-      initialDismissed || (organizationId ? Boolean(getDismissedOrganizations()[organizationId]) : false),
+      initialDismissed ||
+        (organizationId
+          ? Boolean(getDismissedOrganizations()[organizationId])
+          : false),
     );
   }, [initialDismissed, organizationId]);
 
-  if (!organization || (!forceVisible && isDismissed)) {
+  if (!organization) {
     return null;
   }
 
   const currentStepConfig = stepConfigs[currentStep];
+  const spotlightTour = showSpotlightTour ? (
+    <FirstRunSpotlightTour
+      canManage={canManage}
+      currentStep={currentStep}
+      organizationId={organizationId}
+    />
+  ) : null;
+
+  if (!forceVisible && isDismissed) {
+    return spotlightTour;
+  }
 
   return (
-    <Card className="border-purple-200 bg-purple-50/50">
-      <CardHeader className="gap-2">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <CardTitle className="text-base">Primeiros passos</CardTitle>
-            <CardDescription className="mt-1">
-              {canManage
-                ? "Siga a sequência operacional mínima para começar a movimentar estoque."
-                : "Sua organização ainda está em configuração. Acompanhe a sequência enquanto um gestor conclui os passos."}
-            </CardDescription>
-          </div>
-          <Button
-            onClick={() => {
-              if (organizationId) {
-                dismissGuidance(organizationId);
-              }
-
-              setIsDismissed(true);
-            }}
-            type="button"
-            variant="outline"
-          >
-            Ocultar
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <ol className="grid gap-2 text-sm text-[#16151c] md:grid-cols-3">
-          {orderedSteps.map((step) => {
-            const isComplete = completedSteps.includes(step);
-            const isCurrent = step === currentStep;
-
-            return (
-              <li
-                className={
-                  isCurrent
-                    ? "rounded-md border border-purple-200 bg-white p-3"
-                    : "rounded-md border border-purple-100 bg-white/80 p-3"
+    <>
+      <Card
+        className="border-purple-200 bg-purple-50/50"
+        data-tour-target="first-run-guidance"
+      >
+        <CardHeader className="gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <CardTitle className="text-base">Primeiros passos</CardTitle>
+              <CardDescription className="mt-1">
+                {canManage
+                  ? "Siga a sequência operacional mínima para começar a movimentar estoque."
+                  : "Sua organização ainda está em configuração. Acompanhe a sequência enquanto um gestor conclui os passos."}
+              </CardDescription>
+            </div>
+            <Button
+              onClick={() => {
+                if (organizationId) {
+                  dismissGuidance(organizationId);
                 }
-                key={step}
-              >
-                <p className="m-0 text-xs font-semibold text-purple-700">
-                  {isComplete ? "Concluído" : isCurrent ? "Agora" : "Depois"}
-                </p>
-                <p className="m-0 mt-1 font-medium">{stepConfigs[step].label}</p>
-              </li>
-            );
-          })}
-        </ol>
-        {canManage ? (
-          <Button asChild className="w-fit">
-            <Link href={currentStepConfig.actionHref}>{currentStepConfig.actionLabel}</Link>
-          </Button>
-        ) : null}
-      </CardContent>
-    </Card>
+
+                setIsDismissed(true);
+              }}
+              type="button"
+              variant="outline"
+            >
+              Ocultar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <ol className="grid gap-2 text-sm text-[#16151c] md:grid-cols-3">
+            {orderedSteps.map((step) => {
+              const isComplete = completedSteps.includes(step);
+              const isCurrent = step === currentStep;
+
+              return (
+                <li
+                  className={
+                    isCurrent
+                      ? "rounded-md border border-purple-200 bg-white p-3"
+                      : "rounded-md border border-purple-100 bg-white/80 p-3"
+                  }
+                  key={step}
+                >
+                  <p className="m-0 text-xs font-semibold text-purple-700">
+                    {isComplete ? "Concluído" : isCurrent ? "Agora" : "Depois"}
+                  </p>
+                  <p className="m-0 mt-1 font-medium">
+                    {stepConfigs[step].label}
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+          {canManage ? (
+            <Button asChild className="w-fit">
+              <Link href={currentStepConfig.actionHref}>
+                {currentStepConfig.actionLabel}
+              </Link>
+            </Button>
+          ) : null}
+        </CardContent>
+      </Card>
+      {spotlightTour}
+    </>
   );
 }

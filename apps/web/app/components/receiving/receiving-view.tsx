@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, PackagePlus, RotateCw, Search } from "lucide-react";
+import { AlertCircle, PackagePlus, RotateCw, Search } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import type {
@@ -8,13 +8,18 @@ import type {
   LocationItem,
   Organization,
   ReceivingTransactionInput,
-  ReceivingTransactionResult,
 } from "../../lib/api";
 import { FirstRunGuidance } from "../onboarding/first-run-guidance";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Skeleton } from "../ui/skeleton";
 
 export type ReceivingViewProps = {
@@ -23,13 +28,13 @@ export type ReceivingViewProps = {
   isSubmitting?: boolean;
   items: ReceivingItem[];
   locations: Location[];
-  onReceive?: (input: ReceivingTransactionInput & { locationId: string }) => Promise<void>;
+  onReceive?: (
+    input: ReceivingTransactionInput & { locationId: string },
+  ) => Promise<void>;
   onRetry?: () => void;
   organization?: Organization | null;
   preselectedItemId?: string | null;
   preselectedLocationId?: string | null;
-  submitErrorMessage?: string;
-  successResult?: ReceivingTransactionResult | null;
 };
 
 export type ReceivingItem = LocationItem & {
@@ -64,8 +69,6 @@ export function ReceivingView({
   organization,
   preselectedItemId,
   preselectedLocationId,
-  submitErrorMessage,
-  successResult,
 }: ReceivingViewProps) {
   const [locationId, setLocationId] = useState(preselectedLocationId ?? "");
   const [itemId, setItemId] = useState(preselectedItemId ?? "");
@@ -76,13 +79,22 @@ export function ReceivingView({
   const [validationError, setValidationError] = useState("");
   const role = organization?.role?.toLowerCase() ?? "viewer";
   const canReceive = writeRoles.has(role);
-  const firstRunGuidanceStep = !locations.length ? "location" : !items.length ? "catalog" : null;
-  const selectedLocation = locations.find((location) => location.id === locationId);
+  const firstRunGuidanceStep = !locations.length
+    ? "location"
+    : !items.length
+      ? "catalog"
+      : null;
+  const selectedLocation = locations.find(
+    (location) => location.id === locationId,
+  );
   const locationItems = items.filter((item) => item.location_id === locationId);
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return locationItems.filter((item) => !normalizedQuery || getSearchText(item).includes(normalizedQuery));
+    return locationItems.filter(
+      (item) =>
+        !normalizedQuery || getSearchText(item).includes(normalizedQuery),
+    );
   }, [locationItems, query]);
   const selectedItem = locationItems.find((item) => item.id === itemId);
 
@@ -122,7 +134,9 @@ export function ReceivingView({
     }
 
     if (!locationId || !itemId) {
-      setValidationError("Escolha um local e um item antes de receber estoque.");
+      setValidationError(
+        "Escolha um local e um item antes de receber estoque.",
+      );
       return;
     }
 
@@ -142,7 +156,10 @@ export function ReceivingView({
 
   if (isLoading) {
     return (
-      <main aria-busy="true" className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6">
+      <main
+        aria-busy="true"
+        className="min-h-[calc(100svh-4rem)] bg-white p-4 md:min-h-screen md:p-6"
+      >
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
           <div className="border-b border-purple-100 pb-5">
             <Skeleton className="h-4 w-36" />
@@ -163,9 +180,12 @@ export function ReceivingView({
             <p className="m-0 text-sm font-medium text-purple-600">
               {organization?.name ?? "Nenhuma organização selecionada"}
             </p>
-            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Recebimento</h1>
+            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">
+              Recebimento
+            </h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-[#5c6670]">
-              Adicione estoque de entrada a um item existente do local e registre a transação.
+              Adicione estoque de entrada a um item existente do local e
+              registre a transação.
             </p>
           </div>
           <Badge variant={canReceive ? "secondary" : "outline"}>
@@ -176,7 +196,9 @@ export function ReceivingView({
         {!organization ? (
           <Alert variant="destructive">
             <AlertTitle>Nenhuma organização selecionada</AlertTitle>
-            <AlertDescription>Selecione uma organização antes de receber estoque.</AlertDescription>
+            <AlertDescription>
+              Selecione uma organização antes de receber estoque.
+            </AlertDescription>
           </Alert>
         ) : null}
 
@@ -184,14 +206,17 @@ export function ReceivingView({
           <Alert variant="warning">
             <AlertTitle>Recebimento indisponível</AlertTitle>
             <AlertDescription>
-              Visualizadores podem revisar o estoque, mas não podem criar transações de recebimento.
+              Visualizadores podem revisar o estoque, mas não podem criar
+              transações de recebimento.
             </AlertDescription>
           </Alert>
         ) : null}
 
         {errorMessage ? (
           <Alert variant="destructive">
-            <AlertTitle>Não foi possível carregar os dados de recebimento</AlertTitle>
+            <AlertTitle>
+              Não foi possível carregar os dados de recebimento
+            </AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
@@ -199,23 +224,12 @@ export function ReceivingView({
         {!errorMessage && firstRunGuidanceStep ? (
           <FirstRunGuidance
             canManage={canReceive}
-            completedSteps={firstRunGuidanceStep === "catalog" ? ["location"] : []}
+            completedSteps={
+              firstRunGuidanceStep === "catalog" ? ["location"] : []
+            }
             currentStep={firstRunGuidanceStep}
             organization={organization}
           />
-        ) : null}
-
-        {successResult ? (
-          <Alert>
-            <CheckCircle2 className="absolute top-4 left-4 size-4 text-purple-500" />
-            <div className="pl-6">
-              <AlertTitle>Estoque recebido</AlertTitle>
-              <AlertDescription>
-                Quantidade alterada de {successResult.transaction.previous_quantity} para{" "}
-                {successResult.transaction.new_quantity}.
-              </AlertDescription>
-            </div>
-          </Alert>
         ) : null}
 
         {canReceive ? (
@@ -223,14 +237,17 @@ export function ReceivingView({
             <CardHeader>
               <CardTitle>Receber estoque</CardTitle>
               <CardDescription>
-                Escolha um item do local, informe a quantidade e envie um movimento de recebimento.
+                Escolha um item do local, informe a quantidade e envie um
+                movimento de recebimento.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form className="grid gap-4" onSubmit={handleSubmit}>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Local</span>
+                    <span className="text-xs font-semibold text-purple-700">
+                      Local
+                    </span>
                     <select
                       className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:bg-purple-50"
                       disabled={isSubmitting}
@@ -266,7 +283,9 @@ export function ReceivingView({
                 </div>
 
                 <label className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-purple-700">Item</span>
+                  <span className="text-xs font-semibold text-purple-700">
+                    Item
+                  </span>
                   <select
                     className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:bg-purple-50"
                     disabled={isSubmitting || !locationId}
@@ -275,7 +294,9 @@ export function ReceivingView({
                     value={itemId}
                   >
                     <option value="">
-                      {selectedLocation ? "Selecionar item" : "Selecionar local primeiro"}
+                      {selectedLocation
+                        ? "Selecionar item"
+                        : "Selecionar local primeiro"}
                     </option>
                     {filteredItems.map((item) => (
                       <option key={item.id} value={item.id}>
@@ -296,7 +317,9 @@ export function ReceivingView({
 
                 <div className="grid gap-4 lg:grid-cols-3">
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Quantidade</span>
+                    <span className="text-xs font-semibold text-purple-700">
+                      Quantidade
+                    </span>
                     <input
                       className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:bg-purple-50"
                       disabled={isSubmitting}
@@ -309,7 +332,9 @@ export function ReceivingView({
                     />
                   </label>
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Referência</span>
+                    <span className="text-xs font-semibold text-purple-700">
+                      Referência
+                    </span>
                     <input
                       className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:bg-purple-50"
                       disabled={isSubmitting}
@@ -319,7 +344,9 @@ export function ReceivingView({
                     />
                   </label>
                   <label className="flex min-w-0 flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-purple-700">Observações</span>
+                    <span className="text-xs font-semibold text-purple-700">
+                      Observações
+                    </span>
                     <input
                       className="h-10 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300 disabled:bg-purple-50"
                       disabled={isSubmitting}
@@ -336,18 +363,16 @@ export function ReceivingView({
                   </p>
                 ) : null}
 
-                {submitErrorMessage ? (
-                  <p className="m-0 text-sm text-[#b42318]" role="alert">
-                    {submitErrorMessage}
-                  </p>
-                ) : null}
-
                 <Button
                   className="justify-self-start"
                   disabled={isSubmitting || !locationId || !itemId || !quantity}
                   type="submit"
                 >
-                  {isSubmitting ? <RotateCw className="animate-spin" /> : <PackagePlus />}
+                  {isSubmitting ? (
+                    <RotateCw className="animate-spin" />
+                  ) : (
+                    <PackagePlus />
+                  )}
                   Receber estoque
                 </Button>
               </form>
@@ -356,7 +381,12 @@ export function ReceivingView({
         ) : null}
 
         {errorMessage && onRetry ? (
-          <Button className="w-fit" onClick={onRetry} type="button" variant="outline">
+          <Button
+            className="w-fit"
+            onClick={onRetry}
+            type="button"
+            variant="outline"
+          >
             <AlertCircle />
             Tentar novamente
           </Button>

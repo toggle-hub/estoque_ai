@@ -3,7 +3,7 @@ import {
   ReceivingView,
   type ReceivingItem,
 } from "../app/components/receiving/receiving-view";
-import type { Location, Organization, ReceivingTransactionResult } from "../app/lib/api";
+import type { Location, Organization } from "../app/lib/api";
 
 const organization: Organization = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -77,32 +77,6 @@ const items: ReceivingItem[] = [
   },
 ];
 
-const successResult: ReceivingTransactionResult = {
-  transaction: {
-    id: "40000000-0000-4000-8000-000000000001",
-    organization_id: organization.id,
-    location_id: locations[0]?.id ?? null,
-    item_id: items[0]?.id ?? null,
-    type: "RECEIVING",
-    quantity: 8,
-    previous_quantity: 12,
-    new_quantity: 20,
-    reference: "NF-000123",
-    notes: "Entrega do fornecedor",
-    performed_by: "50000000-0000-4000-8000-000000000001",
-    created_at: "2026-01-03T00:00:00.000Z",
-  },
-  stock_level: {
-    id: "60000000-0000-4000-8000-000000000001",
-    organization_id: organization.id,
-    location_id: locations[0]?.id ?? "",
-    item_id: items[0]?.id ?? "",
-    quantity: 20,
-    created_at: "2026-01-01T00:00:00.000Z",
-    updated_at: "2026-01-03T00:00:00.000Z",
-  },
-};
-
 const meta = {
   title: "Pages/Receiving",
   component: ReceivingView,
@@ -135,34 +109,12 @@ export const PreselectedItem: Story = {
   },
 };
 
-export const ValidationError: Story = {
-  args: {
-    items,
-    locations,
-    onReceive: async () => undefined,
-    organization,
-    submitErrorMessage: "A quantidade deve ser um número inteiro positivo.",
-  },
-};
-
 export const Loading: Story = {
   args: {
     isLoading: true,
     items: [],
     locations: [],
     organization,
-  },
-};
-
-export const Success: Story = {
-  args: {
-    items,
-    locations,
-    onReceive: async () => undefined,
-    organization,
-    preselectedItemId: items[0]?.id,
-    preselectedLocationId: locations[0]?.id,
-    successResult,
   },
 };
 

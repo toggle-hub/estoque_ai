@@ -48,6 +48,7 @@ type NavItem = {
   label: string;
   opensLocationSelector?: boolean;
   requiresActionRole?: boolean;
+  tourTarget?: string;
 };
 
 const actionRoles = new Set(["admin", "manager"]);
@@ -62,6 +63,7 @@ const locationsNavItem = {
   isActive: (currentPath: string) => currentPath === "/dashboard/locations",
   label: "Locais",
   href: "/dashboard/locations",
+  tourTarget: "tour-nav-locations",
 };
 const organizationSettingsNavItem = {
   icon: Settings,
@@ -69,13 +71,24 @@ const organizationSettingsNavItem = {
   href: "/dashboard/settings/organization",
 };
 const workflowNavItems: NavItem[] = [
-  { icon: Package, label: "Itens", href: "/dashboard/items" },
-  { icon: Tags, label: "Categorias", href: "/dashboard/categories" },
+  {
+    icon: Package,
+    label: "Itens",
+    href: "/dashboard/items",
+    tourTarget: "tour-nav-items",
+  },
+  {
+    icon: Tags,
+    label: "Categorias",
+    href: "/dashboard/categories",
+    tourTarget: "tour-nav-categories",
+  },
   {
     icon: Truck,
     label: "Recebimento",
     href: "/dashboard/receiving",
     requiresActionRole: true,
+    tourTarget: "tour-nav-receiving",
   },
   { icon: ReceiptText, label: "Transações", href: "/dashboard/transactions" },
 ];
@@ -264,6 +277,7 @@ export const Navbar = ({
             label,
             opensLocationSelector,
             requiresActionRole,
+            tourTarget,
           }) => {
             const isLocked = Boolean(
               requiresActionRole && !canUseActionWorkflows,
@@ -276,6 +290,7 @@ export const Navbar = ({
               return (
                 <button
                   className="flex min-h-11 w-full items-center gap-3 rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-left text-[#16151c] transition-colors hover:border-l-purple-500 hover:bg-purple-500/10 hover:text-purple-600"
+                  data-tour-target={tourTarget}
                   key={label}
                   onClick={() => setIsLocationSelectorOpen(true)}
                   type="button"
@@ -310,6 +325,7 @@ export const Navbar = ({
                 key={label}
                 onClick={() => setIsMobileOpen(false)}
                 tabIndex={isLocked ? -1 : undefined}
+                data-tour-target={tourTarget}
               >
                 <Icon className="size-4 shrink-0" />
                 <span className="min-w-0 flex-1">

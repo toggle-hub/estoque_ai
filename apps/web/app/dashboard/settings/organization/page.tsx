@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Navbar } from "../../../components/navbar";
 import { OrganizationSettingsView } from "../../../components/organizations/organization-settings-view";
 import {
@@ -59,11 +60,12 @@ const getActiveLocations = (locations: Location[]) =>
  */
 export default function OrganizationSettingsPage() {
   const queryClient = useQueryClient();
-  const { organizationsQuery, selectedOrganization } = useSelectedOrganization();
+  const { organizationsQuery, selectedOrganization } =
+    useSelectedOrganization();
   const organizationId = selectedOrganization?.id;
   const prevOrganizationId = useRef<string | undefined>(organizationId);
-  const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
-  const [saveSuccessMessage, setSaveSuccessMessage] = useState("");
+  const [selectedLocation, setSelectedLocationState] =
+    useState<SelectedLocation | null>(null);
   const organizationQuery = useQuery({
     enabled: Boolean(organizationId),
     queryKey: ["organizations", organizationId],
@@ -77,19 +79,28 @@ export default function OrganizationSettingsPage() {
     retry: false,
   });
   const updateOrganizationMutation = useMutation({
-    mutationFn: (input: { organization: Organization; profile: OrganizationProfileInput }) =>
-      updateOrganization(input.organization.id, input.profile),
+    mutationFn: (input: {
+      organization: Organization;
+      profile: OrganizationProfileInput;
+    }) => updateOrganization(input.organization.id, input.profile),
     onSuccess: async (_organization, variables) => {
-      setSaveSuccessMessage("Perfil da organização salvo.");
+      toast.success("Perfil da organização salvo.");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["organizations"] }),
-        queryClient.invalidateQueries({ queryKey: ["organizations", variables.organization.id] }),
+        queryClient.invalidateQueries({
+          queryKey: ["organizations", variables.organization.id],
+        }),
       ]);
+    },
+    onError: (error) => {
+      toast.error(error.message);
     },
   });
   const hasOrganization = Boolean(organizationId);
   const isLoadingLocations = hasOrganization ? locationsQuery.isPending : false;
-  const hasLocationLoadError = hasOrganization ? Boolean(locationsQuery.error) : false;
+  const hasLocationLoadError = hasOrganization
+    ? Boolean(locationsQuery.error)
+    : false;
   const activeLocations = useMemo(
     () => getActiveLocations(locationsQuery.data ?? []),
     [locationsQuery.data],
@@ -119,12 +130,18 @@ export default function OrganizationSettingsPage() {
     );
 
     if (storedActiveLocation) {
-      setSelectedLocationState({ id: storedActiveLocation.id, name: storedActiveLocation.name });
+      setSelectedLocationState({
+        id: storedActiveLocation.id,
+        name: storedActiveLocation.name,
+      });
       return;
     }
 
     if (activeLocations.length === 1 && activeLocations[0]) {
-      const nextLocation = { id: activeLocations[0].id, name: activeLocations[0].name };
+      const nextLocation = {
+        id: activeLocations[0].id,
+        name: activeLocations[0].name,
+      };
 
       setSelectedLocation(organizationId, nextLocation);
       setSelectedLocationState(nextLocation);
@@ -160,7 +177,8 @@ export default function OrganizationSettingsPage() {
         <OrganizationSettingsView
           errorMessage={errorMessage}
           isLoading={
-            organizationsQuery.isPending || (hasOrganization ? organizationQuery.isPending : false)
+            organizationsQuery.isPending ||
+            (hasOrganization ? organizationQuery.isPending : false)
           }
           isSaving={updateOrganizationMutation.isPending}
           onRetry={() => {
@@ -171,7 +189,6 @@ export default function OrganizationSettingsPage() {
           onSave={
             organization
               ? async (profile) => {
-                  setSaveSuccessMessage("");
                   await updateOrganizationMutation.mutateAsync({
                     organization,
                     profile,
@@ -180,8 +197,6 @@ export default function OrganizationSettingsPage() {
               : undefined
           }
           organization={organization}
-          saveErrorMessage={updateOrganizationMutation.error?.message}
-          saveSuccessMessage={saveSuccessMessage}
         />
       </div>
     </div>

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { LocationInventoryView } from "../../../../components/inventory/location-inventory-view";
 import { Navbar } from "../../../../components/navbar";
 import {
@@ -71,10 +72,12 @@ export default function LocationInventoryPage() {
   const params = useParams();
   const routeLocationId = getRouteParam(params.locationId);
   const queryClient = useQueryClient();
-  const { organizationsQuery, selectedOrganization } = useSelectedOrganization();
+  const { organizationsQuery, selectedOrganization } =
+    useSelectedOrganization();
   const organizationId = selectedOrganization?.id;
   const prevOrganizationId = useRef<string | undefined>(organizationId);
-  const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
+  const [selectedLocation, setSelectedLocationState] =
+    useState<SelectedLocation | null>(null);
   const locationsQuery = useQuery({
     enabled: Boolean(organizationId),
     queryKey: ["organizations", organizationId, "locations"],
@@ -91,7 +94,9 @@ export default function LocationInventoryPage() {
     () => getActiveLocations(locationsQuery.data ?? []),
     [locationsQuery.data],
   );
-  const location = activeLocations.find((activeLocation) => activeLocation.id === routeLocationId);
+  const location = activeLocations.find(
+    (activeLocation) => activeLocation.id === routeLocationId,
+  );
   const locationId = location?.id;
   const itemsQuery = useQuery({
     enabled: Boolean(locationId),
@@ -110,7 +115,9 @@ export default function LocationInventoryPage() {
     queryKey: ["organizations", organizationId, "categories"],
     queryFn: () => {
       if (!organizationId) {
-        throw new Error("A organização é obrigatória para carregar categorias.");
+        throw new Error(
+          "A organização é obrigatória para carregar categorias.",
+        );
       }
 
       return getOrganizationCategories(organizationId);
@@ -124,17 +131,27 @@ export default function LocationInventoryPage() {
       return createLocationItem(locationId, payload);
     },
     onSuccess: async (_item, variables) => {
+      toast.success("Item criado.");
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["locations", variables.locationId, "items"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["locations", variables.locationId, "items"],
+        }),
         organizationId
-          ? queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "stock"] })
+          ? queryClient.invalidateQueries({
+              queryKey: ["organizations", organizationId, "stock"],
+            })
           : Promise.resolve(),
       ]);
+    },
+    onError: (error) => {
+      toast.error(error.message);
     },
   });
   const hasOrganization = Boolean(organizationId);
   const isLoadingLocations = hasOrganization ? locationsQuery.isPending : false;
-  const hasLocationLoadError = hasOrganization ? Boolean(locationsQuery.error) : false;
+  const hasLocationLoadError = hasOrganization
+    ? Boolean(locationsQuery.error)
+    : false;
   const errorMessage =
     organizationsQuery.error?.message ??
     (hasOrganization ? locationsQuery.error?.message : undefined) ??
@@ -169,7 +186,10 @@ export default function LocationInventoryPage() {
     );
 
     if (storedActiveLocation) {
-      setSelectedLocationState({ id: storedActiveLocation.id, name: storedActiveLocation.name });
+      setSelectedLocationState({
+        id: storedActiveLocation.id,
+        name: storedActiveLocation.name,
+      });
       return;
     }
 
@@ -201,7 +221,6 @@ export default function LocationInventoryPage() {
       <div className="min-w-0 flex-1 pt-16 md:pt-0">
         <LocationInventoryView
           categories={categoriesQuery.data ?? []}
-          createErrorMessage={createItemMutation.error?.message}
           errorMessage={errorMessage}
           isCreating={createItemMutation.isPending}
           isLoading={

@@ -12,11 +12,21 @@ import {
 } from "lucide-react";
 import type { Organization } from "../../lib/api";
 import { cn } from "../../lib/utils";
-import { FirstRunGuidance, type FirstRunGuidanceStep } from "../onboarding/first-run-guidance";
+import {
+  FirstRunGuidance,
+  type FirstRunGuidanceStep,
+} from "../onboarding/first-run-guidance";
+import { FirstRunSpotlightTour } from "../onboarding/spotlight-tour";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Skeleton } from "../ui/skeleton";
 import {
   Table,
@@ -111,11 +121,14 @@ const activityLabels = {
     label: "Transferência",
     quantityClassName: "text-purple-700",
   },
-} satisfies Record<DashboardActivity["type"], {
-  icon: typeof ArrowDownLeft;
-  label: string;
-  quantityClassName: string;
-}>;
+} satisfies Record<
+  DashboardActivity["type"],
+  {
+    icon: typeof ArrowDownLeft;
+    label: string;
+    quantityClassName: string;
+  }
+>;
 
 const alertStatusLabels = {
   critical: "Crítico",
@@ -133,11 +146,14 @@ const alertStatusStyles = {
     quantityClassName: "text-amber-700",
     rowClassName: "bg-amber-50/40",
   },
-} satisfies Record<DashboardLowStockAlert["status"], {
-  badgeClassName: string;
-  quantityClassName: string;
-  rowClassName: string;
-}>;
+} satisfies Record<
+  DashboardLowStockAlert["status"],
+  {
+    badgeClassName: string;
+    quantityClassName: string;
+    rowClassName: string;
+  }
+>;
 
 /**
  * Returns the highest severity class for the dashboard low-stock summary.
@@ -207,7 +223,9 @@ const formatActivityQuantity = (activity: DashboardActivity) => {
  * @param metrics Aggregated dashboard metrics.
  * @returns Metric card metadata.
  */
-const getMetricCards = (metrics: DashboardOverviewMetrics): MetricCardConfig[] => [
+const getMetricCards = (
+  metrics: DashboardOverviewMetrics,
+): MetricCardConfig[] => [
   {
     description: "Produtos ativos no estoque",
     icon: Package,
@@ -239,7 +257,14 @@ const getMetricCards = (metrics: DashboardOverviewMetrics): MetricCardConfig[] =
 ];
 
 const metricSkeletonKeys = ["sku", "units", "low-stock", "value"];
-const activityHeaderSkeletonKeys = ["item", "location", "type", "quantity", "actor", "date"];
+const activityHeaderSkeletonKeys = [
+  "item",
+  "location",
+  "type",
+  "quantity",
+  "actor",
+  "date",
+];
 const activityRowSkeletonKeys = ["row-a", "row-b", "row-c", "row-d"];
 const alertHeaderSkeletonKeys = ["item", "quantity", "reorder-point", "status"];
 const alertRowSkeletonKeys = ["row-a", "row-b", "row-c"];
@@ -307,7 +332,10 @@ function DashboardOverviewSkeleton() {
                       key={rowKey}
                     >
                       {activityHeaderSkeletonKeys.map((cellKey) => (
-                        <Skeleton className="h-4" key={`${rowKey}-${cellKey}`} />
+                        <Skeleton
+                          className="h-4"
+                          key={`${rowKey}-${cellKey}`}
+                        />
                       ))}
                     </div>
                   ))}
@@ -335,7 +363,10 @@ function DashboardOverviewSkeleton() {
                       key={rowKey}
                     >
                       {alertHeaderSkeletonKeys.map((cellKey) => (
-                        <Skeleton className="h-4" key={`${rowKey}-${cellKey}`} />
+                        <Skeleton
+                          className="h-4"
+                          key={`${rowKey}-${cellKey}`}
+                        />
                       ))}
                     </div>
                   ))}
@@ -358,7 +389,7 @@ function DashboardOverviewSkeleton() {
 export function DashboardOverviewView({
   activities,
   errorMessage,
-  firstRunGuidanceStep = "location",
+  firstRunGuidanceStep,
   isLoading = false,
   lowStockAlerts,
   metrics,
@@ -369,9 +400,16 @@ export function DashboardOverviewView({
     return <DashboardOverviewSkeleton />;
   }
 
-  const metricCards = !errorMessage && metrics ? getMetricCards(metrics) : undefined;
-  const hasInventory = !errorMessage && metrics ? Boolean(metrics.totalSkus > 0 || metrics.totalStockUnits > 0) : false;
-  const lowStockSummaryBadgeClassName = getLowStockSummaryBadgeClassName(lowStockAlerts);
+  const metricCards =
+    !errorMessage && metrics ? getMetricCards(metrics) : undefined;
+  const hasInventory =
+    !errorMessage && metrics
+      ? Boolean(metrics.totalSkus > 0 || metrics.totalStockUnits > 0)
+      : false;
+  const hasReceivedStock =
+    !errorMessage && metrics ? metrics.totalStockUnits > 0 : false;
+  const lowStockSummaryBadgeClassName =
+    getLowStockSummaryBadgeClassName(lowStockAlerts);
 
   return (
     <main className="min-h-[calc(100svh-4rem)] bg-white p-4 text-[#16151c] md:min-h-screen md:p-6">
@@ -381,7 +419,9 @@ export function DashboardOverviewView({
             <p className="m-0 text-sm font-medium text-purple-600">
               {organization?.name ?? "Organização selecionada"}
             </p>
-            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">Painel operacional</h1>
+            <h1 className="m-0 mt-1 text-2xl font-semibold tracking-normal">
+              Painel operacional
+            </h1>
             <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-gray-500">
               Acompanhe volume, valor e riscos de reposição do estoque.
             </p>
@@ -393,14 +433,18 @@ export function DashboardOverviewView({
             >
               {formatNumber(metrics?.lowStockItems ?? 0)} estoque baixo
             </Badge>
-            <Badge variant="secondary">{formatNumber(activities.length)} atividades recentes</Badge>
+            <Badge variant="secondary">
+              {formatNumber(activities.length)} atividades recentes
+            </Badge>
           </div>
         </header>
 
         {!organization ? (
           <Alert variant="destructive">
             <AlertTitle>Nenhuma organização selecionada</AlertTitle>
-            <AlertDescription>Selecione uma organização para visualizar as métricas do painel.</AlertDescription>
+            <AlertDescription>
+              Selecione uma organização para visualizar as métricas do painel.
+            </AlertDescription>
           </Alert>
         ) : null}
 
@@ -419,20 +463,42 @@ export function DashboardOverviewView({
 
         {organization && !errorMessage && metricCards ? (
           <>
-            {!hasInventory ? (
+            {firstRunGuidanceStep ? (
+              <FirstRunSpotlightTour
+                canManage={["admin", "manager"].includes(
+                  organization.role.toLowerCase(),
+                )}
+                currentStep={firstRunGuidanceStep}
+                organizationId={organization.id}
+              />
+            ) : null}
+
+            {firstRunGuidanceStep && !hasReceivedStock ? (
               <>
                 <FirstRunGuidance
-                  canManage={["admin", "manager"].includes(organization.role.toLowerCase())}
-                  completedSteps={firstRunGuidanceStep === "catalog" ? ["location"] : []}
+                  canManage={["admin", "manager"].includes(
+                    organization.role.toLowerCase(),
+                  )}
+                  completedSteps={
+                    firstRunGuidanceStep === "receiving"
+                      ? ["location", "catalog"]
+                      : firstRunGuidanceStep === "catalog"
+                        ? ["location"]
+                        : []
+                  }
                   currentStep={firstRunGuidanceStep}
                   organization={organization}
+                  showSpotlightTour={false}
                 />
-                <Alert>
-                  <AlertTitle>Estoque ainda vazio</AlertTitle>
-                  <AlertDescription>
-                    Cadastre itens e registre recebimentos para preencher os indicadores operacionais.
-                  </AlertDescription>
-                </Alert>
+                {!hasInventory ? (
+                  <Alert>
+                    <AlertTitle>Estoque ainda vazio</AlertTitle>
+                    <AlertDescription>
+                      Cadastre itens e registre recebimentos para preencher os
+                      indicadores operacionais.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
               </>
             ) : null}
 
@@ -444,26 +510,34 @@ export function DashboardOverviewView({
                   <Card
                     className={cn(
                       "min-h-36",
-                      metric.tone === "warning" ? "border-purple-200 bg-purple-50" : undefined,
+                      metric.tone === "warning"
+                        ? "border-purple-200 bg-purple-50"
+                        : undefined,
                     )}
                     key={metric.title}
                   >
                     <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
                       <div className="min-w-0">
                         <CardDescription>{metric.title}</CardDescription>
-                        <CardTitle className="mt-2 truncate text-2xl">{metric.value}</CardTitle>
+                        <CardTitle className="mt-2 truncate text-2xl">
+                          {metric.value}
+                        </CardTitle>
                       </div>
                       <span
                         className={cn(
                           "grid size-10 shrink-0 place-items-center rounded-md bg-purple-100 text-purple-700",
-                          metric.tone === "warning" ? "bg-purple-500 text-white" : undefined,
+                          metric.tone === "warning"
+                            ? "bg-purple-500 text-white"
+                            : undefined,
                         )}
                       >
                         <Icon className="size-5" />
                       </span>
                     </CardHeader>
                     <CardContent>
-                      <p className="m-0 text-sm leading-6 text-gray-500">{metric.description}</p>
+                      <p className="m-0 text-sm leading-6 text-gray-500">
+                        {metric.description}
+                      </p>
                     </CardContent>
                   </Card>
                 );
@@ -474,14 +548,17 @@ export function DashboardOverviewView({
               <Card>
                 <CardHeader>
                   <CardTitle>Atividade recente</CardTitle>
-                  <CardDescription>Últimos recebimentos e vendas registrados.</CardDescription>
+                  <CardDescription>
+                    Últimos recebimentos e vendas registrados.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {activities.length ? (
                     <div className="overflow-x-auto rounded-md border border-purple-100">
                       <Table className="min-w-[760px]">
                         <TableCaption>
-                          Atividades recentes de estoque com item, local, quantidade, tipo, responsável e data.
+                          Atividades recentes de estoque com item, local,
+                          quantidade, tipo, responsável e data.
                         </TableCaption>
                         <TableHeader>
                           <TableRow className="border-t-0">
@@ -506,21 +583,35 @@ export function DashboardOverviewView({
                                       <ActivityIcon className="size-4" />
                                     </span>
                                     <div className="min-w-0">
-                                      <div className="truncate font-semibold">{activity.itemName}</div>
+                                      <div className="truncate font-semibold">
+                                        {activity.itemName}
+                                      </div>
                                       <div className="mt-1 truncate font-mono text-xs text-gray-500">
                                         {activity.sku ?? "Sem SKU"}
                                       </div>
                                     </div>
                                   </div>
                                 </TableCell>
-                                <TableCell>{activity.locationName ?? "Local desconhecido"}</TableCell>
                                 <TableCell>
-                                  <Badge variant="outline">{activityType.label}</Badge>
+                                  {activity.locationName ??
+                                    "Local desconhecido"}
                                 </TableCell>
-                                <TableCell className={cn("text-right font-semibold", activityType.quantityClassName)}>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    {activityType.label}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell
+                                  className={cn(
+                                    "text-right font-semibold",
+                                    activityType.quantityClassName,
+                                  )}
+                                >
                                   {formatActivityQuantity(activity)}
                                 </TableCell>
-                                <TableCell>{activity.actorName ?? "Desconhecido"}</TableCell>
+                                <TableCell>
+                                  {activity.actorName ?? "Desconhecido"}
+                                </TableCell>
                                 <TableCell className="whitespace-nowrap">
                                   {formatActivityDate(activity.occurredAt)}
                                 </TableCell>
@@ -534,9 +625,12 @@ export function DashboardOverviewView({
                     <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-purple-200 p-6 text-center">
                       <AlertCircle className="size-8 text-purple-500" />
                       <div>
-                        <p className="m-0 text-sm font-semibold">Nenhuma movimentação recente</p>
+                        <p className="m-0 text-sm font-semibold">
+                          Nenhuma movimentação recente
+                        </p>
                         <p className="m-0 mt-1 text-sm leading-6 text-gray-500">
-                          Recebimentos e vendas aparecerão aqui quando estiverem disponíveis.
+                          Recebimentos e vendas aparecerão aqui quando estiverem
+                          disponíveis.
                         </p>
                       </div>
                     </div>
@@ -547,20 +641,25 @@ export function DashboardOverviewView({
               <Card>
                 <CardHeader>
                   <CardTitle>Alertas de estoque baixo</CardTitle>
-                  <CardDescription>Itens no ponto de reposição por local.</CardDescription>
+                  <CardDescription>
+                    Itens no ponto de reposição por local.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {lowStockAlerts.length ? (
                     <div className="overflow-x-auto rounded-md border border-purple-100">
                       <Table className="min-w-[460px]">
                         <TableCaption>
-                          Alertas urgentes de estoque baixo com item, local, quantidade, ponto de reposição e status.
+                          Alertas urgentes de estoque baixo com item, local,
+                          quantidade, ponto de reposição e status.
                         </TableCaption>
                         <TableHeader>
                           <TableRow className="border-t-0">
                             <TableHead>Item</TableHead>
                             <TableHead className="text-right">Qtd.</TableHead>
-                            <TableHead className="text-right">Reposição</TableHead>
+                            <TableHead className="text-right">
+                              Reposição
+                            </TableHead>
                             <TableHead>Status</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -574,19 +673,29 @@ export function DashboardOverviewView({
                                 key={alert.id}
                               >
                                 <TableCell>
-                                  <div className="font-semibold">{alert.itemName}</div>
+                                  <div className="font-semibold">
+                                    {alert.itemName}
+                                  </div>
                                   <div className="mt-1 truncate text-xs text-gray-500">
                                     {alert.sku} · {alert.locationName}
                                   </div>
                                 </TableCell>
-                                <TableCell className={cn("text-right font-semibold", statusStyle.quantityClassName)}>
+                                <TableCell
+                                  className={cn(
+                                    "text-right font-semibold",
+                                    statusStyle.quantityClassName,
+                                  )}
+                                >
                                   {formatNumber(alert.quantity)}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {formatNumber(alert.reorderPoint)}
                                 </TableCell>
                                 <TableCell>
-                                  <Badge className={statusStyle.badgeClassName} variant="outline">
+                                  <Badge
+                                    className={statusStyle.badgeClassName}
+                                    variant="outline"
+                                  >
                                     {alertStatusLabels[alert.status]}
                                   </Badge>
                                 </TableCell>
@@ -600,7 +709,9 @@ export function DashboardOverviewView({
                     <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-purple-200 p-6 text-center">
                       <TriangleAlert className="size-8 text-purple-500" />
                       <div>
-                        <p className="m-0 text-sm font-semibold">Nenhum alerta urgente</p>
+                        <p className="m-0 text-sm font-semibold">
+                          Nenhum alerta urgente
+                        </p>
                         <p className="m-0 mt-1 text-sm leading-6 text-gray-500">
                           Itens abaixo do ponto de reposição aparecerão aqui.
                         </p>

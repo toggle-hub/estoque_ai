@@ -7,11 +7,16 @@ import type { Organization } from "../../lib/api";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Spinner } from "../ui/spinner";
 
 type OrganizationSelectionViewProps = {
-  createErrorMessage?: string;
   errorMessage?: string;
   isCreating?: boolean;
   isLoading?: boolean;
@@ -29,7 +34,6 @@ type OrganizationSelectionViewProps = {
  * @returns Organization selection UI.
  */
 export function OrganizationSelectionView({
-  createErrorMessage,
   errorMessage,
   isCreating = false,
   isLoading = false,
@@ -68,7 +72,9 @@ export function OrganizationSelectionView({
       <section className="mx-auto flex min-h-svh w-full max-w-5xl flex-col px-6 py-10 max-[640px]:px-4">
         <header className="mb-8 flex items-center justify-between gap-4 border-b border-purple-100 pb-5">
           <div>
-            <p className="m-0 text-sm font-medium text-purple-500">Contexto da organização</p>
+            <p className="m-0 text-sm font-medium text-purple-500">
+              Contexto da organização
+            </p>
             <h1 className="m-0 mt-1 text-2xl leading-8 font-semibold tracking-normal">
               Selecionar organização
             </h1>
@@ -94,7 +100,9 @@ export function OrganizationSelectionView({
                 <AlertCircle size={18} aria-hidden="true" />
                 Não foi possível carregar as organizações
               </AlertTitle>
-              <AlertDescription className="mb-4 text-[#6f2f2a]">{errorMessage}</AlertDescription>
+              <AlertDescription className="mb-4 text-[#6f2f2a]">
+                {errorMessage}
+              </AlertDescription>
               {onRetry ? (
                 <Button
                   className="border-[#b42318] text-[#b42318] hover:bg-[#fff5f4]"
@@ -139,9 +147,13 @@ export function OrganizationSelectionView({
                         {organization.name}
                       </span>
                       <span className="mt-2 flex flex-wrap gap-2">
-                        <Badge className="capitalize">{organization.role}</Badge>
+                        <Badge className="capitalize">
+                          {organization.role}
+                        </Badge>
                         {organization.plan_type ? (
-                          <Badge variant="secondary">{organization.plan_type}</Badge>
+                          <Badge variant="secondary">
+                            {organization.plan_type}
+                          </Badge>
                         ) : null}
                         {organization.cnpj ? (
                           <Badge variant="outline">{organization.cnpj}</Badge>
@@ -159,7 +171,11 @@ export function OrganizationSelectionView({
                       variant={isSelected ? "default" : "outline"}
                       onClick={() => onSelect?.(organization.id)}
                     >
-                      {isSelected ? <Check aria-hidden="true" /> : <Building2 aria-hidden="true" />}
+                      {isSelected ? (
+                        <Check aria-hidden="true" />
+                      ) : (
+                        <Building2 aria-hidden="true" />
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
@@ -172,29 +188,34 @@ export function OrganizationSelectionView({
           <Card className="mt-4">
             <CardHeader>
               <CardTitle>Criar organização</CardTitle>
-              <CardDescription>Crie um novo espaço de empresa e troque para ele depois.</CardDescription>
+              <CardDescription>
+                Crie um novo espaço de empresa e troque para ele depois.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleCreate}>
+              <form
+                className="flex flex-col gap-3 sm:flex-row"
+                onSubmit={handleCreate}
+              >
                 <label className="min-w-0 flex-1">
                   <span className="sr-only">Nome da organização</span>
                   <input
                     className="h-10 w-full min-w-0 rounded-md border border-purple-200 bg-white px-3 text-sm outline-none focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-purple-300"
                     disabled={!onCreate}
-                    onChange={(event) => setOrganizationName(event.target.value)}
+                    onChange={(event) =>
+                      setOrganizationName(event.target.value)
+                    }
                     placeholder="Nome da organização"
                     value={organizationName}
                   />
                 </label>
-                <Button disabled={!onCreate || isCreating || !organizationName.trim()} type="submit">
+                <Button
+                  disabled={!onCreate || isCreating || !organizationName.trim()}
+                  type="submit"
+                >
                   Criar organização
                 </Button>
               </form>
-              {createErrorMessage ? (
-                <p className="m-0 mt-3 text-sm text-[#b42318]" role="alert">
-                  {createErrorMessage}
-                </p>
-              ) : null}
             </CardContent>
           </Card>
         ) : null}

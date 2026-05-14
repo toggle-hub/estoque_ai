@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { CategoriesManagementView } from "../../components/categories/categories-management-view";
 import { Navbar } from "../../components/navbar";
 import {
@@ -58,16 +59,20 @@ const getActiveLocations = (locations: Location[]) =>
  */
 export default function CategoriesPage() {
   const queryClient = useQueryClient();
-  const { organizationsQuery, selectedOrganization } = useSelectedOrganization();
+  const { organizationsQuery, selectedOrganization } =
+    useSelectedOrganization();
   const organizationId = selectedOrganization?.id;
   const prevOrganizationId = useRef<string | undefined>(organizationId);
-  const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation | null>(null);
+  const [selectedLocation, setSelectedLocationState] =
+    useState<SelectedLocation | null>(null);
   const categoriesQuery = useQuery({
     enabled: Boolean(organizationId),
     queryKey: ["organizations", organizationId, "categories"],
     queryFn: () => {
       if (!organizationId) {
-        throw new Error("A organização é obrigatória para carregar categorias.");
+        throw new Error(
+          "A organização é obrigatória para carregar categorias.",
+        );
       }
 
       return getOrganizationCategories(organizationId);
@@ -93,14 +98,20 @@ export default function CategoriesPage() {
         name: input.name,
       }),
     onSuccess: async (_category, variables) => {
+      toast.success("Categoria criada.");
       await queryClient.invalidateQueries({
         queryKey: ["organizations", variables.organizationId, "categories"],
       });
     },
+    onError: (error) => {
+      toast.error(error.message);
+    },
   });
   const hasOrganization = Boolean(organizationId);
   const isLoadingLocations = hasOrganization ? locationsQuery.isPending : false;
-  const hasLocationLoadError = hasOrganization ? Boolean(locationsQuery.error) : false;
+  const hasLocationLoadError = hasOrganization
+    ? Boolean(locationsQuery.error)
+    : false;
   const activeLocations = useMemo(
     () => getActiveLocations(locationsQuery.data ?? []),
     [locationsQuery.data],
@@ -129,12 +140,18 @@ export default function CategoriesPage() {
     );
 
     if (storedActiveLocation) {
-      setSelectedLocationState({ id: storedActiveLocation.id, name: storedActiveLocation.name });
+      setSelectedLocationState({
+        id: storedActiveLocation.id,
+        name: storedActiveLocation.name,
+      });
       return;
     }
 
     if (activeLocations.length === 1 && activeLocations[0]) {
-      const nextLocation = { id: activeLocations[0].id, name: activeLocations[0].name };
+      const nextLocation = {
+        id: activeLocations[0].id,
+        name: activeLocations[0].name,
+      };
 
       setSelectedLocation(organizationId, nextLocation);
       setSelectedLocationState(nextLocation);
@@ -169,10 +186,12 @@ export default function CategoriesPage() {
       <div className="min-w-0 flex-1 pt-16 md:pt-0">
         <CategoriesManagementView
           categories={categoriesQuery.data ?? []}
-          createErrorMessage={createCategoryMutation.error?.message}
           errorMessage={errorMessage}
           isCreating={createCategoryMutation.isPending}
-          isLoading={organizationsQuery.isPending || (hasOrganization ? categoriesQuery.isPending : false)}
+          isLoading={
+            organizationsQuery.isPending ||
+            (hasOrganization ? categoriesQuery.isPending : false)
+          }
           onCreate={
             organizationId
               ? async (input) => {
