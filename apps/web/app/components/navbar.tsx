@@ -71,7 +71,12 @@ const organizationSettingsNavItem = {
   href: "/dashboard/settings/organization",
 };
 const workflowNavItems: NavItem[] = [
-  { icon: Package, label: "Itens", href: "/dashboard/items" },
+  {
+    icon: Package,
+    label: "Itens",
+    href: "/dashboard/items",
+    tourTarget: "tour-nav-items",
+  },
   {
     icon: Tags,
     label: "Categorias",

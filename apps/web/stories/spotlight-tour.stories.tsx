@@ -55,6 +55,12 @@ const SpotlightStoryFrame = ({ children }: { children: ReactNode }) => (
         <div className="rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-sm font-semibold">
           Categorias
         </div>
+        <div
+          className="rounded-r-md border-l-2 border-l-transparent px-4 py-2.5 text-sm font-semibold"
+          data-tour-target="storybook-items-target"
+        >
+          Itens
+        </div>
       </div>
     </aside>
     <main className="ml-72 p-10">
@@ -169,6 +175,24 @@ const PartiallyCompletedStory = (args: SpotlightTourStoryArgs) => (
   </SpotlightStoryFrame>
 );
 
+/**
+ * Renders the catalog item spotlight that completes the catalog setup branch.
+ *
+ * @param args Storybook args forwarded to the Driver.js preview.
+ * @returns Catalog item spotlight story element.
+ */
+const CatalogItemsStory = (args: SpotlightTourStoryArgs) => (
+  <SpotlightStoryFrame>
+    <DriverSpotlightPreview
+      {...args}
+      description="Depois cadastre itens com SKU, preço e ponto de reposição para liberar o recebimento."
+      targetSelector='[data-tour-target="storybook-items-target"]'
+      targetType="navigation"
+      title="Cadastre itens"
+    />
+  </SpotlightStoryFrame>
+);
+
 export const ContentSpotlight: Story = {
   render: ContentSpotlightStory,
 };
@@ -190,4 +214,8 @@ export const Viewer: Story = {
 
 export const PartiallyCompletedSetup: Story = {
   render: PartiallyCompletedStory,
+};
+
+export const CatalogItemsStep: Story = {
+  render: CatalogItemsStory,
 };
