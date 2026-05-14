@@ -352,6 +352,10 @@ const startDriverTour = (
       onDismiss();
       activeDriver.destroy();
     },
+    onDestroyStarted: (_element, _step, { driver: activeDriver }) => {
+      onDismiss();
+      activeDriver.destroy();
+    },
     onNextClick: (_element, _step, { driver: activeDriver }) => {
       if (activeDriver.hasNextStep()) {
         activeDriver.moveNext();
@@ -455,18 +459,11 @@ export function FirstRunSpotlightTour({
       dismissTour(organizationId);
       setIsDismissed(true);
     };
-    const dismissOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        dismiss();
-      }
-    };
 
     driverRef.current?.destroy();
     driverRef.current = startDriverTour(driverSteps, dismiss);
-    window.addEventListener("keydown", dismissOnEscape);
 
     return () => {
-      window.removeEventListener("keydown", dismissOnEscape);
       driverRef.current?.destroy();
       driverRef.current = null;
     };
